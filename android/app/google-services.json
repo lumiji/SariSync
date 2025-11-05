@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "722764029231",
+    "project_id": "sarisync-337e3",
+    "storage_bucket": "sarisync-337e3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:722764029231:android:9cae33016d29e1df5555da",
+        "android_client_info": {
+          "package_name": "com.example.sarisync"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD-fpDsKwcq_ElqYqhSjBL66vM5hv4i1mg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
