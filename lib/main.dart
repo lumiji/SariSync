@@ -3,6 +3,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart'; // Ensure this file exists for Firebase setup
 import 'package:google_fonts/google_fonts.dart';
 
+//pages
+import 'home.dart';
 
 // Initializing Firebase
 Future<void> main() async {
@@ -15,7 +17,6 @@ Future<void> main() async {
   runApp(const MyApp());
 }
 
-
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -24,7 +25,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Flutter Demo',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.fromSeed(seedColor: Color(0xFFFCFCFC)),
         useMaterial3: true,
       ),
       // Set the home to the initial splash screen
@@ -32,8 +33,6 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-
-
 
 // for splash screen
 class SplashFrames extends StatefulWidget {
@@ -66,6 +65,7 @@ class _SplashFramesState extends State<SplashFrames> {
 
     // Phase 2: Triangle appears + scale up (Starts at 1300ms)
     Future.delayed(const Duration(milliseconds: 1300), () {
+      if (!mounted) return;
       setState(() {
         showTriangle = true;
         triangleHeight = 60;
@@ -100,7 +100,15 @@ class _SplashFramesState extends State<SplashFrames> {
       _startTextAnimation(); // Start the letter-by-letter animation
     });
 
-    // Phase 5: Enter PIN
+    //Phase 5: Enter PIN
+
+    // Phase 6: Navigate to Home Page (after animations complete)
+    Future.delayed(const Duration(milliseconds: 3000), () {
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => HomePage()),
+      );
+    });
   }
 
   // Helper function for the letter-by-letter text appearance
@@ -264,51 +272,4 @@ class TrianglePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(CustomPainter oldDelegate) => false;
-}
-
-// Main App Screen (Target of Navigation)
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  final String title;
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      _counter++;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text(widget.title),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ),
-    );
-  }
 }
