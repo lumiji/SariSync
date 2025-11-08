@@ -2,19 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart'; // Ensure this file exists for Firebase setup
 import 'package:google_fonts/google_fonts.dart';
-
+import 'pin_screen.dart';
 
 // Initializing Firebase
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   runApp(const MyApp());
 }
-
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -33,8 +30,6 @@ class MyApp extends StatelessWidget {
   }
 }
 
-
-
 // for splash screen
 class SplashFrames extends StatefulWidget {
   @override
@@ -52,11 +47,12 @@ class _SplashFramesState extends State<SplashFrames> {
   // Phase 4 Variables
   bool phaseFourActive = false; // Triggers slide-left movement
   int textLength = 0; // Controls letter-by-letter appearance
-  final String textToDisplay = "SariSync"; 
+  final String textToDisplay = "SariSync";
 
   // Asset Constants
   static const String backgroundAsset = 'assets/images/background.png';
-  static const double logoSize = 48.0; // Adjusted logo size for better visibility
+  static const double logoSize =
+      48.0; // Adjusted logo size for better visibility
 
   @override
   void initState() {
@@ -101,13 +97,21 @@ class _SplashFramesState extends State<SplashFrames> {
     });
 
     // Phase 5: Enter PIN
+    Future.delayed(const Duration(milliseconds: 3000), () {
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const PinScreen()),
+        );
+      }
+    });
   }
 
   // Helper function for the letter-by-letter text appearance
   void _startTextAnimation() {
     int totalLetters = textToDisplay.length;
-    const int delayPerLetterMs = 50; 
-    
+    const int delayPerLetterMs = 50;
+
     // Start text animation slightly delayed after Phase 4 movement begins
     Future.delayed(const Duration(milliseconds: 50), () {
       for (int i = 1; i <= totalLetters; i++) {
@@ -142,13 +146,13 @@ class _SplashFramesState extends State<SplashFrames> {
       children: [
         // 1. Full-Screen Animated Background Container
         AnimatedContainer(
-          duration: const Duration(milliseconds: 300), 
+          duration: const Duration(milliseconds: 300),
           color: backgroundColor,
           child: AnimatedOpacity(
             opacity: showLogo ? 1.0 : 0.0,
             duration: const Duration(milliseconds: 300),
             child: Image.asset(
-              backgroundAsset, 
+              backgroundAsset,
               fit: BoxFit.fill,
               width: double.infinity,
               height: double.infinity,
@@ -161,7 +165,7 @@ class _SplashFramesState extends State<SplashFrames> {
           child: AnimatedContainer(
             duration: exitDuration,
             // Slides the content left by adjusting the margin
-            margin: EdgeInsets.only(left: logoLeftOffset), 
+            margin: EdgeInsets.only(left: logoLeftOffset),
             child: AnimatedOpacity(
               opacity: showLogo ? 1.0 : 0.0,
               duration: const Duration(milliseconds: 300),
@@ -172,16 +176,16 @@ class _SplashFramesState extends State<SplashFrames> {
                   SizedBox(
                     width: logoSize,
                     height: logoSize,
-                    child: Image.asset('assets/images/logo.png'), 
+                    child: Image.asset('assets/images/logo.png'),
                   ),
-                  
+
                   // Text Beside the Logo (Letter-by-letter)
-                  if (showLogo) 
+                  if (showLogo)
                     Padding(
                       padding: const EdgeInsets.only(left: 5.0),
                       child: Text(
                         // Display substring based on textLength
-                        textToDisplay.substring(0, textLength), 
+                        textToDisplay.substring(0, textLength),
                         style: const TextStyle(
                           fontFamily: 'Inter',
                           fontSize: 32,
@@ -205,7 +209,9 @@ class _SplashFramesState extends State<SplashFrames> {
               duration: exitDuration,
               curve: Curves.easeIn,
               // SLIDE: Move off-screen to the left (by adding right padding)
-              padding: EdgeInsets.only(right: phaseFourActive ? stackWidth + 20.0 : 0.0),
+              padding: EdgeInsets.only(
+                right: phaseFourActive ? stackWidth + 20.0 : 0.0,
+              ),
               child: SizedBox(
                 width: stackWidth,
                 height: stackHeight,
@@ -218,7 +224,7 @@ class _SplashFramesState extends State<SplashFrames> {
                       curve: Curves.easeInOut,
                       width: size,
                       height: size,
-                      color: Colors.blue, 
+                      color: Colors.blue,
                     ),
 
                     // Triangle (roof)
@@ -226,15 +232,18 @@ class _SplashFramesState extends State<SplashFrames> {
                       duration: const Duration(milliseconds: 300),
                       curve: Curves.easeInOut,
                       // Positioning formula based on size and height
-                      top: showTriangle 
-                          ? (stackHeight / 2) - (size / 2) - triangleHeight - spacing
-                          : stackHeight + 20.0, 
-                          
+                      top: showTriangle
+                          ? (stackHeight / 2) -
+                                (size / 2) -
+                                triangleHeight -
+                                spacing
+                          : stackHeight + 20.0,
+
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 300),
                         curve: Curves.easeInOut,
                         width: size,
-                        height: triangleHeight, 
+                        height: triangleHeight,
                         child: CustomPaint(painter: TrianglePainter()),
                       ),
                     ),
