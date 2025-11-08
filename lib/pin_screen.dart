@@ -1,8 +1,7 @@
-// import 'main.dart';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:sarisync/main.dart';
+import 'package:sarisync/home.dart';
 
 class PinScreen extends StatefulWidget {
   const PinScreen({super.key});
@@ -14,29 +13,10 @@ class PinScreen extends StatefulWidget {
 class _PinScreenState extends State<PinScreen> {
   String _enteredPin = '';
   String _errorMessage = '';
-  List<String> _input = [];
+  // List<String> _input = [];
+  String? _pressedKey;
 
   void _onNumberTap(String number) {
-    //   if (_enteredPin.length < 4) {
-    //     setState(() {
-    //       _enteredPin += number;
-
-    //             // Clear error if user starts typing again
-    //     if (_errorMessage.isNotEmpty) _errorMessage = '';
-    //     });
-    //     if (_enteredPin.length == 4) {
-    //       // ✅ Automatically go to home after entering 4 digits
-    //       Future.delayed(const Duration(milliseconds: 300), () {
-    //         Navigator.pushReplacement(
-    //           context,
-    //           MaterialPageRoute(
-    //             builder: (context) => const MyHomePage(title: 'Home'),
-    //           ),
-    //         );
-    //       });
-    //     }
-    //   }
-    // }
     if (_enteredPin.length < 4) {
       setState(() {
         _enteredPin += number;
@@ -61,30 +41,15 @@ class _PinScreenState extends State<PinScreen> {
   }
 
   void _onSubmit() {
-    //   if (_enteredPin.length == 4) {
-    //     Navigator.pushReplacement(
-    //       context,
-    //       MaterialPageRoute(
-    //         builder: (context) => const MyHomePage(title: 'Home'),
-    //       ),
-    //     );
-    //   } else {
-    //     ScaffoldMessenger.of(context).showSnackBar(
-    //       const SnackBar(content: Text('Please enter your 4-digit PIN')),
-    //     );
-    //   }
-    // }
     setState(() {
       if (_enteredPin.length == 4) {
         _errorMessage = ''; // clear error
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(
-            builder: (context) => const MyHomePage(title: 'Home'),
-          ),
+          MaterialPageRoute(builder: (context) => HomePage()),
         );
       } else {
-        _errorMessage = 'Please enter all 4 digits';
+        _errorMessage = 'Enter 4 digits';
       }
     });
   }
@@ -95,46 +60,60 @@ class _PinScreenState extends State<PinScreen> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // ✅ Background image with blur effect
-          Image.asset('assets/images/background.png', fit: BoxFit.cover),
+          // Background image with blur effect
+          Image.asset('assets/images/background.png', fit: BoxFit.fill),
           BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3),
-            child: Container(color: Colors.blue.withOpacity(0.4)),
+            filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+            child: Container(color: Colors.black.withOpacity(0.1)),
           ),
 
-          // ✅ Content layout
+          // Content layout
           Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const SizedBox(height: 80),
 
               // Logo and text
-              Column(
-                children: [
-                  Image.asset('assets/images/logo.png', width: 60, height: 60),
-                  const SizedBox(height: 8),
-                  Text(
-                    "SariSync",
-                    style: GoogleFonts.inter(
-                      color: Colors.white,
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                    ),
+              Align(
+                alignment: Alignment.topCenter,
+                child: Padding(
+                  padding: const EdgeInsets.only(
+                    top: 10,
+                  ), // adjust between 60–100 as you like
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Image.asset(
+                        'assets/images/logo.png',
+                        width: 80,
+                        height: 80,
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        "SariSync",
+                        style: GoogleFonts.inter(
+                          color: Colors.white,
+                          fontSize: 50,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
 
-              const SizedBox(height: 60),
+              const SizedBox(height: 75),
 
               // "Enter PIN" label
               Text(
                 "Enter PIN",
                 style: GoogleFonts.inter(
                   fontSize: 20,
-                  color: Colors.white.withOpacity(1.0),
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 25),
 
               // PIN circles
               Row(
@@ -148,7 +127,7 @@ class _PinScreenState extends State<PinScreen> {
                     decoration: BoxDecoration(
                       color: filled ? Colors.white : Colors.transparent,
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.white, width: 2),
+                      border: Border.all(color: Colors.white, width: 1),
                     ),
                   );
                 }),
@@ -160,7 +139,7 @@ class _PinScreenState extends State<PinScreen> {
                   child: Text(
                     _errorMessage,
                     style: const TextStyle(
-                      color: Color.fromARGB(255, 54, 51, 51),
+                      color: Color.fromARGB(255, 141, 4, 4),
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
                     ),
@@ -219,23 +198,46 @@ class _PinScreenState extends State<PinScreen> {
       onTap = () => _onNumberTap(key);
     }
 
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(40),
-      child: Container(
-        width: 70,
-        height: 70,
+    return GestureDetector(
+      onTapDown: (_) {
+        setState(() => _pressedKey = key);
+      },
+      onTapUp: (_) {
+        Future.delayed(const Duration(milliseconds: 20), () {
+          setState(() => _pressedKey = null);
+        });
+        onTap?.call();
+      },
+      onTapCancel: () {
+        setState(() => _pressedKey = null);
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 20),
+        curve: Curves.easeOut,
+        width: 60,
+        height: 60,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: Colors.white.withOpacity(0.15),
+          color: _pressedKey == key
+              ? Colors.white.withOpacity(0.1) // soft glow when pressed
+              : Colors.transparent, // normal state
+          boxShadow: _pressedKey == key
+              ? [
+                  BoxShadow(
+                    color: Colors.white.withOpacity(0),
+                    blurRadius: 5,
+                    spreadRadius: 0.5,
+                  ),
+                ]
+              : [],
         ),
         child: Center(
           child: icon != null
               ? Icon(icon, color: Colors.white, size: 28)
               : Text(
                   key,
-                  style: const TextStyle(
-                    fontSize: 24,
+                  style: GoogleFonts.inter(
+                    fontSize: 26,
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
                   ),
