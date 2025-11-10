@@ -2,21 +2,52 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 // pages
-import 'main.dart';
+//import 'main.dart';
 
 //models
 import 'models/transaction_model.dart';
 
 // HomePage Widget
-class HomePage extends StatelessWidget {
-  HomePage({Key? key}) : super(key: key);
+class HomePage extends StatefulWidget {
+  HomePage({super.key});
+
+  @override State<HomePage> createState() => _HomePageState();
+
+}
+
+class _HomePageState extends State<HomePage> {
+  
+  int _selectedIndex = 0;
+  
 
   // Simulated data — replace with Firebase later
   final List<TransactionItem> recentTransactions = [
     TransactionItem(amount: 'Php 50.00', date: '20251105'),
     TransactionItem(amount: 'Php 150.00', date: '20251106'),
     TransactionItem(amount: 'Php 15.00', date: '20251107'),
+
   ];
+
+  void _onItemTapped(int index) {
+    if (_selectedIndex == index) return; // Prevent unnecessary rebuild
+    setState(() => _selectedIndex = index);
+
+    switch (index) {
+      case 0: // home page
+        Navigator.pushReplacementNamed(context, '/home');
+        break;
+      case 1:
+        Navigator.pushReplacementNamed(context, '/inventory');
+        break;
+      case 2:
+        Navigator.pushReplacementNamed(context, '/ledger');
+        break;
+      case 3:
+        Navigator.pushReplacementNamed(context, '/history');
+        break;
+    }
+
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -357,12 +388,13 @@ class HomePage extends StatelessWidget {
         decoration: BoxDecoration(
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.15), // shadow color
-              blurRadius: 8, // how soft the shadow is
-              offset: const Offset(0, -2), // negative Y = shadow above
+              color: Colors.black.withOpacity(0.15),
+              blurRadius: 8,
+              offset: const Offset(0, -2),
             ),
           ],
         ),
+        // Nav Bar
         child: BottomAppBar(
           color: const Color(0xFFFCFCFC),
           shape: const CircularNotchedRectangle(),
@@ -372,22 +404,30 @@ class HomePage extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildBottomNavItem(Icons.home, 'Home', true),
-                _buildBottomNavItem(
-                  Icons.inventory_2_outlined,
-                  'Inventory',
-                  false,
+                GestureDetector(
+                  onTap: () => _onItemTapped(0),
+                  child: _buildBottomNavItem(Icons.home, 'Home', _selectedIndex == 0),
+                ),
+                GestureDetector(
+                  onTap: () => _onItemTapped(1),
+                  child: _buildBottomNavItem(Icons.inventory_2_outlined, 'Inventory', _selectedIndex == 1),
                 ),
                 const SizedBox(width: 40),
-                _buildBottomNavItem(Icons.book_outlined, 'Ledger', false),
-                _buildBottomNavItem(Icons.history, 'History', false),
+                GestureDetector(
+                  onTap: () => _onItemTapped(2),
+                  child: _buildBottomNavItem(Icons.book_outlined, 'Ledger', _selectedIndex == 2),
+                ),
+                GestureDetector(
+                  onTap: () => _onItemTapped(3),
+                  child: _buildBottomNavItem(Icons.history, 'History', _selectedIndex == 3),
+                ),
               ],
             ),
           ),
         ),
       ),
     );
-  }
+}
 
   // Widgets
 
@@ -440,18 +480,21 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  //for nav bar selection (change color if selected or not selected)
+
+  // For nav bar selection (change color if selected or not selected)
   Widget _buildBottomNavItem(IconData icon, String label, bool isActive) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, color: isActive ? Color(0xFF1565C0) : Color(0XffB1B1B1)),
+        Icon(
+          icon,
+          color: isActive ? const Color(0xFF1565C0) : const Color(0xFFB1B1B1),
+        ),
         Text(
           label,
-          style: TextStyle(
-            fontFamily: 'Inter',
+          style: GoogleFonts.inter(
             fontSize: 12,
-            color: isActive ? Color(0xFF1565C0) : Color(0XffB1B1B1),
+            color: isActive ? const Color(0xFF1565C0) : const Color(0xFFB1B1B1),
           ),
         ),
       ],

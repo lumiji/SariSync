@@ -1,16 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+
+//pages
+import 'inventory_add_page.dart';
+
+//models
+import 'models/inventory_item.dart';
+
 class InventoryPage extends StatefulWidget {
-  const InventoryPage({Key? key}) : super(key: key);
+  InventoryPage({Key? key}) : super(key: key);
 
   @override
   State<InventoryPage> createState() => _InventoryPageState();
 }
 
 class _InventoryPageState extends State<InventoryPage> {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   int _selectedIndex = 1;
   String _selectedCategory = 'All';
+
+  //holds items for display
+  List<InventoryItem> _inventoryItems = [];
 
   final List<Map<String, dynamic>> _categories = [
     {'name': 'Snacks', 'imagePath': 'assets/images/SNACKS.png'},
@@ -19,13 +31,6 @@ class _InventoryPageState extends State<InventoryPage> {
     {'name': 'Toiletries', 'imagePath': 'assets/images/TOILETRIES.png'},
     {'name': 'Condiments', 'imagePath': 'assets/images/CONDIMENTS.png'},
     {'name': 'Others', 'imagePath': 'assets/images/OTHERS.png'},
-  ];
-
-  final List<Map<String, dynamic>> _items = [
-    {'name': 'Chick Boy (Big)', 'description': 'Sweet Corn Flavor', 'weight': '100g', 'qty': 10, 'price': 25.00, 'expiryDate': '11-5-26', 'image': null},
-    {'name': 'Chiz Curls (Big)', 'description': 'Cheese Flavor', 'weight': '55g', 'qty': 15, 'price': 38.00, 'expiryDate': '11-25-25', 'image': null},
-    {'name': 'Criss Cross', 'description': 'Sour Cream Flavor', 'weight': '20g', 'qty': 16, 'price': 9.00, 'expiryDate': '11-20-25', 'image': null},
-    {'name': 'Nova', 'description': 'Spicy Flavor', 'weight': '30g', 'qty': 8, 'price': 12.00, 'expiryDate': '12-15-25', 'image': null},
   ];
 
   void _onItemTapped(int index) {
@@ -45,6 +50,20 @@ class _InventoryPageState extends State<InventoryPage> {
     }
   }
 
+ Future<void> addItem(String name, int quantity, double price) async {
+    try {
+      await _firestore.collection('inventory').add({
+        'name': name,
+        'quantity': quantity,
+        'price': price,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      print("Item added successfully!");
+    } catch (e) {
+      print("Error adding item: $e");
+    }
+  }
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -114,21 +133,21 @@ class _InventoryPageState extends State<InventoryPage> {
                     ),
                   ),
                 ),
-
-                // SliverList for items (lazy load)
-                SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      final item = _items[index];
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 12, left: 16, right: 16),
-                        child: _buildItemCard(item),
-                      );
-                    },
-                    childCount: _items.length,
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        final item = _inventoryItems[index];
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _buildItemCard(item),
+                        );
+                      },
+                      childCount: _inventoryItems.length,
+                    ),
                   ),
                 ),
-                const SliverToBoxAdapter(child: SizedBox(height: 100)), // padding at bottom for FAB
               ],
             ),
           ),
@@ -138,8 +157,21 @@ class _InventoryPageState extends State<InventoryPage> {
             bottom: 60,
             right: 20,
             child: FloatingActionButton(
-              onPressed: () {
-                // ADD ITEM action
+              onPressed: () async {
+                 final newItem = await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const InventoryAddPage()),
+                );
+
+                if (newItem != null && newItem is InventoryItem) {
+                  setState(() {
+                    _inventoryItems.add(newItem); // ✅ Add item to the list
+                  });
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('✅ ${newItem.name} added to inventory!')),
+                  );
+                }
               },
               backgroundColor: const Color(0xFF1565C0),
               child: const Icon(Icons.add, color: Colors.white, size: 28),
@@ -200,56 +232,68 @@ class _InventoryPageState extends State<InventoryPage> {
     );
   }
 
-  Widget _buildItemCard(Map<String, dynamic> item) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2))],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(8)),
-            child: item['image'] != null
-                ? ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.asset(item['image'], fit: BoxFit.cover, cacheWidth: 100, cacheHeight: 100))
-                : const Icon(Icons.inventory_2, color: Colors.grey),
+  Widget _buildItemCard(InventoryItem item) {
+  return Container(
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.05),
+          blurRadius: 4,
+          offset: const Offset(0, 2),
+        ),
+      ],
+    ),
+    child: Row(
+      children: [
+        Container(
+          width: 60,
+          height: 60,
+          decoration: BoxDecoration(
+            color: Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(8),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(item['name'], style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 2),
-                Text(item['description'], style: GoogleFonts.inter(fontSize: 13, color: Colors.grey)),
-                const SizedBox(height: 2),
-                Text(item['weight'], style: GoogleFonts.inter(fontSize: 12, color: Colors.grey.shade500)),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Text('Qty: ${item['qty']}', style: GoogleFonts.inter(fontSize: 12, color: Colors.grey.shade700)),
-                    const SizedBox(width: 16),
-                    Text('ED: ${item['expiryDate']}', style: GoogleFonts.inter(fontSize: 12, color: Colors.grey.shade700)),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+          child: item.imageUrl != null
+              ? ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.asset(item.imageUrl!, fit: BoxFit.cover),
+                )
+              : const Icon(Icons.inventory_2, color: Colors.grey),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(item['price'].toStringAsFixed(2), style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.bold)),
-              Text('PHP', style: GoogleFonts.inter(fontSize: 12, color: Colors.grey)),
+              Text(item.name, style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 2),
+              Text(item.add_info ?? '', style: GoogleFonts.inter(fontSize: 13, color: Colors.grey)),
+              const SizedBox(height: 2),
+              Text(item.unit ?? '', style: GoogleFonts.inter(fontSize: 12, color: Colors.grey.shade500)),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Text('Qty: ${item.quantity}', style: GoogleFonts.inter(fontSize: 12, color: Colors.grey.shade700)),
+                  const SizedBox(width: 16),
+                  Text('ED: ${item.expiration ?? ''}', style: GoogleFonts.inter(fontSize: 12, color: Colors.grey.shade700)),
+                ],
+              ),
             ],
           ),
-        ],
-      ),
-    );
-  }
+        ),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(item.price.toStringAsFixed(2), style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.bold)),
+            Text('PHP', style: GoogleFonts.inter(fontSize: 12, color: Colors.grey)),
+          ],
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _buildBottomNavBar() {
     return Container(
