@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:sarisync/home.dart';
 
+
+
 class PinScreen extends StatefulWidget {
   const PinScreen({super.key});
 
@@ -93,7 +95,7 @@ class _PinScreenState extends State<PinScreen> {
                         "SariSync",
                         style: GoogleFonts.inter(
                           color: Colors.white,
-                          fontSize: 50,
+                          fontSize: 40,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -104,7 +106,6 @@ class _PinScreenState extends State<PinScreen> {
 
               const SizedBox(height: 75),
 
-              // "Enter PIN" label
               Text(
                 "Enter PIN",
                 style: GoogleFonts.inter(
@@ -138,8 +139,8 @@ class _PinScreenState extends State<PinScreen> {
                   padding: const EdgeInsets.only(top: 8.0),
                   child: Text(
                     _errorMessage,
-                    style: const TextStyle(
-                      color: Color.fromARGB(255, 141, 4, 4),
+                    style: GoogleFonts.inter(
+                      color: Color.fromARGB(255, 209, 22, 22),
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
                     ),

@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 // pages
 import 'main.dart';
+import 'ledger.dart';
 
 //models
 import 'models/transaction_model.dart';
@@ -372,15 +373,16 @@ class HomePage extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildBottomNavItem(Icons.home, 'Home', true),
+                _buildBottomNavItem(Icons.home, 'Home', true,context),
                 _buildBottomNavItem(
                   Icons.inventory_2_outlined,
                   'Inventory',
                   false,
+                  context,
                 ),
                 const SizedBox(width: 40),
-                _buildBottomNavItem(Icons.book_outlined, 'Ledger', false),
-                _buildBottomNavItem(Icons.history, 'History', false),
+                _buildBottomNavItem(Icons.book_outlined, 'Ledger', false, context),
+                _buildBottomNavItem(Icons.history, 'History', false, context),
               ],
             ),
           ),
@@ -441,70 +443,141 @@ class HomePage extends StatelessWidget {
   }
 
   //for nav bar selection (change color if selected or not selected)
-  Widget _buildBottomNavItem(IconData icon, String label, bool isActive) {
-    return Column(
+  //   Widget _buildBottomNavItem(IconData icon, String label, bool isActive) {
+  //     return Column(
+  //       mainAxisSize: MainAxisSize.min,
+  //       children: [
+  //         Icon(icon, color: isActive ? Color(0xFF1565C0) : Color(0XffB1B1B1)),
+  //         Text(
+  //           label,
+  //           style: TextStyle(
+  //             fontFamily: 'Inter',
+  //             fontSize: 12,
+  //             color: isActive ? Color(0xFF1565C0) : Color(0XffB1B1B1),
+  //           ),
+  //         ),
+  //       ],
+  //     );
+  //   }
+  // }
+
+  // Widget _buildBottomNavItem(
+  //   IconData icon,
+  //   String label,
+  //   bool isActive,
+  //   VoidCallback onTap,
+  // ) {
+  //   return InkWell(
+  //     onTap: onTap,
+  //     child: Column(
+  //       mainAxisSize: MainAxisSize.min,
+  //       children: [
+  //         Icon(icon, color: isActive ? Color(0xFF1565C0) : Color(0XffB1B1B1)),
+  //         Text(
+  //           label,
+  //           style: TextStyle(
+  //             fontFamily: 'Inter',
+  //             fontSize: 12,
+  //             color: isActive ? Color(0xFF1565C0) : Color(0XffB1B1B1),
+  //           ),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
+
+Widget _buildBottomNavItem(
+  IconData icon,
+  String label,
+  bool isActive,
+  BuildContext context,
+) {
+  return InkWell(
+    splashColor: Colors.transparent, // remove ripple
+    highlightColor: Colors.transparent, // remove glow
+    hoverColor: Colors.transparent, // remove hover highlight
+    onTap: () {
+      if (label == 'Home') {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => HomePage()),
+        );
+      } else if (label == 'Ledger') {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => LedgerPage()),
+        );
+      }
+      // add for Inventory/History later if needed
+    },
+    child: Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, color: isActive ? Color(0xFF1565C0) : Color(0XffB1B1B1)),
+        Icon(
+          icon,
+          color: isActive ? const Color(0xFF1565C0) : const Color(0XffB1B1B1),
+        ),
         Text(
           label,
           style: TextStyle(
             fontFamily: 'Inter',
             fontSize: 12,
-            color: isActive ? Color(0xFF1565C0) : Color(0XffB1B1B1),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// for recent transactions
-Widget _buildTransactionItem(TransactionItem transaction) {
-  return Container(
-    margin: const EdgeInsets.only(bottom: 12),
-    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(12),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withOpacity(0.05),
-          blurRadius: 6,
-          offset: const Offset(0, 2),
-        ),
-      ],
-    ),
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Row(
-          children: [
-            const CircleAvatar(
-              radius: 16,
-              backgroundColor: Color(0xFFFF9800),
-              child: Icon(Icons.shopping_cart, color: Colors.white, size: 16),
-            ),
-            const SizedBox(width: 12),
-            Text(
-              transaction.amount,
-              style: const TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-        Text(
-          transaction.date,
-          style: const TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 12,
-            color: Color(0xFF757575),
+            color: isActive ? const Color(0xFF1565C0) : const Color(0XffB1B1B1),
           ),
         ),
       ],
     ),
   );
+}
+
+
+  // for recent transactions
+  Widget _buildTransactionItem(TransactionItem transaction) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              const CircleAvatar(
+                radius: 16,
+                backgroundColor: Color(0xFFFF9800),
+                child: Icon(Icons.shopping_cart, color: Colors.white, size: 16),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                transaction.amount,
+                style: const TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          Text(
+            transaction.date,
+            style: const TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 12,
+              color: Color(0xFF757575),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
