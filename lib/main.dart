@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 //pages
 import 'pin_screen.dart';
 import 'home.dart';
+import 'inventory.dart';
 
 // Initializing Firebase
 Future<void> main() async {
@@ -23,13 +24,22 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false, //hides the DEBUG banner
-      title: 'Flutter Demo',
+      title: 'SariSync',
       theme: ThemeData(
+        fontFamily: GoogleFonts.inter().fontFamily,
         colorScheme: ColorScheme.fromSeed(seedColor: Color(0xFFFCFCFC)),
         useMaterial3: true,
       ),
       // Set the home to the initial splash screen
       home: SplashFrames(),
+      //routes to other pages
+      routes: {
+        '/home': (context) => HomePage(),
+        '/inventory': (context) => InventoryPage(),
+        // Add these when you create the pages
+        // '/ledger': (context) => LedgerPage(),
+        // '/history': (context) => HistoryPage(),
+      },
     );
   }
 }
@@ -111,6 +121,8 @@ class _SplashFramesState extends State<SplashFrames> {
       }
     });
   }
+
+
 
   // Helper function for the letter-by-letter text appearance
   void _startTextAnimation() {
