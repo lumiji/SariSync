@@ -8,9 +8,13 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 
 //firebase dependencies
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 //pages
 import 'sku_scanner.dart';
+
+//models & services
+import 'services/inventory_service.dart';
 
 
 class InventoryAddPage extends StatefulWidget {
@@ -22,31 +26,9 @@ class InventoryAddPage extends StatefulWidget {
 
 class _InventoryAddPageState extends State<InventoryAddPage> {
   final _formKey = GlobalKey<FormState>();
+  final _inventoryService = InventoryService();
 
-  // Controllers
-  final _nameController = TextEditingController();
-  final _priceController = TextEditingController();
-  final _quantityController = TextEditingController(text: '0');
-  final _expirationController = TextEditingController();
-  final _infoController = TextEditingController();
-  final _barcodeController = TextEditingController(); // text field for displaying barcode
-
-  // State
-  File? _selectedImage;
-  String? _selectedCategory;
-  int _quantity = 0;
-  DateTime? _selectedDate;
-
-  final List<String> _categories = [
-    'Snacks',
-    'Drinks',
-    'Cans & Packs',
-    'Toiletries',
-    'Condiments',
-    'Other',
-  ];
-
-  // for picking image
+// for picking image
   Future<void> _pickImage() async {
     showModalBottomSheet(
       context: context,
@@ -65,6 +47,7 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
                   final pickedImage =
                       await ImagePicker().pickImage(source: ImageSource.camera);
                   if (pickedImage != null) {
+                    print('Picked image: ${pickedImage.path}');
                     setState(() {
                       _selectedImage = File(pickedImage.path);
                     });
@@ -79,6 +62,7 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
                   final pickedImage =
                       await ImagePicker().pickImage(source: ImageSource.gallery);
                   if (pickedImage != null) {
+                    print('Picked image: ${pickedImage.path}');
                     setState(() {
                       _selectedImage = File(pickedImage.path);
                     });
@@ -91,6 +75,43 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
       },
     );
   }
+
+  // Controllers
+  final _nameController = TextEditingController();
+  final _priceController = TextEditingController();
+  final _quantityController = TextEditingController(text: '0');
+  final _unitAmountController = TextEditingController();
+  final _expirationController = TextEditingController();
+  final _infoController = TextEditingController();
+  final _barcodeController = TextEditingController(); // text field for displaying barcode
+
+  // State
+  File? _selectedImage;
+  String? _selectedCategory;
+  int _quantity = 0;
+  DateTime? _selectedDate;
+  String? _unitDropdownValue;
+  String? imageUrl;
+
+  final List<String> _units = [
+    'pcs', 
+    'oz', 
+    'L', 
+    'mL', 
+    'kg', 
+    'g'
+  ];
+  
+  final List<String> _categories = [
+    'Snacks',
+    'Drinks',
+    'Cans & Packs',
+    'Toiletries',
+    'Condiments',
+    'Other',
+  ];
+
+  
 
   //for increasing and decreasing quantity
   void _incrementQuantity() {
@@ -127,14 +148,47 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
   }
 
   // for saving item
-  void _saveItem() {
-    if (_formKey.currentState!.validate()) {
+  void _saveItem() async {
+  print('Save button pressed');
+  if (!_formKey.currentState!.validate()) {
+    print('Form validation failed');
+    return;
+  }
+
+  print('Form validated successfully');
+  String? imageUrl;
+  if (_selectedImage != null) {
+    print('Uploading image...');
+    imageUrl = await _inventoryService.uploadImage(_selectedImage!);
+    print('Image uploaded: $imageUrl');
+  }
+
+  try {
+    await _inventoryService.addItem(
+      name: _nameController.text.trim(),
+      quantity: int.parse(_quantityController.text),
+      price: double.parse(_priceController.text),
+      category: _selectedCategory ?? '',
+      barcode: _barcodeController.text,
+      unit: '${_unitAmountController.text} ${_unitDropdownValue ?? ''}',
+      info: _infoController.text,
+      expirationDate: _expirationController.text,
+      imageUrl: imageUrl,
+    );
+    print('✅ Firestore addItem() completed');
+
+    if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Item saved successfully!')),
       );
       Navigator.pop(context);
     }
+  } catch (e) {
+    print('🔥 Error saving item: $e');
   }
+}
+
+
 
 // for cleaning up controllers 
   @override
@@ -145,6 +199,7 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
     _expirationController.dispose();
     _infoController.dispose();
     _barcodeController.dispose();
+    _unitAmountController.dispose();
     super.dispose();
   }
 
@@ -280,6 +335,7 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
               ),
               const SizedBox(height: 16),
 
+            // for quantity
               _buildLabel('Quantity'),
             TextFormField(
               controller: _quantityController,
@@ -314,6 +370,48 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
                 ),
               ),
             ),
+            const SizedBox(height: 24),
+
+            // for unit of measure
+            Row(
+              children: [
+                // Numeric text field for quantity
+                Expanded(
+                  flex: 2,
+                  child: TextFormField(
+                    controller: _unitAmountController, // e.g., 24
+                    keyboardType: TextInputType.numberWithOptions(decimal: true),
+                    decoration: _inputDecoration(hintText: 'Enter quantity'),
+                    validator: (v) =>
+                        v == null || v.isEmpty ? 'Please enter quantity' : null,
+                  ),
+                ),
+                const SizedBox(width: 12),
+
+                // Dropdown for unit
+                Expanded(
+                  flex: 1,
+                  child: DropdownButtonFormField<String>(
+                    value: _unitDropdownValue,
+                    decoration: _inputDecoration(),
+                    items: _units.map((unit) {
+                      return DropdownMenuItem(
+                        value: unit,
+                        child: Text(unit),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        _unitDropdownValue = value!;
+                      });
+                    },
+                    validator: (v) => v == null || v.isEmpty ? 'Select a unit' : null,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
 
               // Barcode Field + Scan Button
               _buildLabel('Barcode'),
