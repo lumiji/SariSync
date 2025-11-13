@@ -1,23 +1,57 @@
+//This is the main home page
+
+//flutter dependencies
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+
+//firebase dependencies
 
 // pages
-import 'main.dart';
 import 'ledger.dart';
+import 'inventory.dart';
+import 'inventory_add_page.dart';
 
 //models
 import 'models/transaction_model.dart';
 
 // HomePage Widget
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   HomePage({Key? key}) : super(key: key);
 
-  // Simulated data — replace with Firebase later
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  //home page index (used for switching between pages)
+  int _selectedIndex = 0;
+
+  // Simulated data — replace with actual data later
   final List<TransactionItem> recentTransactions = [
     TransactionItem(amount: 'Php 50.00', date: '20251105'),
     TransactionItem(amount: 'Php 150.00', date: '20251106'),
     TransactionItem(amount: 'Php 15.00', date: '20251107'),
   ];
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+
+    switch (index) {
+      case 0:
+        // alreadu on home page
+        break;
+      case 1:
+        Navigator.pushReplacementNamed(context, '/inventory');
+        break;
+      case 2:
+        Navigator.pushReplacementNamed(context, '/ledger');
+        break;
+      case 3:
+        Navigator.pushReplacementNamed(context, '/history');
+        break;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -373,16 +407,39 @@ class HomePage extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildBottomNavItem(Icons.home, 'Home', true,context),
-                _buildBottomNavItem(
-                  Icons.inventory_2_outlined,
-                  'Inventory',
-                  false,
-                  context,
+                GestureDetector(
+                  onTap: () => _onItemTapped(0),
+                  child: _buildBottomNavItem(
+                    Icons.home,
+                    'Home',
+                    _selectedIndex == 0,
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => _onItemTapped(1),
+                  child: _buildBottomNavItem(
+                    Icons.inventory_2_outlined,
+                    'Inventory',
+                    _selectedIndex == 1,
+                  ),
                 ),
                 const SizedBox(width: 40),
-                _buildBottomNavItem(Icons.book_outlined, 'Ledger', false, context),
-                _buildBottomNavItem(Icons.history, 'History', false, context),
+                GestureDetector(
+                  onTap: () => _onItemTapped(2),
+                  child: _buildBottomNavItem(
+                    Icons.book_outlined,
+                    'Ledger',
+                    _selectedIndex == 2,
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => _onItemTapped(3),
+                  child: _buildBottomNavItem(
+                    Icons.history,
+                    'History',
+                    _selectedIndex == 3,
+                  ),
+                ),
               ],
             ),
           ),
@@ -442,94 +499,52 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  //for nav bar selection (change color if selected or not selected)
-  //   Widget _buildBottomNavItem(IconData icon, String label, bool isActive) {
-  //     return Column(
-  //       mainAxisSize: MainAxisSize.min,
-  //       children: [
-  //         Icon(icon, color: isActive ? Color(0xFF1565C0) : Color(0XffB1B1B1)),
-  //         Text(
-  //           label,
-  //           style: TextStyle(
-  //             fontFamily: 'Inter',
-  //             fontSize: 12,
-  //             color: isActive ? Color(0xFF1565C0) : Color(0XffB1B1B1),
-  //           ),
-  //         ),
-  //       ],
-  //     );
-  //   }
-  // }
-
-  // Widget _buildBottomNavItem(
-  //   IconData icon,
-  //   String label,
-  //   bool isActive,
-  //   VoidCallback onTap,
-  // ) {
-  //   return InkWell(
-  //     onTap: onTap,
-  //     child: Column(
-  //       mainAxisSize: MainAxisSize.min,
-  //       children: [
-  //         Icon(icon, color: isActive ? Color(0xFF1565C0) : Color(0XffB1B1B1)),
-  //         Text(
-  //           label,
-  //           style: TextStyle(
-  //             fontFamily: 'Inter',
-  //             fontSize: 12,
-  //             color: isActive ? Color(0xFF1565C0) : Color(0XffB1B1B1),
-  //           ),
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  // }
-
-Widget _buildBottomNavItem(
-  IconData icon,
-  String label,
-  bool isActive,
-  BuildContext context,
-) {
-  return InkWell(
-    splashColor: Colors.transparent, // remove ripple
-    highlightColor: Colors.transparent, // remove glow
-    hoverColor: Colors.transparent, // remove hover highlight
-    onTap: () {
-      if (label == 'Home') {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => HomePage()),
-        );
-      } else if (label == 'Ledger') {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => LedgerPage()),
-        );
-      }
-      // add for Inventory/History later if needed
-    },
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(
-          icon,
-          color: isActive ? const Color(0xFF1565C0) : const Color(0XffB1B1B1),
-        ),
-        Text(
-          label,
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 12,
+  Widget _buildBottomNavItem(IconData icon, String label, bool isActive) {
+    return InkWell(
+      splashColor: Colors.transparent, // remove ripple
+      highlightColor: Colors.transparent, // remove glow
+      hoverColor: Colors.transparent, // remove hover highlight
+      onTap: () {
+        if (label == 'Home') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => HomePage()),
+          );
+        } else if (label == 'Ledger') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => LedgerPage()),
+          );
+        }
+        // add for Inventory/History later if needed
+        else if (label == 'Inventory') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => InventoryPage()),
+          );
+        }
+      },
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
             color: isActive ? const Color(0xFF1565C0) : const Color(0XffB1B1B1),
           ),
-        ),
-      ],
-    ),
-  );
-}
-
+          Text(
+            label,
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 12,
+              color: isActive
+                  ? const Color(0xFF1565C0)
+                  : const Color(0XffB1B1B1),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   // for recent transactions
   Widget _buildTransactionItem(TransactionItem transaction) {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:sarisync/inventory.dart';
 import 'models/transaction_model.dart'; // if you’ll use it later
 
 import 'main.dart';
@@ -95,7 +96,9 @@ class LedgerPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
 
-                  /// Customer List
+
+
+                  // Customers List
                   Expanded(
                     child: ListView.builder(
                       itemCount: customers.length,
@@ -103,59 +106,104 @@ class LedgerPage extends StatelessWidget {
                         final c = customers[index];
                         return Container(
                           margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.08),
-                                blurRadius: 6,
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 4,
                                 offset: const Offset(0, 2),
                               ),
                             ],
                           ),
-                          child: ListTile(
-                            leading: ClipRRect(
-                              borderRadius: BorderRadius.circular(
-                                8,
-                              ), // adjust for slightly rounded corners
-                              child: Image.asset(
-                                c["image"]!,
-                                width: 50,
-                                height: 50,
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                            title: Text(
-                              c["name"]!,
-                              style: GoogleFonts.inter(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 14,
-                                color: Colors.black87,
-                              ),
-                            ),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  "${c["datetime"]}\n${c["code"]}\nReceived by: ${c["receivedBy"]}",
-                                  style: GoogleFonts.inter(fontSize: 12),
+                          child: Row(
+                            children: [
+                              //For image container
+                              Container(
+                                width: 60,
+                                height: 60,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade100,
+                                  borderRadius: BorderRadius.circular(8),
                                 ),
-                              ],
-                            ),
-                            trailing: Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  "${c["amount"]} PHP",
-                                  style: GoogleFonts.inter(
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 16,
+                                child: c["image"] != null
+                                    ? ClipRRect(
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: Image.asset(
+                                          c["image"]!,
+                                          fit: BoxFit.cover,
+                                        ),
+                                      )
+                                    : const Icon(
+                                        Icons.person,
+                                        color: Colors.grey,
+                                      ),
+                              ),
+                              const SizedBox(width: 12),
+
+                              // Customer Info
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      c["name"]!,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      c["datetime"]!,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 13,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      "Code: ${c["code"]}",
+                                      style: GoogleFonts.inter(
+                                        fontSize: 12,
+                                        color: Colors.grey.shade500,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      "Received by: ${c["receivedBy"]}",
+                                      style: GoogleFonts.inter(
+                                        fontSize: 12,
+                                        color: Colors.grey.shade700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                              // Amount Section (same as InventoryPage price layout)
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    c["amount"]!,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
+                                  Text(
+                                    'PHP',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
                         );
                       },
@@ -165,9 +213,22 @@ class LedgerPage extends StatelessWidget {
               ),
             ),
           ),
+
+          Positioned(
+            bottom: 60,
+            right: 20,
+            child: FloatingActionButton(
+              onPressed: () {
+                // Example: Navigate to a new LedgerAddPage later
+              },
+              backgroundColor: const Color(0xFF1565C0),
+              child: const Icon(Icons.add, color: Colors.white, size: 28),
+            ),
+          ),
         ],
       ),
 
+      //Floating Scan Button
       floatingActionButton: SizedBox(
         width: 60,
         height: 60,
@@ -241,19 +302,22 @@ Widget _buildBottomNavItem(
           context,
           MaterialPageRoute(builder: (context) => HomePage()),
         );
+      } else if (label == 'Inventory') {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => InventoryPage()),
+        );
       } else if (label == 'Ledger') {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => LedgerPage()),
         );
-      } else if (label == 'Inventory') {
-        // TODO: Add your InventoryPage navigation here
       } else if (label == 'History') {
-        // TODO: Add your HistoryPage navigation here
+        //Add your HistoryPage navigation here
       }
     },
 
-    // 👇 Add these lines to remove the translucent highlight and ripple
+    // Add these lines to remove the translucent highlight and ripple
     splashColor: Colors.transparent,
     highlightColor: Colors.transparent,
     hoverColor: Colors.transparent,
