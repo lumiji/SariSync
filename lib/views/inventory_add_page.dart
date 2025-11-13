@@ -14,7 +14,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'sku_scanner.dart';
 
 //models & services
-import 'services/inventory_service.dart';
+import '../services/inventory_service.dart';
 
 
 class InventoryAddPage extends StatefulWidget {
