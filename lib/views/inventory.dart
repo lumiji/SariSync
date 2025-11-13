@@ -11,7 +11,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'inventory_add_page.dart';
 
 //models
-import 'models/inventory_item.dart';
+import '../models/inventory_item.dart';
 
 class InventoryPage extends StatefulWidget {
   const InventoryPage({Key? key}) : super(key: key);
@@ -24,7 +24,7 @@ class _InventoryPageState extends State<InventoryPage> {
   int _selectedIndex = 1;
   String _selectedCategory = 'All';
 
-  final List<Map<String, dynamic>> _categories = [
+  final List<Map<String, String>> _categories = [
     {'name': 'All', 'imagePath': 'assets/images/ALL.png'},
     {'name': 'Snacks', 'imagePath': 'assets/images/SNACKS.png'},
     {'name': 'Drinks', 'imagePath': 'assets/images/DRINKS.png'},
@@ -120,6 +120,7 @@ Widget build(BuildContext context) {
                           ),
                           const SizedBox(height: 12),
 
+                        // List of Categories
                           SizedBox(
                             height: 100,
                             child: ListView.builder(
@@ -130,7 +131,7 @@ Widget build(BuildContext context) {
                                 return Padding(
                                   padding: const EdgeInsets.only(right: 12),
                                   child: _buildCategoryCard(
-                                      category['name'], category['imagePath']),
+                                      category['name']!, category['imagePath']!),
                                 );
                               },
                             ),
@@ -157,13 +158,21 @@ Widget build(BuildContext context) {
                     sliver: SliverList(
                       delegate: SliverChildBuilderDelegate(
                         (context, index) {
-                          final item = items[index];
+
+                          //Filter items based on selected category
+                          final filteredItems = _selectedCategory == 'All' 
+                            ? items
+                            : items.where((item) => item.category == _selectedCategory).toList();
+
+                          final item = filteredItems[index];
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 12),
                             child: _buildItemCard(item),
                           );
                         },
-                        childCount: items.length,
+                        childCount: _selectedCategory == 'All'
+                          ? items.length
+                          : items.where((item) => item.category == _selectedCategory).length,
                       ),
                     ),
                   ),
@@ -197,19 +206,31 @@ Widget build(BuildContext context) {
 
 
   Widget _buildCategoryCard(String label, String imagePath) {
+
+    final bool isSelected = _selectedCategory == label;
+
     return Container(
       width: 100,
       height: 100,
       decoration: BoxDecoration(
-        color: const Color(0xFFFEFEFE),
+        color: isSelected? const Color(0xFFB4D7FF) : const Color(0xFFFEFEFE),
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 2))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05), 
+            blurRadius: 10, 
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
+          splashColor: Color(0xFFB4D7FF),
           borderRadius: BorderRadius.circular(16),
-          onTap: () => setState(() => _selectedCategory = label),
+          onTap: () => setState(() {
+            _selectedCategory = label;
+          } ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -219,13 +240,20 @@ Widget build(BuildContext context) {
                 child: Image.asset(imagePath, fit: BoxFit.contain),
               ),
               const SizedBox(height: 4),
-              Text(label, textAlign: TextAlign.center, overflow: TextOverflow.ellipsis, style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w500)),
-            ],
+              Text(
+                label, 
+                textAlign: TextAlign.center, 
+                overflow: TextOverflow.ellipsis, 
+                style: GoogleFonts.inter(
+                  fontSize: 10, 
+                  fontWeight: FontWeight.w500),
+                ),
+              ],
+            ),
           ),
         ),
-      ),
-    );
-  }
+      );
+    }
 
   Widget _buildItemCard(InventoryItem item) {
     return Container(

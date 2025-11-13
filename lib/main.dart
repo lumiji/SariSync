@@ -12,9 +12,9 @@ import 'package:flutter/foundation.dart';
 import 'firebase_options.dart';
 
 // Your pages
-import 'pin_screen.dart';
-import 'home.dart';
-import 'inventory.dart';
+import 'views/pin_screen.dart';
+import 'views/home.dart';
+import 'views/inventory.dart';
 
 // Your models
 //import 'models/inventory_item.dart';

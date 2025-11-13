@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'inventory.dart';
 
 // models
-import 'models/transaction_model.dart';
+import '../models/transaction_model.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
