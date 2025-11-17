@@ -2,17 +2,19 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:sarisync/home.dart';
+import 'package:sarisync/services/local_storage_service.dart';
+import 'pin_screen.dart';
 
 
 
-class PinScreen extends StatefulWidget {
-  const PinScreen({super.key});
+class SetPinScreen extends StatefulWidget {
+  const SetPinScreen({super.key});
 
   @override
-  State<PinScreen> createState() => _PinScreenState();
+  State<SetPinScreen> createState() => _SetPinScreenState();
 }
 
-class _PinScreenState extends State<PinScreen> {
+class _SetPinScreenState extends State<SetPinScreen> {
   String _enteredPin = '';
   String _errorMessage = '';
   // List<String> _input = [];
@@ -42,19 +44,48 @@ class _PinScreenState extends State<PinScreen> {
     }
   }
 
-  void _onSubmit() {
+  // void _onSubmit() {
+  //   setState(() {
+  //     if (_enteredPin.length == 4) {
+  //       _errorMessage = ''; // clear error
+  //       Navigator.pushReplacement(
+  //         context,
+  //         MaterialPageRoute(builder: (context) => HomePage()),
+  //       );
+  //     } else {
+  //       _errorMessage = 'Enter 4 digits';
+  //     }
+  //   });
+  // }
+
+
+     void _onSubmit() async {
+  if (_enteredPin.length == 4) {
     setState(() {
-      if (_enteredPin.length == 4) {
-        _errorMessage = ''; // clear error
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => HomePage()),
-        );
-      } else {
-        _errorMessage = 'Enter 4 digits';
-      }
+      _errorMessage = '';
+    });
+
+    // Save PIN locally
+    await LocalStorageService.savePin(_enteredPin);
+
+    // Mark user as logged in (first-time sign-in complete)
+    await LocalStorageService.saveLoggedIn();
+
+    // Redirect to enter PIN screen
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => PinScreen()),
+    );
+  } else {
+    setState(() {
+      _errorMessage = 'Enter 4 digits';
     });
   }
+}
+
+
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -107,7 +138,7 @@ class _PinScreenState extends State<PinScreen> {
               const SizedBox(height: 75),
 
               Text(
-                "Enter PIN",
+                "Set PIN",
                 style: GoogleFonts.inter(
                   fontSize: 20,
                   color: Colors.white,

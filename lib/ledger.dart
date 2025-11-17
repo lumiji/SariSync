@@ -333,8 +333,7 @@ Widget _buildBottomNavItem(
         ),
         Text(
           label,
-          style: TextStyle(
-            fontFamily: 'Inter',
+          style: GoogleFonts.inter(
             fontSize: 12,
             color: isActive ? const Color(0xFF1565C0) : const Color(0XffB1B1B1),
           ),

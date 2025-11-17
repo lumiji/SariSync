@@ -1,0 +1,9 @@
+//<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">SariSync</string>
+    <string name="facebook_app_id">1062003855943554</string>
+    <string name="fb_login_protocol_scheme">fb1062003855943554</string>
+    <string name="facebook_client_token">fd2b40be8aa7e108b07dcfeb207f6403</string>
+
+</resources>

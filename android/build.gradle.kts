@@ -1,4 +1,4 @@
-allprojects {
+buildscript { 
     repositories {
         google()
         mavenCentral()

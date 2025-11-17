@@ -10,7 +10,7 @@ import 'dart:io';
 //firebase dependencies
 
 //pages
-import 'sku_scanner.dart';
+import 'views/sku_scanner.dart';
 
 
 class InventoryAddPage extends StatefulWidget {

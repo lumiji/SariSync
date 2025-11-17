@@ -2,13 +2,14 @@
 
 //flutter dependencies
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 //firebase dependencies
 
 // pages
 import 'ledger.dart';
 import 'inventory.dart';
-import 'inventory_add_page.dart';
+// import 'inventory_add_page.dart';
 
 //models
 import 'models/transaction_model.dart';
@@ -533,8 +534,8 @@ class _HomePageState extends State<HomePage> {
           ),
           Text(
             label,
-            style: TextStyle(
-              fontFamily: 'Inter',
+            style: GoogleFonts.inter(
+              // fontFamily: 'Inter',
               fontSize: 12,
               color: isActive
                   ? const Color(0xFF1565C0)
@@ -575,8 +576,8 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(width: 12),
               Text(
                 transaction.amount,
-                style: const TextStyle(
-                  fontFamily: 'Inter',
+                style: GoogleFonts.inter(
+                  // fontFamily: 'Inter',
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                 ),
@@ -586,7 +587,7 @@ class _HomePageState extends State<HomePage> {
           Text(
             transaction.date,
             style: const TextStyle(
-              fontFamily: 'Inter',
+              // fontFamily: 'Inter',
               fontSize: 12,
               color: Color(0xFF757575),
             ),

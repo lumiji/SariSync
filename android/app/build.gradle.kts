@@ -8,6 +8,10 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+dependencies {
+    implementation("com.facebook.android:facebook-android-sdk:latest.release")
+}
+
 android {
     namespace = "com.example.sarisync"
     compileSdk = flutter.compileSdkVersion
@@ -27,6 +31,7 @@ android {
         applicationId = "com.example.sarisync"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
+        //minSdk = flutter.minSdkVersion
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
