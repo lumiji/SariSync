@@ -6,6 +6,7 @@ import 'package:sarisync/widgets/bottom_nav_item.dart';
 
 // pages
 import 'inventory.dart';
+import 'ledger.dart';
 
 // models, services, and widgets
 import 'package:sarisync/models/transaction_model.dart';
@@ -28,7 +29,7 @@ class _HomePageState extends State<HomePage> {
   final List<Widget> _pages = [
     HomeContent(), 
     InventoryPage(),
-    // LedgerPage(),
+    LedgerPage(),
     // HistoryPage(),
   ];
 

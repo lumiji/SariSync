@@ -6,14 +6,15 @@ import 'package:google_fonts/google_fonts.dart';
 
 //firebase dependencies
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:sarisync/widgets/inv-category_card.dart';
-import 'package:sarisync/widgets/inv-item_card.dart';
 
 //pages
 import 'inventory_add_page.dart';
 
-//models
+//models, services, and widgets
 import '../models/inventory_item.dart';
+import 'package:sarisync/widgets/inv-category_card.dart';
+import 'package:sarisync/widgets/inv-item_card.dart';
+
 
 class InventoryPage extends StatefulWidget {
   const InventoryPage({Key? key}) : super(key: key);

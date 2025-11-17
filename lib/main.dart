@@ -15,6 +15,7 @@ import 'package:firebase_storage/firebase_storage.dart'; // Firebase Storage
 import 'views/pin_screen.dart';
 import 'views/home.dart';
 import 'views/inventory.dart';
+import 'views/ledger.dart';
 
 //models
 //import 'models/inventory_item.dart';
@@ -64,8 +65,7 @@ class MyApp extends StatelessWidget {
       routes: {
         '/home': (context) => HomePage(),
         '/inventory': (context) => InventoryPage(),
-        // Add these when you create the pages
-        // '/ledger': (context) => LedgerPage(),
+        '/ledger': (context) => LedgerPage(),
         // '/history': (context) => HistoryPage(),
       },
     );
