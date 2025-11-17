@@ -4,7 +4,7 @@ import 'package:sarisync/inventory.dart';
 import 'models/transaction_model.dart'; // if you’ll use it later
 
 import 'main.dart';
-import 'home.dart';
+import 'views/home.dart';
 
 class LedgerPage extends StatelessWidget {
   LedgerPage({Key? key}) : super(key: key);

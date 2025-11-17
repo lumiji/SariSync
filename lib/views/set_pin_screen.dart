@@ -1,7 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:sarisync/home.dart';
+import 'package:sarisync/views/home.dart';
 import 'package:sarisync/services/local_storage_service.dart';
 import 'pin_screen.dart';
 

@@ -12,32 +12,6 @@ import 'package:sarisync/services/auth_flow_service.dart';
 class SignInOptionsScreen extends StatelessWidget {
   const SignInOptionsScreen({super.key});
 
-  // Future<void> handlePostLogin(BuildContext context) async {
-  //   // Mark user as logged in
-  //   await LocalStorageService.saveLoggedIn();
-
-  //   // Check if PIN exists
-  //   String? pin = await LocalStorageService.getPin();
-
-  //   if (pin == null || pin.isEmpty) {
-  //     // NO PIN → go to Set PIN screen
-  //     Navigator.pushReplacement(
-  //       context,
-  //       MaterialPageRoute(builder: (_) => SetPinScreen()),
-  //     );
-  //   } else {
-  //     // HAS PIN → go to Enter PIN screen
-  //     Navigator.pushReplacement(
-  //       context,
-  //       MaterialPageRoute(builder: (_) => PinScreen()),
-  //     );
-  //   }
-
-  //   // Mark user as logged in (optional)
-  //   await LocalStorageService.saveLoggedIn();
-
-  // }
-
   @override
   Widget build(BuildContext context) {
     final authService = AuthService();
@@ -47,18 +21,18 @@ class SignInOptionsScreen extends StatelessWidget {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // 1️⃣ MAIN BACKGROUND IMAGE
+          //MAIN BACKGROUND IMAGE
           Image.asset('assets/images/background.png', fit: BoxFit.cover),
 
           //Logo
           Positioned(
-            top: 120, // adjust if you want it higher/lower
-            left: 60, //112
+            top: 120, 
+            left: 60,
             right: 0,
             child: Row(
               children: [
-                Image.asset('assets/images/logo.png', width: 80, height: 80),
-                const SizedBox(width: 10),
+                Image.asset('assets/images/logo.png', width: 100, height: 100),
+                const SizedBox(width: 0),
                 Text(
                   "SariSync",
                   style: GoogleFonts.inter(
@@ -73,20 +47,21 @@ class SignInOptionsScreen extends StatelessWidget {
 
           //WHITE BACKGROUND PNG LAYER (BOTTOM SECTION)
           Positioned(
-            top: 210, // where white bg starts
+            top: MediaQuery.of(context).size.height * 0.3, // 30% from top
             left: 0,
             right: 0,
+            bottom: 0, // stretch to bottom
             child: Image.asset(
               'assets/images/White_bg.png',
               width: MediaQuery.of(context).size.width,
-              height: 655, // you can adjust this!
-              fit: BoxFit.fill,
+              fit: BoxFit.fill, // fill the space
             ),
           ),
 
+
           //CONTENT (WELCOME + BUTTONS)
           Positioned(
-            top: 380, // move this to adjust content position
+            top:  MediaQuery.of(context).size.height * 0.50, 
             left: 0,
             right: 0,
             child: Column(
@@ -105,7 +80,7 @@ class SignInOptionsScreen extends StatelessWidget {
 
                 // BUTTONS
                 FractionallySizedBox(
-                  widthFactor: 0.8, // buttons occupy 90% of screen width
+                  widthFactor: 0.8,
                   child: Column(
                     children: [
                       // Google Sign-in
