@@ -6,6 +6,8 @@ import 'package:google_fonts/google_fonts.dart';
 
 //firebase dependencies
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:sarisync/widgets/inv-category_card.dart';
+import 'package:sarisync/widgets/inv-item_card.dart';
 
 //pages
 import 'inventory_add_page.dart';
@@ -128,14 +130,27 @@ Widget build(BuildContext context) {
                               itemCount: _categories.length,
                               itemBuilder: (context, index) {
                                 final category = _categories[index];
+                                
+                                final String label = category['name']!;
+                                final String imagePath = category['imagePath']!;
+
                                 return Padding(
                                   padding: const EdgeInsets.only(right: 12),
-                                  child: _buildCategoryCard(
-                                      category['name']!, category['imagePath']!),
+                                  child: InvCategoryCard(
+                                    label: label,
+                                    imagePath: imagePath,
+                                    isSelected: _selectedCategory == label,
+                                    onTap: () {
+                                      setState(() {
+                                        _selectedCategory = label;
+                                      });
+                                    },
+                                  ),
                                 );
                               },
                             ),
                           ),
+
                           const SizedBox(height: 24),
 
                           // Items header
@@ -167,7 +182,9 @@ Widget build(BuildContext context) {
                           final item = filteredItems[index];
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 12),
-                            child: _buildItemCard(item),
+                            child: InvItemCard(
+                              item: item,
+                            ),
                           );
                         },
                         childCount: _selectedCategory == 'All'
@@ -182,170 +199,25 @@ Widget build(BuildContext context) {
           ),
         ),
 
-        // '+' Add Item Floating Button
-        Positioned(
-          bottom: 20,
-          right: 20,
-          child: FloatingActionButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const InventoryAddPage(),
-                ),
-              );
-            },
-            backgroundColor: const Color(0xFF1565C0),
-            child: const Icon(Icons.add, color: Colors.white, size: 28),
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-
-  Widget _buildCategoryCard(String label, String imagePath) {
-
-    final bool isSelected = _selectedCategory == label;
-
-    return Container(
-      width: 100,
-      height: 100,
-      decoration: BoxDecoration(
-        color: isSelected? const Color(0xFFB4D7FF) : const Color(0xFFFEFEFE),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05), 
-            blurRadius: 10, 
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          splashColor: Color(0xFFB4D7FF),
-          borderRadius: BorderRadius.circular(16),
-          onTap: () => setState(() {
-            _selectedCategory = label;
-          } ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              SizedBox(
-                width: 40,
-                height: 40,
-                child: Image.asset(imagePath, fit: BoxFit.contain),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                label, 
-                textAlign: TextAlign.center, 
-                overflow: TextOverflow.ellipsis, 
-                style: GoogleFonts.inter(
-                  fontSize: 10, 
-                  fontWeight: FontWeight.w500),
-                ),
-              ],
+          // '+' Add Item Floating Button
+          Positioned(
+            bottom: 20,
+            right: 20,
+            child: FloatingActionButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const InventoryAddPage(),
+                  ),
+                );
+              },
+              backgroundColor: const Color(0xFF1565C0),
+              child: const Icon(Icons.add, color: Colors.white, size: 28),
             ),
-          ),
-        ),
-      );
-    }
-
-  Widget _buildItemCard(InventoryItem item) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(
-          color: Colors.black.withOpacity(0.05),
-          blurRadius: 4, 
-          offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100, 
-              borderRadius: BorderRadius.circular(8),
-              ),
-            child: item.imageUrl != null
-                ? ClipRRect(
-                  borderRadius: BorderRadius.circular(8), 
-                  child: Image.network(
-                    item.imageUrl!, 
-                    fit: BoxFit.cover, 
-                    cacheWidth: 100, 
-                    cacheHeight: 100),
-                    )
-                : const Icon(Icons.inventory_2, color: Colors.grey),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(item.name, 
-                  style: GoogleFonts.inter(
-                    fontSize: 15, 
-                    fontWeight: FontWeight.w600),
-                  ),
-                const SizedBox(height: 2),
-                Text(item.add_info, 
-                  style: GoogleFonts.inter(
-                    fontSize: 13, 
-                    color: Colors.grey),
-                  ),
-                const SizedBox(height: 2),
-                Text(item.unit, 
-                  style: GoogleFonts.inter(
-                    fontSize: 12, 
-                    color: Colors.grey.shade500),
-                  ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Text('Qty: ${item.quantity}', 
-                      style: GoogleFonts.inter(
-                        fontSize: 12, 
-                        color: Colors.grey.shade700),
-                      ),
-                    const SizedBox(width: 16),
-                    Text('ED: ${item.expiration}', 
-                      style: GoogleFonts.inter(
-                        fontSize: 12, 
-                        color: Colors.grey.shade700),
-                      ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(item.price.toStringAsFixed(2), 
-                style: GoogleFonts.inter(
-                  fontSize: 20, 
-                  fontWeight: FontWeight.bold),
-              ),
-              Text('PHP', 
-                style: GoogleFonts.inter(
-                  fontSize: 12, 
-                  color: Colors.grey),
-              ),
-            ],
           ),
         ],
       ),
     );
   }
- }
+}
