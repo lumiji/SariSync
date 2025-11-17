@@ -8,13 +8,13 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 
 //firebase dependencies
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 //pages
 import 'sku_scanner.dart';
 
-//models & services
+//models, widgets & services
 import '../services/inventory_service.dart';
+import 'package:sarisync/widgets/inv_add-label.dart';
 
 
 class InventoryAddPage extends StatefulWidget {
@@ -111,7 +111,11 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
     'Other',
   ];
 
-  
+@override
+void initState() {
+  super.initState();
+  _unitDropdownValue = _units.first;
+}
 
   //for increasing and decreasing quantity
   void _incrementQuantity() {
@@ -295,7 +299,8 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
               const SizedBox(height: 24),
 
               // for category
-              _buildLabel('Category'),
+              InvAddLabel(
+                text: 'Category'),
               DropdownButtonFormField<String>(
                 value: _selectedCategory,
                 decoration: _inputDecoration(fillColor: const Color(0xFFF0F8FF)), // light grey background
@@ -313,7 +318,8 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
               const SizedBox(height: 16),
 
               // Name
-              _buildLabel('Name'),
+              InvAddLabel(
+                text: 'Name'),
               TextFormField(
                 controller: _nameController,
                 decoration:
@@ -324,7 +330,8 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
               const SizedBox(height: 16),
 
               // Price
-              _buildLabel('Price'),
+              InvAddLabel(
+                text: 'Price'),
               TextFormField(
                 controller: _priceController,
                 keyboardType:
@@ -336,85 +343,88 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
               const SizedBox(height: 16),
 
             // for quantity
-              _buildLabel('Quantity'),
-            TextFormField(
-              controller: _quantityController,
-              keyboardType: TextInputType.number,
-              onChanged: (v) => _quantity = int.tryParse(v) ?? _quantity,
-              validator: (v) =>
-                  v == null || v.isEmpty ? 'Please enter quantity' : null,
-              decoration: _inputDecoration(
-                hintText: '0',
-                suffixIcon: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    SizedBox(
-                      height: 24,
-                      child: IconButton(
-                        padding: EdgeInsets.zero,
-                        iconSize: 28,
-                        icon: const Icon(Icons.arrow_drop_up),
-                        onPressed: _incrementQuantity,
+              InvAddLabel(
+                text: 'Quantity'),
+              TextFormField(
+                controller: _quantityController,
+                keyboardType: TextInputType.number,
+                onChanged: (v) => _quantity = int.tryParse(v) ?? _quantity,
+                validator: (v) =>
+                    v == null || v.isEmpty ? 'Please enter quantity' : null,
+                decoration: _inputDecoration(
+                  hintText: '0',
+                  suffixIcon: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        height: 24,
+                        child: IconButton(
+                          padding: EdgeInsets.zero,
+                          iconSize: 28,
+                          icon: const Icon(Icons.arrow_drop_up),
+                          onPressed: _incrementQuantity,
+                        ),
                       ),
-                    ),
-                    SizedBox(
-                      height: 24,
-                      child: IconButton(
-                        padding: EdgeInsets.zero,
-                        iconSize: 28,
-                        icon: const Icon(Icons.arrow_drop_down),
-                        onPressed: _decrementQuantity,
+                      SizedBox(
+                        height: 24,
+                        child: IconButton(
+                          padding: EdgeInsets.zero,
+                          iconSize: 28,
+                          icon: const Icon(Icons.arrow_drop_down),
+                          onPressed: _decrementQuantity,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 24),
+              const SizedBox(height: 24),
 
-            // for unit of measure
-            Row(
-              children: [
-                // Numeric text field for quantity
-                Expanded(
-                  flex: 2,
-                  child: TextFormField(
-                    controller: _unitAmountController, // e.g., 24
-                    keyboardType: TextInputType.numberWithOptions(decimal: true),
-                    decoration: _inputDecoration(hintText: 'Enter quantity'),
-                    validator: (v) =>
-                        v == null || v.isEmpty ? 'Please enter quantity' : null,
+              InvAddLabel(
+                text: 'Unit of Measure'),
+              Row(
+                children: [
+                  // Numeric text field for quantity
+                  Expanded(
+                    flex: 2,
+                    child: TextFormField(
+                      controller: _unitAmountController, // e.g., 24
+                      keyboardType: TextInputType.numberWithOptions(decimal: true),
+                      decoration: _inputDecoration(hintText: 'Enter unit of measure (e.g., 60mL)'),
+                      validator: (v) =>
+                          v == null || v.isEmpty ? 'Please enter unit of measure' : null,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
+                  const SizedBox(width: 12),
 
-                // Dropdown for unit
-                Expanded(
-                  flex: 1,
-                  child: DropdownButtonFormField<String>(
-                    value: _unitDropdownValue,
-                    decoration: _inputDecoration(),
-                    items: _units.map((unit) {
-                      return DropdownMenuItem(
-                        value: unit,
-                        child: Text(unit),
-                      );
-                    }).toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        _unitDropdownValue = value!;
-                      });
-                    },
-                    validator: (v) => v == null || v.isEmpty ? 'Select a unit' : null,
+                  // Dropdown for unit
+                  Expanded(
+                    flex: 1,
+                    child: DropdownButtonFormField<String>(
+                      value: _unitDropdownValue,
+                      decoration: _inputDecoration(),
+                      items: _units.map((unit) {
+                        return DropdownMenuItem(
+                          value: unit,
+                          child: Text(unit),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _unitDropdownValue = value!;
+                        });
+                      },
+                      validator: (v) => v == null || v.isEmpty ? 'Select a unit' : null,
+                    ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
+                ],
+              ),
+              const SizedBox(height: 16),
 
 
               // Barcode Field + Scan Button
-              _buildLabel('Barcode'),
+              InvAddLabel(
+                text: 'Barcode'),
               Row(
                 children: [
                   Expanded(
@@ -448,7 +458,8 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
               const SizedBox(height: 16),
 
               // Expiration Date
-              _buildLabel('Expiration Date'),
+              InvAddLabel(
+                text: 'Expiration Date'),
               TextFormField(
                 controller: _expirationController,
                 readOnly: true,
@@ -462,7 +473,8 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
               const SizedBox(height: 16),
 
               // Additional Info
-              _buildLabel('Additional Info'),
+              InvAddLabel(
+                text: 'Additional Info'),
               TextFormField(
                 controller: _infoController,
                 maxLines: 3,
@@ -498,16 +510,6 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
     );
   }
 
-  // Reusable UI helpers
-  Widget _buildLabel(String text) => Text(
-        text,
-        style: const TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w500,
-          color: Color(0xFF424242),
-        ),
-      );
-
   InputDecoration _inputDecoration({String? hintText, Widget? suffixIcon, Color? fillColor}) {
     return InputDecoration(
       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
@@ -521,6 +523,7 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
       fillColor: fillColor ?? Color(0xFFF0F8FF), 
     );
   }
+
 // for quantity buttons
   Widget _buildQuantityButtons() => Container(
         height: 48,
