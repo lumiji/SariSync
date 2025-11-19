@@ -44,21 +44,6 @@ class _PinScreenState extends State<PinScreen> {
     }
   }
 
-  // void _onSubmit() {
-  //   setState(() {
-  //     if (_enteredPin.length == 4) {
-  //       _errorMessage = ''; // clear error
-  //       Navigator.pushReplacement(
-  //         context,
-  //         MaterialPageRoute(builder: (context) => HomePage()),
-  //       );
-  //     } else {
-  //       _errorMessage = 'Enter 4 digits';
-  //     }
-  //   });
-  // }
-
-
       void _onSubmit() async {
   if (_enteredPin.length != 4) {
     setState(() => _errorMessage = 'Enter 4 digits');
@@ -87,8 +72,6 @@ class _PinScreenState extends State<PinScreen> {
     });
   }
 }
-
-
 
 
   @override

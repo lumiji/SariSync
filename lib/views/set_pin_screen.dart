@@ -44,21 +44,6 @@ class _SetPinScreenState extends State<SetPinScreen> {
     }
   }
 
-  // void _onSubmit() {
-  //   setState(() {
-  //     if (_enteredPin.length == 4) {
-  //       _errorMessage = ''; // clear error
-  //       Navigator.pushReplacement(
-  //         context,
-  //         MaterialPageRoute(builder: (context) => HomePage()),
-  //       );
-  //     } else {
-  //       _errorMessage = 'Enter 4 digits';
-  //     }
-  //   });
-  // }
-
-
      void _onSubmit() async {
   if (_enteredPin.length == 4) {
     setState(() {
@@ -112,7 +97,7 @@ class _SetPinScreenState extends State<SetPinScreen> {
                 child: Padding(
                   padding: const EdgeInsets.only(
                     top: 10,
-                  ), // adjust between 60–100 as you like
+                  ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -251,8 +236,8 @@ class _SetPinScreenState extends State<SetPinScreen> {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: _pressedKey == key
-              ? Colors.white.withOpacity(0.1) // soft glow when pressed
-              : Colors.transparent, // normal state
+              ? Colors.white.withOpacity(0.1) 
+              : Colors.transparent,
           boxShadow: _pressedKey == key
               ? [
                   BoxShadow(

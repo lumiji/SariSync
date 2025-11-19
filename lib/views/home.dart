@@ -2,8 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:sarisync/widgets/bottom_nav_item.dart';
 
-
-
 // pages
 import 'inventory.dart';
 
@@ -58,6 +56,7 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
       ),
+      
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
 
       // Custom Navigation Bar
@@ -89,42 +88,42 @@ class _HomePageState extends State<HomePage> {
                       label:  'Home',
                       isActive:  _selectedIndex == 0
                     ),
-                  ),
+                ),
 
-                  // Inventory
-                  GestureDetector(
-                    onTap: () => _onItemTapped(1),
-                    child:
-                      BtmNavItem(
-                        icon: Icons.inventory_2_outlined,
-                        label:  'Inventory',
-                        isActive:  _selectedIndex == 1
-                      ),
+                // Inventory
+                GestureDetector(
+                  onTap: () => _onItemTapped(1),
+                  child:
+                    BtmNavItem(
+                      icon: Icons.inventory_2_outlined,
+                      label:  'Inventory',
+                      isActive:  _selectedIndex == 1
                     ),
+                ),
 
                 const SizedBox(width: 40),
 
-                  // Ledger
-                  GestureDetector(
-                    onTap: () => _onItemTapped(2),
-                    child: 
-                      BtmNavItem(
-                        icon: Icons.book_outlined,
-                        label:  'Ledger',
-                        isActive:  _selectedIndex == 2
-                      ),
+                // Ledger
+                GestureDetector(
+                  onTap: () => _onItemTapped(2),
+                  child: 
+                    BtmNavItem(
+                      icon: Icons.book_outlined,
+                      label:  'Ledger',
+                      isActive:  _selectedIndex == 2
                     ),
+                ),
 
-                  // History
-                  GestureDetector(
-                    onTap: () => _onItemTapped(3),
-                    child: 
-                      BtmNavItem(
-                        icon: Icons.history,
-                        label:  'History',
-                        isActive:  _selectedIndex == 3
-                      ),
-                  ),
+                // History
+                GestureDetector(
+                  onTap: () => _onItemTapped(3),
+                  child: 
+                    BtmNavItem(
+                      icon: Icons.history,
+                      label:  'History',
+                      isActive:  _selectedIndex == 3
+                    ),
+                ),
               ],
             ),
           ),

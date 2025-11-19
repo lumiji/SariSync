@@ -14,7 +14,7 @@ import 'package:firebase_storage/firebase_storage.dart'; // Firebase Storage
 //pages
 import 'views/set_pin_screen.dart';
 import 'views/pin_screen.dart';
-import 'views/home.dart';
+import 'views/home.dart';.
 import 'ledger.dart';
 import 'inventory.dart';
 import 'views/sign-in_options.dart';
@@ -116,7 +116,6 @@ class _InitialNavigatorState extends State<InitialNavigator> {
 
   @override
   Widget build(BuildContext context) {
-    // You can show a simple loading indicator while waiting
     return const Scaffold(
       body: Center(child: CircularProgressIndicator()),
     );

@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:sarisync/inventory.dart';
-import 'models/transaction_model.dart'; // if you’ll use it later
-
+import 'models/transaction_model.dart';
 import 'main.dart';
 import 'views/home.dart';
 
@@ -183,7 +182,7 @@ class LedgerPage extends StatelessWidget {
                                 ),
                               ),
 
-                              // Amount Section (same as InventoryPage price layout)
+                              // Amount Section
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
@@ -219,7 +218,7 @@ class LedgerPage extends StatelessWidget {
             right: 20,
             child: FloatingActionButton(
               onPressed: () {
-                // Example: Navigate to a new LedgerAddPage later
+                
               },
               backgroundColor: const Color(0xFF1565C0),
               child: const Icon(Icons.add, color: Colors.white, size: 28),
@@ -250,9 +249,9 @@ class LedgerPage extends StatelessWidget {
         decoration: BoxDecoration(
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.15), // shadow color
-              blurRadius: 8, // how soft the shadow is
-              offset: const Offset(0, -2), // negative Y = shadow above
+              color: Colors.black.withOpacity(0.15), 
+              blurRadius: 8,
+              offset: const Offset(0, -2), 
             ),
           ],
         ),
@@ -317,7 +316,6 @@ Widget _buildBottomNavItem(
       }
     },
 
-    // Add these lines to remove the translucent highlight and ripple
     splashColor: Colors.transparent,
     highlightColor: Colors.transparent,
     hoverColor: Colors.transparent,
@@ -328,8 +326,8 @@ Widget _buildBottomNavItem(
         Icon(
           icon,
           color: isActive
-              ? const Color(0xFF1565C0) // active blue
-              : const Color(0XffB1B1B1), // inactive gray
+              ? const Color(0xFF1565C0) 
+              : const Color(0XffB1B1B1), 
         ),
         Text(
           label,
