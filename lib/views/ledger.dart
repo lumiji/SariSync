@@ -15,7 +15,7 @@ import '../models/ledger_item.dart';
 import '../widgets/led-item_card.dart';
 
 class LedgerPage extends StatefulWidget {
-  LedgerPage({Key? key}) : super(key: key);
+  const LedgerPage({Key? key}) : super(key: key);
 
   @override
   State<LedgerPage> createState() => _LedgerPageState();
@@ -24,19 +24,32 @@ class LedgerPage extends StatefulWidget {
 class _LedgerPageState extends State<LedgerPage> {
   int _selectedIndex = 2;
 
-Stream<List<LedgerItem>> getLedgerItems() {
-  return FirebaseFirestore.instance
-      .collection('ledger') 
-      .orderBy('createdAt', descending: true)
-      .snapshots()         
-      .map((snapshot) => snapshot.docs
-          .map((doc) => LedgerItem.fromMap(doc.data(), doc.id))
-          .toList());
-}
-  
+  Stream<List<LedgerItem>> getLedgerItems() {
+    return FirebaseFirestore.instance
+        .collection('ledger')
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => LedgerItem.fromMap(doc.data(), doc.id))
+            .toList());
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // Add FloatingActionButton here instead of manually positioning
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const LedgerAddPage(),
+            ),
+          );
+        },
+        backgroundColor: const Color(0xFF1565C0),
+        child: const Icon(Icons.add, color: Colors.white, size: 28),
+      ),
       body: Stack(
         children: [
           /// Background gradient
@@ -72,10 +85,10 @@ Stream<List<LedgerItem>> getLedgerItems() {
                             decoration: InputDecoration(
                               hintText: 'Search',
                               border: InputBorder.none,
-                              hintStyle: TextStyle(
+                              hintStyle: const TextStyle(
                                 fontFamily: 'Inter',
                                 fontSize: 14,
-                                color: const Color(0xFF757575),
+                                color: Color(0xFF757575),
                               ),
                             ),
                           ),
@@ -102,56 +115,42 @@ Stream<List<LedgerItem>> getLedgerItems() {
                   ),
                   const SizedBox(height: 12),
 
-                  // Customers List
-                 Expanded(
-                  child: StreamBuilder<List<LedgerItem>>(
-                    stream: getLedgerItems(),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
+                  /// Customers List
+                  Expanded(
+                    child: StreamBuilder<List<LedgerItem>>(
+                      stream: getLedgerItems(),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return const Center(child: CircularProgressIndicator());
+                        }
 
-                      if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                        return Center(
-                          child: Text(
-                            "No customers found",
-                            style: GoogleFonts.inter(fontSize: 14, color: Colors.grey),
-                          ),
-                        );
-                      }
-
-                      final customers = snapshot.data!;
-
-                      return ListView.builder(
-                        padding: const EdgeInsets.only(top: 12),
-                        itemCount: customers.length,
-                        itemBuilder: (context, index) {
-                          final item = customers[index];
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: LedItemCard(item: item), // Your card handles everything
+                        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                          return Center(
+                            child: Text(
+                              "No customers found",
+                              style: GoogleFonts.inter(fontSize: 14, color: Colors.grey),
+                            ),
                           );
-                        },
-                      );
-                    },
-                  ),
-                ),
+                        }
 
-                // '+' Add Item Floating Button
-          Positioned(
-            bottom: 20,
-            right: 20,
-            child: FloatingActionButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const LedgerAddPage(),
+                        final customers = snapshot.data!;
+
+                        return ListView.builder(
+                          padding: const EdgeInsets.only(top: 12),
+                          itemCount: customers.length,
+                          itemBuilder: (context, index) {
+                            final item = customers[index];
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: LedItemCard(item: item),
+                            );
+                          },
+                        );
+                      },
+                    ),
                   ),
-                );
-              },
-              backgroundColor: const Color(0xFF1565C0),
-              child: const Icon(Icons.add, color: Colors.white, size: 28),
+                ],
+              ),
             ),
           ),
         ],
