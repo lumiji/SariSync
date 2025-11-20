@@ -12,7 +12,6 @@ import 'dart:io';
 //pages
 import 'views/sku_scanner.dart';
 
-
 class InventoryAddPage extends StatefulWidget {
   const InventoryAddPage({Key? key}) : super(key: key);
 
@@ -29,7 +28,8 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
   final _quantityController = TextEditingController(text: '0');
   final _expirationController = TextEditingController();
   final _infoController = TextEditingController();
-  final _barcodeController = TextEditingController(); // text field for displaying barcode
+  final _barcodeController =
+      TextEditingController(); // text field for displaying barcode
 
   // State
   File? _selectedImage;
@@ -62,8 +62,9 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
                 title: const Text('Take a Photo'),
                 onTap: () async {
                   Navigator.of(context).pop();
-                  final pickedImage =
-                      await ImagePicker().pickImage(source: ImageSource.camera);
+                  final pickedImage = await ImagePicker().pickImage(
+                    source: ImageSource.camera,
+                  );
                   if (pickedImage != null) {
                     setState(() {
                       _selectedImage = File(pickedImage.path);
@@ -76,8 +77,9 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
                 title: const Text('Choose from Gallery'),
                 onTap: () async {
                   Navigator.of(context).pop();
-                  final pickedImage =
-                      await ImagePicker().pickImage(source: ImageSource.gallery);
+                  final pickedImage = await ImagePicker().pickImage(
+                    source: ImageSource.gallery,
+                  );
                   if (pickedImage != null) {
                     setState(() {
                       _selectedImage = File(pickedImage.path);
@@ -129,14 +131,14 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
   // for saving item
   void _saveItem() {
     if (_formKey.currentState!.validate()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Item saved successfully!')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Item saved successfully!')));
       Navigator.pop(context);
     }
   }
 
-// for cleaning up controllers 
+  // for cleaning up controllers
   @override
   void dispose() {
     _nameController.dispose();
@@ -168,7 +170,7 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
     );
   }
 
-// UI for the form
+  // UI for the form
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -217,8 +219,11 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
                                   fit: BoxFit.cover,
                                 ),
                               )
-                            : const Icon(Icons.image_outlined,
-                                size: 60, color: Color(0xFFFEFEFE)),
+                            : const Icon(
+                                Icons.image_outlined,
+                                size: 60,
+                                color: Color(0xFFFEFEFE),
+                              ),
                       ),
                       Positioned(
                         bottom: 4,
@@ -229,8 +234,11 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
                             color: Color(0xFFFEFEFE),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.camera_alt,
-                              size: 24, color: Color(0xFF1565C0)),
+                          child: const Icon(
+                            Icons.camera_alt,
+                            size: 24,
+                            color: Color(0xFF1565C0),
+                          ),
                         ),
                       ),
                     ],
@@ -243,7 +251,9 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
               _buildLabel('Category'),
               DropdownButtonFormField<String>(
                 value: _selectedCategory,
-                decoration: _inputDecoration(fillColor: const Color(0xFFF0F8FF)), // light grey background
+                decoration: _inputDecoration(
+                  fillColor: const Color(0xFFF0F8FF),
+                ), // light grey background
                 hint: const Text(
                   'Select category',
                   style: TextStyle(color: Color(0xFF9E9E9E)),
@@ -261,8 +271,7 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
               _buildLabel('Name'),
               TextFormField(
                 controller: _nameController,
-                decoration:
-                    _inputDecoration(hintText: 'Enter item name'),
+                decoration: _inputDecoration(hintText: 'Enter item name'),
                 validator: (v) =>
                     v == null || v.isEmpty ? 'Please enter item name' : null,
               ),
@@ -272,8 +281,9 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
               _buildLabel('Price'),
               TextFormField(
                 controller: _priceController,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 decoration: _inputDecoration(hintText: '0.00'),
                 validator: (v) =>
                     v == null || v.isEmpty ? 'Please enter price' : null,
@@ -281,39 +291,39 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
               const SizedBox(height: 16),
 
               _buildLabel('Quantity'),
-            TextFormField(
-              controller: _quantityController,
-              keyboardType: TextInputType.number,
-              onChanged: (v) => _quantity = int.tryParse(v) ?? _quantity,
-              validator: (v) =>
-                  v == null || v.isEmpty ? 'Please enter quantity' : null,
-              decoration: _inputDecoration(
-                hintText: '0',
-                suffixIcon: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    SizedBox(
-                      height: 24,
-                      child: IconButton(
-                        padding: EdgeInsets.zero,
-                        iconSize: 28,
-                        icon: const Icon(Icons.arrow_drop_up),
-                        onPressed: _incrementQuantity,
+              TextFormField(
+                controller: _quantityController,
+                keyboardType: TextInputType.number,
+                onChanged: (v) => _quantity = int.tryParse(v) ?? _quantity,
+                validator: (v) =>
+                    v == null || v.isEmpty ? 'Please enter quantity' : null,
+                decoration: _inputDecoration(
+                  hintText: '0',
+                  suffixIcon: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        height: 24,
+                        child: IconButton(
+                          padding: EdgeInsets.zero,
+                          iconSize: 28,
+                          icon: const Icon(Icons.arrow_drop_up),
+                          onPressed: _incrementQuantity,
+                        ),
                       ),
-                    ),
-                    SizedBox(
-                      height: 24,
-                      child: IconButton(
-                        padding: EdgeInsets.zero,
-                        iconSize: 28,
-                        icon: const Icon(Icons.arrow_drop_down),
-                        onPressed: _decrementQuantity,
+                      SizedBox(
+                        height: 24,
+                        child: IconButton(
+                          padding: EdgeInsets.zero,
+                          iconSize: 28,
+                          icon: const Icon(Icons.arrow_drop_down),
+                          onPressed: _decrementQuantity,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
 
               // Barcode Field + Scan Button
               _buildLabel('Barcode'),
@@ -323,7 +333,8 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
                     child: TextFormField(
                       controller: _barcodeController,
                       decoration: _inputDecoration(
-                          hintText: 'Enter or scan barcode'),
+                        hintText: 'Enter or scan barcode',
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -332,18 +343,21 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFFF9800),
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 14),
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(6)),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
                     ),
                     child: const Text(
                       'Scan',
-                        style: TextStyle(
-                            fontSize: 14, 
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFFFEFEFE),
-                            ),
-                          ),
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFFFEFEFE),
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -357,8 +371,11 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
                 onTap: _selectDate,
                 decoration: _inputDecoration(
                   hintText: 'Select expiration date',
-                  suffixIcon: const Icon(Icons.calendar_today,
-                      size: 18, color: Color(0xFF757575)),
+                  suffixIcon: const Icon(
+                    Icons.calendar_today,
+                    size: 18,
+                    color: Color(0xFF757575),
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
@@ -369,7 +386,8 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
                 controller: _infoController,
                 maxLines: 3,
                 decoration: _inputDecoration(
-                    hintText: 'Enter additional information'),
+                  hintText: 'Enter additional information',
+                ),
               ),
               const SizedBox(height: 24),
 
@@ -382,14 +400,16 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
                     backgroundColor: const Color(0xFF4CAF50),
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(6)),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
                   ),
                   child: const Text(
                     'Save',
                     style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white),
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),
@@ -402,46 +422,49 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
 
   // Reusable UI helpers
   Widget _buildLabel(String text) => Text(
-        text,
-        style: const TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w500,
-          color: Color(0xFF424242),
-        ),
-      );
+    text,
+    style: const TextStyle(
+      fontSize: 13,
+      fontWeight: FontWeight.w500,
+      color: Color(0xFF424242),
+    ),
+  );
 
-  InputDecoration _inputDecoration({String? hintText, Widget? suffixIcon, Color? fillColor}) {
+  InputDecoration _inputDecoration({
+    String? hintText,
+    Widget? suffixIcon,
+    Color? fillColor,
+  }) {
     return InputDecoration(
       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(6),
-      ),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
       hintText: hintText,
       suffixIcon: suffixIcon,
       hintStyle: const TextStyle(color: Color(0xFF9E9E9E)),
-      filled: true,           
-      fillColor: fillColor ?? Color(0xFFF0F8FF), 
+      filled: true,
+      fillColor: fillColor ?? Color(0xFFF0F8FF),
     );
   }
-// for quantity buttons
+
+  // for quantity buttons
   Widget _buildQuantityButtons() => Container(
-        height: 48,
-        decoration: BoxDecoration(
-          border: Border.all(color: const Color(0xFFE0E0E0)),
-          borderRadius: BorderRadius.circular(6),
+    height: 48,
+    decoration: BoxDecoration(
+      border: Border.all(color: const Color(0xFFE0E0E0)),
+      borderRadius: BorderRadius.circular(6),
+    ),
+    child: Row(
+      children: [
+        IconButton(
+          onPressed: _decrementQuantity,
+          icon: const Icon(Icons.remove, size: 18),
         ),
-        child: Row(
-          children: [
-            IconButton(
-                onPressed: _decrementQuantity,
-                icon: const Icon(Icons.remove, size: 18)),
-            const VerticalDivider(width: 1),
-            IconButton(
-                onPressed: _incrementQuantity,
-                icon: const Icon(Icons.add, size: 18)),
-          ],
+        const VerticalDivider(width: 1),
+        IconButton(
+          onPressed: _incrementQuantity,
+          icon: const Icon(Icons.add, size: 18),
         ),
-      );
+      ],
+    ),
+  );
 }
-
-
