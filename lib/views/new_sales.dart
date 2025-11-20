@@ -1,0 +1,238 @@
+import 'dart:async';
+import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:sarisync/models/inventory_item.dart';
+import 'package:sarisync/widgets/pos-item_card.dart';
+
+class PoSSystem extends StatefulWidget {
+  final Function(String barcode)? onDetect;
+  final Stream<List<InventoryItem>> inventoryStream;
+
+  const PoSSystem({
+    Key? key,
+    this.onDetect,
+    required this.inventoryStream,
+  }) : super(key: key);
+
+  @override
+  State<PoSSystem> createState() => _PoSSystem();
+}
+
+class _PoSSystem extends State<PoSSystem> {
+  List<InventoryItem> scannedItemsList = [];
+  List<InventoryItem> allInventoryItems = [];
+
+  final _MobileScannerController = MobileScannerController(
+    cameraResolution: const Size(1280, 720),
+    detectionSpeed: DetectionSpeed.normal,
+    formats: [BarcodeFormat.all],
+    torchEnabled: true,
+    autoZoom: true,
+    autoStart: true,
+  );
+
+  final AudioPlayer _audioPlayer = AudioPlayer();
+  bool _isProcessing = false;
+  bool _isTorchOn = true;
+  int _scannedItems = 0;
+
+  void _handleBarcode(BarcodeCapture capture) {
+    if (_isProcessing) return;
+    _isProcessing = true;
+
+    for (final barcode in capture.barcodes) {
+      final value = barcode.rawValue ?? '';
+
+      if (value.isNotEmpty) {
+        final match = allInventoryItems.firstWhere(
+          (item) => item.barcode == value,
+          orElse: () => null as InventoryItem,
+        );
+
+        if (match != null) {
+          setState(() {
+            _scannedItems++;
+            scannedItemsList.add(match);
+          });
+
+          widget.onDetect?.call(value);
+          _audioPlayer.play(AssetSource('audio/scanner_beep.mp3'));
+        }
+      }
+    }
+
+    Future.delayed(const Duration(milliseconds: 500), () {
+      _isProcessing = false;
+    });
+  }
+
+  void _toggleTorch() {
+    _MobileScannerController.toggleTorch();
+    setState(() {
+      _isTorchOn = !_isTorchOn;
+    });
+  }
+
+@override
+Widget build(BuildContext context) {
+  return Scaffold(
+    backgroundColor: const Color(0xFFFEFEFE),
+    appBar: AppBar(
+      backgroundColor: const Color(0xFFFEFEFE),
+      elevation: 0,
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back, color: Colors.black),
+        onPressed: () => Navigator.pop(context),
+      ),
+      title: const Text(
+        'Scan',
+        style: TextStyle(
+          color: Colors.black,
+          fontSize: 16,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    ),
+    body: StreamBuilder<List<InventoryItem>>(
+      stream: widget.inventoryStream,
+      builder: (context, snapshot) {
+        if (snapshot.hasData) {
+          allInventoryItems = snapshot.data!;
+        }
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Column(
+            children: [
+              const SizedBox(height: 36),
+              Center(
+                child: Container(
+                  width: 300,
+                  height: 300,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.blueAccent, width: 2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: MobileScanner(
+                    controller: _MobileScannerController,
+                    fit: BoxFit.cover,
+                    onDetect: _handleBarcode,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  IconButton(
+                    icon: Icon(_isTorchOn ? Icons.flash_on : Icons.flash_off),
+                    onPressed: _toggleTorch,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    "Total Scanned Items: $_scannedItems",
+                    style: GoogleFonts.inter(
+                      color: Colors.black,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () {},
+                    child: const Text(
+                      'Manual Add',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 16,
+                        color: Color(0xFF757575),
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                child: scannedItemsList.isEmpty
+                    ? Center(
+                        child: Text(
+                          "No scanned items",
+                          style: GoogleFonts.inter(fontSize: 14, color: Colors.grey),
+                        ),
+                      )
+                    : ListView.separated(
+                        padding: const EdgeInsets.only(top: 12),
+                        itemCount: scannedItemsList.length,
+                        itemBuilder: (context, index) {
+                          final item = scannedItemsList[index];
+
+                          return PosItemCard(
+                            item: item,
+                            onDelete: () {
+                              try {
+                                setState(() {
+                                  scannedItemsList.removeAt(index);
+                                  _scannedItems--;
+                                });
+                              } catch (e) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Error deleting item: $e')),
+                                );
+                              }
+                            },
+                          );
+                        },
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(height: 12),
+                      ),
+                ),
+              ], 
+            ),
+          ); 
+        },
+      ),
+              
+
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          // Navigate to receipt page or next screen
+          // Navigator.push(
+          //   context,
+          //   MaterialPageRoute(
+          //     builder: (context) => ReceiptPage(
+          //       scannedItems: scannedItemsList,
+          //     ),
+          //   ),
+          // );
+        },
+        backgroundColor: const Color(0xFFFF9800),
+        label: Text(
+          'Proceed to Receipt',
+          style: GoogleFonts.inter(
+            fontSize: 16,
+            color: const Color(0xFFFCFCFC),
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        icon: const Icon(
+          Icons.receipt,
+          color:  Color(0xFFFCFCFC)),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+    );
+  }
+
+
+  @override
+  void dispose() {
+    _MobileScannerController.dispose();
+    super.dispose();
+  }
+}

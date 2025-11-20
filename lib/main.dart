@@ -8,8 +8,6 @@ import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; // Firestore
-import 'package:firebase_auth/firebase_auth.dart'; // Firebase Authentication
-import 'package:firebase_storage/firebase_storage.dart'; // Firebase Storage
 
 //pages
 import 'views/set_pin_screen.dart';

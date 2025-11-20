@@ -1,10 +1,14 @@
 // flutter dependencies
 import 'package:flutter/material.dart';
+import 'package:sarisync/views/new_sales.dart';
 import 'package:sarisync/widgets/bottom_nav_item.dart';
 
+//firebase dependencies
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 // pages
-import 'inventory.dart';
-import 'ledger.dart';
+import 'package:sarisync/views/inventory.dart';
+import 'package:sarisync/views/ledger.dart';
 
 // models, services, and widgets
 import 'package:sarisync/models/transaction_model.dart';
@@ -12,6 +16,7 @@ import 'package:sarisync/widgets/home-info_card.dart';
 import 'package:sarisync/widgets/home-pdf_btn.dart';
 import 'package:sarisync/widgets/home-category_card.dart';
 import 'package:sarisync/widgets/home-transaction_item.dart';
+import 'package:sarisync/models/inventory_item.dart';
 
 
 class HomePage extends StatefulWidget {
@@ -37,6 +42,16 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  Stream<List<InventoryItem>> getInventoryItems() {
+  return FirebaseFirestore.instance
+      .collection('inventory') 
+      .orderBy('createdAt', descending: true)
+      .snapshots()         
+      .map((snapshot) => snapshot.docs
+          .map((doc) => InventoryItem.fromMap(doc.data(), doc.id))
+          .toList());
+}
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -47,7 +62,16 @@ class _HomePageState extends State<HomePage> {
         width: 60,
         height: 60,
         child: FloatingActionButton(
-          onPressed: () {},
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => PoSSystem(
+                  inventoryStream: getInventoryItems(),
+              ),
+            ),
+            );
+          },
           backgroundColor: const Color(0xFFFF9800),
           shape: const CircleBorder(),
           child: SizedBox(
