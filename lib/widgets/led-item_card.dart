@@ -35,8 +35,8 @@ class LedItemCard extends StatelessWidget {
         children: [
           /// IMAGE
           Container(
-            width: 60,
-            height: 60,
+            width: 80,
+            height: 80,
             decoration: BoxDecoration(
               color: Colors.grey.shade200,
               borderRadius: BorderRadius.circular(8),
@@ -46,7 +46,9 @@ class LedItemCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(8),
               child: Image.network(
                 item.imageUrl!,
-                fit: BoxFit.cover,
+                fit: BoxFit.fill,
+                cacheWidth: 100,
+                cacheHeight: 100,
               ),
             )
                 : const Icon(Icons.person, size: 30, color: Colors.grey),
@@ -68,7 +70,7 @@ class LedItemCard extends StatelessWidget {
                   ),
                 ),
 
-                const SizedBox(height: 3),
+                const SizedBox(height: 2),
 
                 // Date of utang
                 Text(
@@ -79,18 +81,18 @@ class LedItemCard extends StatelessWidget {
                   ),
                 ),
 
-                const SizedBox(height: 3),
+                const SizedBox(height: 2),
 
                 // Customer ID
                 Text(
-                  "Customer ID: ${item.customerID}",
+                  item.customerID,
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     color: Colors.grey.shade500,
                   ),
                 ),
 
-                const SizedBox(height: 3),
+                const SizedBox(height: 2),
 
                 // Received by
                 Text(

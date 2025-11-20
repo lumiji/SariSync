@@ -5,9 +5,9 @@ class LedgerItem {
   final String name;
   final String customerID;
   final String contact;
-  final String pay_status;
+  final String payStatus;
   final double credit;
-  final double partial_pay;
+  final double? partialPay;
   final String received;
   final String? imageUrl; //  for uploaded images
   final DateTime createdAt;
@@ -17,23 +17,23 @@ class LedgerItem {
     required this.name,
     required this.customerID,
     required this.contact,
-    required this.pay_status,
+    required this.payStatus,
     required this.credit,
-    required this.partial_pay,
+    this.partialPay,
     required this.received,
     this.imageUrl,
     required this.createdAt,
   });
 
-  /// Convert InventoryItem → Firestore Map
+  // Convert InventoryItem → Firestore Map
   Map<String, dynamic> toMap() {
     return {
       'name': name,
       'customerID': customerID,
       'contact': contact,
-      'pay_status': pay_status,
+      'payStatus': payStatus,
       'credit': credit,
-      'partial_pay':  partial_pay,
+      'partialPay':  partialPay,
       'received': received,
       'imageUrl': imageUrl,
       'createdAt': createdAt,
@@ -47,9 +47,9 @@ class LedgerItem {
       name: data['name'] ?? '',
       customerID: (data['customerID'] ?? ''),
       contact: (data['contact'] ?? ''),
-      pay_status: (data['pay_status'] ?? ''),
+      payStatus: (data['payStatus'] ?? ''),
       credit: (data['credit'] ?? 0).toDouble(),
-      partial_pay: (data['partial_pay'] ?? 0).toDouble(),
+      partialPay: (data['partialPay'] ?? 0).toDouble(),
       received: data['received'] ?? '',
       imageUrl: data['imageUrl'],
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),

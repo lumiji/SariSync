@@ -2,7 +2,6 @@
 
 // flutter dependencies
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
@@ -179,7 +178,7 @@ void initState() {
       expirationDate: _expirationController.text,
       imageUrl: imageUrl,
     );
-    print('✅ Firestore addItem() completed');
+    print('Firestore addItem() completed');
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -188,7 +187,7 @@ void initState() {
       Navigator.pop(context);
     }
   } catch (e) {
-    print('🔥 Error saving item: $e');
+    print('Error saving item: $e');
   }
 }
 
