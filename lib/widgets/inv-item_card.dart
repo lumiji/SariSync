@@ -3,6 +3,11 @@ import 'package:sarisync/models/inventory_item.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:sarisync/views/inventory_add_page.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+
+
+import 'inv-status_badge.dart';
+
 
 class InvItemCard extends StatelessWidget {
   final InventoryItem item;
@@ -55,8 +60,8 @@ class InvItemCard extends StatelessWidget {
                       ),
                       child: const Icon(
                         Icons.edit,
-                        color: Colors.blue,
-                        size: 24,
+                        color: Color.fromARGB(255, 9, 115, 201),
+                        size: 25,
                       ),
                     ),
                   ),
@@ -71,9 +76,9 @@ class InvItemCard extends StatelessWidget {
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
-                        Icons.delete,
+                        Icons.delete_forever,
                         color: Colors.red,
-                        size: 24,
+                        size: 25,
                       ),
                     ),
                   ),
@@ -119,15 +124,34 @@ class InvItemCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: item.imageUrl != null
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.network(
-                          item.imageUrl!,
-                          fit: BoxFit.cover,
-                          cacheWidth: 100,
-                          cacheHeight: 100,
+                    // ? ClipRRect(
+                    //     borderRadius: BorderRadius.circular(8),
+                    //     child: Image.network(
+                    //       item.imageUrl!,
+                    //       fit: BoxFit.cover,
+                    //       cacheWidth: 300,
+                    //       cacheHeight: 300,
+                    //     ),
+                    //   )
+                  ? ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: CachedNetworkImage(
+                      imageUrl: item.imageUrl!,
+                      fit: BoxFit.cover,
+                      memCacheWidth: 300,
+                      memCacheHeight: 300,
+                      placeholder: (context, url) => Center(
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
                         ),
-                      )
+                      ),
+                      errorWidget: (context, url, error) => const Icon(Icons.broken_image, color: Colors.grey),
+                    ),
+                  )
+
+
                     : const Icon(Icons.inventory_2, color: Colors.grey),
               ),
               const SizedBox(width: 12),
@@ -181,9 +205,18 @@ class InvItemCard extends StatelessWidget {
                   ],
                 ),
               ),
+
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
+                  //ADD BADGE HERE
+                  StatusBadge(
+                    quantity: item.quantity,
+                    expiration: item.expiration, // Format: MM/DD/YYYY 
+                  ),
+                  const SizedBox(height: 4),
+
+                  //Price
                   Text(
                     item.price.toStringAsFixed(2),
                     style: GoogleFonts.inter(
@@ -191,12 +224,18 @@ class InvItemCard extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
+
+                  //PHP label
                   Text(
                     'PHP',
-                    style: GoogleFonts.inter(fontSize: 12, color: Colors.grey),
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: Colors.grey,
+                    ),
                   ),
                 ],
               ),
+
             ],
           ),
         ),
