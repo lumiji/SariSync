@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:sarisync/inventory.dart';
@@ -26,10 +27,63 @@ class LedgerPage extends StatelessWidget {
       "image": "assets/images/Jimmy.png",
     },
   ];
+=======
+//This is the main ledger page
+
+// flutter dependencies
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+
+//firebase dependencies
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+//pages
+import 'ledger_add_page.dart';
+
+//models
+import '../models/ledger_item.dart';
+import '../widgets/led-item_card.dart';
+
+class LedgerPage extends StatefulWidget {
+  const LedgerPage({Key? key}) : super(key: key);
+
+  @override
+  State<LedgerPage> createState() => _LedgerPageState();
+}
+
+class _LedgerPageState extends State<LedgerPage> {
+  int _selectedIndex = 2;
+
+  Stream<List<LedgerItem>> getLedgerItems() {
+    return FirebaseFirestore.instance
+        .collection('ledger')
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => LedgerItem.fromMap(doc.data(), doc.id))
+            .toList());
+  }
+>>>>>>> feature/ledger-progress
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+<<<<<<< HEAD
+=======
+      // Add FloatingActionButton here instead of manually positioning
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const LedgerAddPage(),
+            ),
+          );
+        },
+        backgroundColor: const Color(0xFF1565C0),
+        child: const Icon(Icons.add, color: Colors.white, size: 28),
+      ),
+>>>>>>> feature/ledger-progress
       body: Stack(
         children: [
           /// Background gradient
@@ -65,10 +119,17 @@ class LedgerPage extends StatelessWidget {
                             decoration: InputDecoration(
                               hintText: 'Search',
                               border: InputBorder.none,
+<<<<<<< HEAD
                               hintStyle: TextStyle(
                                 fontFamily: 'Inter',
                                 fontSize: 14,
                                 color: const Color(0xFF757575),
+=======
+                              hintStyle: const TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 14,
+                                color: Color(0xFF757575),
+>>>>>>> feature/ledger-progress
                               ),
                             ),
                           ),
@@ -95,6 +156,7 @@ class LedgerPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
 
+<<<<<<< HEAD
 
 
                   // Customers List
@@ -204,6 +266,38 @@ class LedgerPage extends StatelessWidget {
                               ),
                             ],
                           ),
+=======
+                  /// Customers List
+                  Expanded(
+                    child: StreamBuilder<List<LedgerItem>>(
+                      stream: getLedgerItems(),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return const Center(child: CircularProgressIndicator());
+                        }
+
+                        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                          return Center(
+                            child: Text(
+                              "No customers found",
+                              style: GoogleFonts.inter(fontSize: 14, color: Colors.grey),
+                            ),
+                          );
+                        }
+
+                        final customers = snapshot.data!;
+
+                        return ListView.builder(
+                          padding: const EdgeInsets.only(top: 12),
+                          itemCount: customers.length,
+                          itemBuilder: (context, index) {
+                            final item = customers[index];
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: LedItemCard(item: item),
+                            );
+                          },
+>>>>>>> feature/ledger-progress
                         );
                       },
                     ),
@@ -212,6 +306,7 @@ class LedgerPage extends StatelessWidget {
               ),
             ),
           ),
+<<<<<<< HEAD
 
           Positioned(
             bottom: 60,
@@ -340,3 +435,10 @@ Widget _buildBottomNavItem(
     ),
   );
 }
+=======
+        ],
+      ),
+    );
+  }
+}
+>>>>>>> feature/ledger-progress

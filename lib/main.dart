@@ -14,9 +14,9 @@ import 'package:firebase_storage/firebase_storage.dart'; // Firebase Storage
 //pages
 import 'views/set_pin_screen.dart';
 import 'views/pin_screen.dart';
-import 'views/home.dart';.
-import 'ledger.dart';
-import 'inventory.dart';
+import 'views/home.dart';
+import 'views/ledger.dart';
+import 'views/inventory.dart';
 import 'views/sign-in_options.dart';
 
 //models, widgets, & services
