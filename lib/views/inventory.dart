@@ -47,6 +47,92 @@ Stream<List<InventoryItem>> getInventoryItems() {
           .toList());
 }
 
+void _confirmDelete(BuildContext context, VoidCallback onConfirm) {
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (_) => Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Color(0xFFE8F3FF),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              "Delete Item?",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.green, 
+                  foregroundColor: Colors.white, 
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10), // border radius
+                ),),
+                  onPressed: onConfirm,
+                  child: const Text("Yes"),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red,  
+                  foregroundColor: Colors.white, 
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10),
+                  )
+                  ),
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("No"), 
+                ),
+              ],
+            )
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+void _successPopup(BuildContext context, String message) {
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (_) => Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Color(0xFFE8F3FF),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              message,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.green,
+              foregroundColor: Colors.white, 
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10),
+              )
+              ),
+              onPressed: () => Navigator.pop(context),
+              child: const Text("OK"),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
  @override
 Widget build(BuildContext context) {
   return Scaffold(
@@ -174,7 +260,6 @@ Widget build(BuildContext context) {
                     sliver: SliverList(
                       delegate: SliverChildBuilderDelegate(
                         (context, index) {
-
                           //Filter items based on selected category
                           final filteredItems = _selectedCategory == 'All' 
                             ? items
@@ -185,6 +270,31 @@ Widget build(BuildContext context) {
                             padding: const EdgeInsets.only(bottom: 12),
                             child: InvItemCard(
                               item: item,
+                              onEdit: () async {
+                                final result = await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => InventoryAddPage(item: item),
+                                  ),
+                                );
+
+                                if (result == "added") {
+                                  _successPopup(context, "Item successfully added.");
+                                } else if (result == "updated") {
+                                  _successPopup(context, "Item successfully updated.");
+                                }
+                              },
+                              onDelete: () {
+                                _confirmDelete(context, () async {
+                                  await FirebaseFirestore.instance
+                                      .collection('inventory')
+                                      .doc(item.id)
+                                      .delete();
+
+                                  Navigator.pop(context); // closes the YES/NO dialog
+                                  _successPopup(context, "Item successfully deleted.");
+                                });
+                              },
                             ),
                           );
                         },
@@ -205,13 +315,17 @@ Widget build(BuildContext context) {
             bottom: 20,
             right: 20,
             child: FloatingActionButton(
-              onPressed: () {
-                Navigator.push(
+              onPressed: () async {
+                  final result = await Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (context) => const InventoryAddPage(),
                   ),
                 );
+
+                 if (result == "added") {
+                  _successPopup(context, "Item successfully added.");
+                }  
               },
               backgroundColor: const Color(0xFF1565C0),
               child: const Icon(Icons.add, color: Colors.white, size: 28),

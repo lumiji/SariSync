@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import '../models/inventory_item.dart';
 
 //firebase dependencies
 
@@ -15,9 +16,11 @@ import 'sku_scanner.dart';
 import '../services/inventory_service.dart';
 import 'package:sarisync/widgets/inv_add-label.dart';
 
-
 class InventoryAddPage extends StatefulWidget {
-  const InventoryAddPage({Key? key}) : super(key: key);
+ 
+  final InventoryItem? item; // null for Add, not null for Edit
+
+  const InventoryAddPage({Key? key, this.item}) : super(key: key);
 
   @override
   State<InventoryAddPage> createState() => _InventoryAddPageState();
@@ -27,7 +30,7 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
   final _formKey = GlobalKey<FormState>();
   final _inventoryService = InventoryService();
 
-// for picking image
+  // for picking image
   Future<void> _pickImage() async {
     showModalBottomSheet(
       context: context,
@@ -43,8 +46,9 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
                 title: const Text('Take a Photo'),
                 onTap: () async {
                   Navigator.of(context).pop();
-                  final pickedImage =
-                      await ImagePicker().pickImage(source: ImageSource.camera);
+                  final pickedImage = await ImagePicker().pickImage(
+                    source: ImageSource.camera,
+                  );
                   if (pickedImage != null) {
                     print('Picked image: ${pickedImage.path}');
                     setState(() {
@@ -58,8 +62,9 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
                 title: const Text('Choose from Gallery'),
                 onTap: () async {
                   Navigator.of(context).pop();
-                  final pickedImage =
-                      await ImagePicker().pickImage(source: ImageSource.gallery);
+                  final pickedImage = await ImagePicker().pickImage(
+                    source: ImageSource.gallery,
+                  );
                   if (pickedImage != null) {
                     print('Picked image: ${pickedImage.path}');
                     setState(() {
@@ -82,7 +87,8 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
   final _unitAmountController = TextEditingController();
   final _expirationController = TextEditingController();
   final _infoController = TextEditingController();
-  final _barcodeController = TextEditingController(); // text field for displaying barcode
+  final _barcodeController =
+      TextEditingController(); // text field for displaying barcode
 
   // State
   File? _selectedImage;
@@ -92,29 +98,46 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
   String? _unitDropdownValue;
   String? imageUrl;
 
-  final List<String> _units = [
-    'pcs', 
-    'oz', 
-    'L', 
-    'mL', 
-    'kg', 
-    'g'
-  ];
-  
+  final List<String> _units = ['pcs', 'oz', 'L', 'mL', 'kg', 'g'];
+
   final List<String> _categories = [
     'Snacks',
     'Drinks',
     'Cans & Packs',
     'Toiletries',
     'Condiments',
-    'Other',
+    'Others',
   ];
 
-@override
-void initState() {
-  super.initState();
-  _unitDropdownValue = _units.first;
-}
+  @override
+  void initState() {
+    super.initState();
+    _unitDropdownValue = _units.first;
+
+    if (widget.item != null) {
+      final item = widget.item!;
+      _nameController.text = item.name;
+      _priceController.text = item.price.toString();
+      _quantityController.text = item.quantity.toString();
+      _quantity = item.quantity;
+      _selectedCategory = item.category;
+      _barcodeController.text = item.barcode;
+      _expirationController.text = item.expiration;
+      _infoController.text = item.add_info;
+
+      // Split unit before space: "60 mL"
+      if (item.unit.contains(" ")) {
+        final split = item.unit.split(" ");
+        _unitAmountController.text = split.first;
+        _unitDropdownValue = split.last;
+      }
+
+      // load image preview if existing
+      if (item.imageUrl != null && item.imageUrl!.isNotEmpty) {
+        imageUrl = item.imageUrl;
+      }
+    }
+  }
 
   //for increasing and decreasing quantity
   void _incrementQuantity() {
@@ -152,48 +175,51 @@ void initState() {
 
   // for saving item
   void _saveItem() async {
-  print('Save button pressed');
-  if (!_formKey.currentState!.validate()) {
-    print('Form validation failed');
-    return;
-  }
+    if (!_formKey.currentState!.validate()) return;
 
-  print('Form validated successfully');
-  String? imageUrl;
-  if (_selectedImage != null) {
-    print('Uploading image...');
-    imageUrl = await _inventoryService.uploadImage(_selectedImage!);
-    print('Image uploaded: $imageUrl');
-  }
+    String? uploadedImageUrl = imageUrl;
 
-  try {
-    await _inventoryService.addItem(
-      name: _nameController.text.trim(),
-      quantity: int.parse(_quantityController.text),
-      price: double.parse(_priceController.text),
-      category: _selectedCategory ?? '',
-      barcode: _barcodeController.text,
-      unit: '${_unitAmountController.text} ${_unitDropdownValue ?? ''}',
-      info: _infoController.text,
-      expirationDate: _expirationController.text,
-      imageUrl: imageUrl,
-    );
-    print('Firestore addItem() completed');
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Item saved successfully!')),
-      );
-      Navigator.pop(context);
+    // If user picked a new image → upload it
+    if (_selectedImage != null) {
+      uploadedImageUrl = await _inventoryService.uploadImage(_selectedImage!);
     }
-  } catch (e) {
-    print('Error saving item: $e');
+
+    if (widget.item == null) {
+      // ADD
+      await _inventoryService.addItem(
+        name: _nameController.text.trim(),
+        quantity: int.parse(_quantityController.text),
+        price: double.parse(_priceController.text),
+        category: _selectedCategory ?? '',
+        barcode: _barcodeController.text,
+        unit: '${_unitAmountController.text} ${_unitDropdownValue ?? ''}',
+        info: _infoController.text,
+        expirationDate: _expirationController.text,
+        imageUrl: uploadedImageUrl,
+      );
+
+      Navigator.pop(context, "added");
+    } else {
+      //EDIT
+      final updatedItem = InventoryItem(
+        id: widget.item!.id,
+        name: _nameController.text.trim(),
+        quantity: int.parse(_quantityController.text),
+        price: double.parse(_priceController.text),
+        category: _selectedCategory ?? '',
+        barcode: _barcodeController.text,
+        unit: '${_unitAmountController.text} ${_unitDropdownValue ?? ''}',
+        add_info: _infoController.text,
+        expiration: _expirationController.text,
+        imageUrl: uploadedImageUrl,
+        createdAt: widget.item!.createdAt, // keep original date
+      );
+      await _inventoryService.updateItem(updatedItem);
+      Navigator.pop(context, "updated");
+    }
   }
-}
 
-
-
-// for cleaning up controllers 
+  // for cleaning up controllers
   @override
   void dispose() {
     _nameController.dispose();
@@ -226,7 +252,7 @@ void initState() {
     );
   }
 
-// UI for the form
+  // UI for the form
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -238,9 +264,9 @@ void initState() {
           icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Add',
-          style: TextStyle(
+        title: Text(
+          widget.item == null ? 'Add' : 'Edit',
+          style: const TextStyle(
             color: Colors.black,
             fontSize: 16,
             fontWeight: FontWeight.w700,
@@ -275,8 +301,11 @@ void initState() {
                                   fit: BoxFit.cover,
                                 ),
                               )
-                            : const Icon(Icons.image_outlined,
-                                size: 60, color: Color(0xFFFEFEFE)),
+                            : const Icon(
+                                Icons.image_outlined,
+                                size: 60,
+                                color: Color(0xFFFEFEFE),
+                              ),
                       ),
                       Positioned(
                         bottom: 4,
@@ -287,8 +316,11 @@ void initState() {
                             color: Color(0xFFFEFEFE),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.camera_alt,
-                              size: 24, color: Color(0xFF1565C0)),
+                          child: const Icon(
+                            Icons.camera_alt,
+                            size: 24,
+                            color: Color(0xFF1565C0),
+                          ),
                         ),
                       ),
                     ],
@@ -298,11 +330,12 @@ void initState() {
               const SizedBox(height: 24),
 
               // for category
-              InvAddLabel(
-                text: 'Category'),
+              InvAddLabel(text: 'Category'),
               DropdownButtonFormField<String>(
                 value: _selectedCategory,
-                decoration: _inputDecoration(fillColor: const Color(0xFFF0F8FF)), // light grey background
+                decoration: _inputDecoration(
+                  fillColor: const Color(0xFFF0F8FF),
+                ), // light grey background
                 hint: const Text(
                   'Select category',
                   style: TextStyle(color: Color(0xFF9E9E9E)),
@@ -317,33 +350,30 @@ void initState() {
               const SizedBox(height: 16),
 
               // Name
-              InvAddLabel(
-                text: 'Name'),
+              InvAddLabel(text: 'Name'),
               TextFormField(
                 controller: _nameController,
-                decoration:
-                    _inputDecoration(hintText: 'Enter item name'),
+                decoration: _inputDecoration(hintText: 'Enter item name'),
                 validator: (v) =>
                     v == null || v.isEmpty ? 'Please enter item name' : null,
               ),
               const SizedBox(height: 16),
 
               // Price
-              InvAddLabel(
-                text: 'Price'),
+              InvAddLabel(text: 'Price'),
               TextFormField(
                 controller: _priceController,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 decoration: _inputDecoration(hintText: '0.00'),
                 validator: (v) =>
                     v == null || v.isEmpty ? 'Please enter price' : null,
               ),
               const SizedBox(height: 16),
 
-            // for quantity
-              InvAddLabel(
-                text: 'Quantity'),
+              // for quantity
+              InvAddLabel(text: 'Quantity'),
               TextFormField(
                 controller: _quantityController,
                 keyboardType: TextInputType.number,
@@ -379,8 +409,7 @@ void initState() {
               ),
               const SizedBox(height: 24),
 
-              InvAddLabel(
-                text: 'Unit of Measure'),
+              InvAddLabel(text: 'Unit of Measure'),
               Row(
                 children: [
                   // Numeric text field for quantity
@@ -388,10 +417,15 @@ void initState() {
                     flex: 2,
                     child: TextFormField(
                       controller: _unitAmountController, // e.g., 24
-                      keyboardType: TextInputType.numberWithOptions(decimal: true),
-                      decoration: _inputDecoration(hintText: 'Enter unit of measure (e.g., 60mL)'),
-                      validator: (v) =>
-                          v == null || v.isEmpty ? 'Please enter unit of measure' : null,
+                      keyboardType: TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      decoration: _inputDecoration(
+                        hintText: 'Enter unit of measure (e.g., 60mL)',
+                      ),
+                      validator: (v) => v == null || v.isEmpty
+                          ? 'Please enter unit of measure'
+                          : null,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -403,34 +437,31 @@ void initState() {
                       value: _unitDropdownValue,
                       decoration: _inputDecoration(),
                       items: _units.map((unit) {
-                        return DropdownMenuItem(
-                          value: unit,
-                          child: Text(unit),
-                        );
+                        return DropdownMenuItem(value: unit, child: Text(unit));
                       }).toList(),
                       onChanged: (value) {
                         setState(() {
                           _unitDropdownValue = value!;
                         });
                       },
-                      validator: (v) => v == null || v.isEmpty ? 'Select a unit' : null,
+                      validator: (v) =>
+                          v == null || v.isEmpty ? 'Select a unit' : null,
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
 
-
               // Barcode Field + Scan Button
-              InvAddLabel(
-                text: 'Barcode'),
+              InvAddLabel(text: 'Barcode'),
               Row(
                 children: [
                   Expanded(
                     child: TextFormField(
                       controller: _barcodeController,
                       decoration: _inputDecoration(
-                          hintText: 'Enter or scan barcode'),
+                        hintText: 'Enter or scan barcode',
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -439,46 +470,51 @@ void initState() {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFFF9800),
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 14),
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(6)),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
                     ),
                     child: const Text(
                       'Scan',
-                        style: TextStyle(
-                            fontSize: 14, 
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFFFEFEFE),
-                            ),
-                          ),
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFFFEFEFE),
+                      ),
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
 
               // Expiration Date
-              InvAddLabel(
-                text: 'Expiration Date'),
+              InvAddLabel(text: 'Expiration Date'),
               TextFormField(
                 controller: _expirationController,
                 readOnly: true,
                 onTap: _selectDate,
                 decoration: _inputDecoration(
                   hintText: 'Select expiration date',
-                  suffixIcon: const Icon(Icons.calendar_today,
-                      size: 18, color: Color(0xFF757575)),
+                  suffixIcon: const Icon(
+                    Icons.calendar_today,
+                    size: 18,
+                    color: Color(0xFF757575),
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
 
               // Additional Info
-              InvAddLabel(
-                text: 'Additional Info'),
+              InvAddLabel(text: 'Additional Info'),
               TextFormField(
                 controller: _infoController,
                 maxLines: 3,
                 decoration: _inputDecoration(
-                    hintText: 'Enter additional information'),
+                  hintText: 'Enter additional information',
+                ),
               ),
               const SizedBox(height: 24),
 
@@ -491,14 +527,16 @@ void initState() {
                     backgroundColor: const Color(0xFF4CAF50),
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(6)),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
                   ),
                   child: const Text(
                     'Save',
                     style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white),
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),
@@ -509,39 +547,41 @@ void initState() {
     );
   }
 
-  InputDecoration _inputDecoration({String? hintText, Widget? suffixIcon, Color? fillColor}) {
+  InputDecoration _inputDecoration({
+    String? hintText,
+    Widget? suffixIcon,
+    Color? fillColor,
+  }) {
     return InputDecoration(
       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(6),
-      ),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
       hintText: hintText,
       suffixIcon: suffixIcon,
       hintStyle: const TextStyle(color: Color(0xFF9E9E9E)),
-      filled: true,           
-      fillColor: fillColor ?? Color(0xFFF0F8FF), 
+      filled: true,
+      fillColor: fillColor ?? Color(0xFFF0F8FF),
     );
   }
 
-// for quantity buttons
+  // for quantity buttons
   Widget _buildQuantityButtons() => Container(
-        height: 48,
-        decoration: BoxDecoration(
-          border: Border.all(color: const Color(0xFFE0E0E0)),
-          borderRadius: BorderRadius.circular(6),
+    height: 48,
+    decoration: BoxDecoration(
+      border: Border.all(color: const Color(0xFFE0E0E0)),
+      borderRadius: BorderRadius.circular(6),
+    ),
+    child: Row(
+      children: [
+        IconButton(
+          onPressed: _decrementQuantity,
+          icon: const Icon(Icons.remove, size: 18),
         ),
-        child: Row(
-          children: [
-            IconButton(
-                onPressed: _decrementQuantity,
-                icon: const Icon(Icons.remove, size: 18)),
-            const VerticalDivider(width: 1),
-            IconButton(
-                onPressed: _incrementQuantity,
-                icon: const Icon(Icons.add, size: 18)),
-          ],
+        const VerticalDivider(width: 1),
+        IconButton(
+          onPressed: _incrementQuantity,
+          icon: const Icon(Icons.add, size: 18),
         ),
-      );
+      ],
+    ),
+  );
 }
-
-

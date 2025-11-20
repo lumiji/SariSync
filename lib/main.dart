@@ -23,7 +23,9 @@ import 'services/local_storage_service.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  FlutterNativeSplash.preserve(widgetsBinding: WidgetsFlutterBinding.ensureInitialized());
+  FlutterNativeSplash.preserve(
+    widgetsBinding: WidgetsFlutterBinding.ensureInitialized(),
+  );
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
@@ -33,7 +35,7 @@ Future<void> main() async {
   FirebaseFirestore.instance.settings = const Settings(
     persistenceEnabled: true,
   );
-  
+
   if (kDebugMode) {
     print("Running in Debug mode");
   } else if (kReleaseMode) {
@@ -47,7 +49,6 @@ Future<void> main() async {
   await Future.delayed(const Duration(seconds: 1));
   FlutterNativeSplash.remove();
 }
-
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
