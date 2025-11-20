@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:sarisync/models/inventory_item.dart';
 import 'package:sarisync/widgets/pos-item_card.dart';
+import 'package:sarisync/views/search.dart';
 
 class PoSSystem extends StatefulWidget {
   final Function(String barcode)? onDetect;
@@ -145,7 +146,22 @@ Widget build(BuildContext context) {
                     ),
                   ),
                   TextButton(
-                    onPressed: () {},
+                    onPressed: () async {
+                      //opens the search page
+                      final selectedItem = await Navigator.push<InventoryItem>(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => SearchPage(),
+                        ),
+                      );
+                      // adds the manually selected item to the scanned item list
+                      if (selectedItem != null) {
+                        setState(() {
+                          scannedItemsList.add(selectedItem);
+                          _scannedItems++;
+                        });
+                      }
+                    },
                     child: const Text(
                       'Manual Add',
                       style: TextStyle(
