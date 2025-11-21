@@ -15,24 +15,24 @@ class PhoneAuthService {
     await _auth.verifyPhoneNumber(
       phoneNumber: phoneNumber.trim(),
 
-      // 🔥 Auto verification if Google confirms silently
+      // Auto verification if Google confirms silently
       verificationCompleted: (PhoneAuthCredential credential) async {
         await _auth.signInWithCredential(credential);
         onAutoVerified(); // go to set pin immediately
       },
 
-      // ❌ Failed verification
+      // Failed verification
       verificationFailed: (FirebaseAuthException e) {
         onFailed(e.message ?? "Phone verification failed");
       },
 
-      // 📩 OTP sent to SMS
+      // OTP sent to SMS
       codeSent: (String verificationId, int? resendToken) {
         _verificationId = verificationId;
         onCodeSent();
       },
 
-      // ⏳ Timeout - allow input manually
+      // Timeout - allow input manually
       codeAutoRetrievalTimeout: (String verificationId) {
         _verificationId = verificationId;
       },

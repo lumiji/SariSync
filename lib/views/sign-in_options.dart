@@ -103,7 +103,7 @@ class SignInOptionsScreen extends StatelessWidget {
                               "Signed in as ${user.displayName}, email: ${user.email}",
                             );
 
-                            // await handlePostLogin(context); // ⭐ ADD THIS
+                          
                             await AuthFlowService.handlePostLogin(context);
                           }
                         },
@@ -150,7 +150,7 @@ class SignInOptionsScreen extends StatelessWidget {
                               "Facebook user: ${user.displayName}, email: ${user.email}",
                             );
 
-                            // await handlePostLogin(context); // ⭐ ADD THIS
+                           
                              await AuthFlowService.handlePostLogin(context);
                           } else {
                             // Login failed or cancelled

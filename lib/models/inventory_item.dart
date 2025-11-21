@@ -27,7 +27,7 @@ class InventoryItem {
     required this.createdAt,
   });
 
-  /// Convert InventoryItem → Firestore Map
+  // Convert InventoryItem → Firestore Map
   Map<String, dynamic> toMap() {
     return {
       'category': category,
@@ -43,7 +43,7 @@ class InventoryItem {
     };
   }
 
-  /// Convert Firestore Map → InventoryItem
+  // Convert Firestore Map → InventoryItem
   factory InventoryItem.fromMap(Map<String, dynamic> data, String documentId) {
     return InventoryItem(
       id: documentId,

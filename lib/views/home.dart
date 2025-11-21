@@ -1,11 +1,14 @@
 // flutter dependencies
 import 'package:flutter/material.dart';
+import 'package:sarisync/views/new_sales.dart';
 import 'package:sarisync/widgets/bottom_nav_item.dart';
 
-
+//firebase dependencies
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 // pages
-import 'inventory.dart';
+import 'package:sarisync/views/inventory.dart';
+import 'package:sarisync/views/ledger.dart';
 
 // models, services, and widgets
 import 'package:sarisync/models/transaction_model.dart';
@@ -13,6 +16,7 @@ import 'package:sarisync/widgets/home-info_card.dart';
 import 'package:sarisync/widgets/home-pdf_btn.dart';
 import 'package:sarisync/widgets/home-category_card.dart';
 import 'package:sarisync/widgets/home-transaction_item.dart';
+import 'package:sarisync/models/inventory_item.dart';
 
 
 class HomePage extends StatefulWidget {
@@ -28,7 +32,7 @@ class _HomePageState extends State<HomePage> {
   final List<Widget> _pages = [
     HomeContent(), 
     InventoryPage(),
-    // LedgerPage(),
+    LedgerPage(),
     // HistoryPage(),
   ];
 
@@ -37,6 +41,16 @@ class _HomePageState extends State<HomePage> {
       _selectedIndex = index;
     });
   }
+
+  Stream<List<InventoryItem>> getInventoryItems() {
+  return FirebaseFirestore.instance
+      .collection('inventory') 
+      .orderBy('createdAt', descending: true)
+      .snapshots()         
+      .map((snapshot) => snapshot.docs
+          .map((doc) => InventoryItem.fromMap(doc.data(), doc.id))
+          .toList());
+}
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +62,16 @@ class _HomePageState extends State<HomePage> {
         width: 60,
         height: 60,
         child: FloatingActionButton(
-          onPressed: () {},
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => PoSSystem(
+                  inventoryStream: getInventoryItems(),
+              ),
+            ),
+            );
+          },
           backgroundColor: const Color(0xFFFF9800),
           shape: const CircleBorder(),
           child: SizedBox(
@@ -58,6 +81,7 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
       ),
+      
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
 
       // Custom Navigation Bar
@@ -89,42 +113,42 @@ class _HomePageState extends State<HomePage> {
                       label:  'Home',
                       isActive:  _selectedIndex == 0
                     ),
-                  ),
+                ),
 
-                  // Inventory
-                  GestureDetector(
-                    onTap: () => _onItemTapped(1),
-                    child:
-                      BtmNavItem(
-                        icon: Icons.inventory_2_outlined,
-                        label:  'Inventory',
-                        isActive:  _selectedIndex == 1
-                      ),
+                // Inventory
+                GestureDetector(
+                  onTap: () => _onItemTapped(1),
+                  child:
+                    BtmNavItem(
+                      icon: Icons.inventory_2_outlined,
+                      label:  'Inventory',
+                      isActive:  _selectedIndex == 1
                     ),
+                ),
 
                 const SizedBox(width: 40),
 
-                  // Ledger
-                  GestureDetector(
-                    onTap: () => _onItemTapped(2),
-                    child: 
-                      BtmNavItem(
-                        icon: Icons.book_outlined,
-                        label:  'Ledger',
-                        isActive:  _selectedIndex == 2
-                      ),
+                // Ledger
+                GestureDetector(
+                  onTap: () => _onItemTapped(2),
+                  child: 
+                    BtmNavItem(
+                      icon: Icons.book_outlined,
+                      label:  'Ledger',
+                      isActive:  _selectedIndex == 2
                     ),
+                ),
 
-                  // History
-                  GestureDetector(
-                    onTap: () => _onItemTapped(3),
-                    child: 
-                      BtmNavItem(
-                        icon: Icons.history,
-                        label:  'History',
-                        isActive:  _selectedIndex == 3
-                      ),
-                  ),
+                // History
+                GestureDetector(
+                  onTap: () => _onItemTapped(3),
+                  child: 
+                    BtmNavItem(
+                      icon: Icons.history,
+                      label:  'History',
+                      isActive:  _selectedIndex == 3
+                    ),
+                ),
               ],
             ),
           ),
