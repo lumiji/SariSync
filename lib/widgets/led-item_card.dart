@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:intl/intl.dart';
 import 'package:sarisync/models/ledger_item.dart';
+import 'package:sarisync/widgets/led-payment_status_badge.dart';
 
 class LedItemCard extends StatelessWidget {
   final LedgerItem item;
@@ -20,10 +21,9 @@ class LedItemCard extends StatelessWidget {
    @override
   Widget build(BuildContext context) {
 
+    final remaining = (item.credit - (item.partialPay ?? 0)).clamp(0.0, double.infinity);
     final DateTime dateToShow = item.updatedAt ?? item.createdAt;
-
     final String label = item.updatedAt != null ? "Updated" : "Created";
-
     final String formattedDate =
         "$label: ${DateFormat('MMM dd, yyyy • hh:mm a').format(dateToShow)}";
 
@@ -203,6 +203,12 @@ class LedItemCard extends StatelessWidget {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
+
+                        PaymentStatusBadge(
+                          payStatus: item.payStatus,
+                          partialPay: item.partialPay, // Format: MM/DD/YYYY 
+                        ),
+                        const SizedBox(height: 4),
                         Text(
                           item.credit.toStringAsFixed(2),
                           style: GoogleFonts.inter(
@@ -216,6 +222,16 @@ class LedItemCard extends StatelessWidget {
                             fontSize: 12,
                             color: Colors.grey,
                           ),
+                        ),
+
+                         if (item.payStatus == 'Partial')
+                          Text(
+                            "-${(item.partialPay ?? 0).toStringAsFixed(2)}",
+                            style: TextStyle(color: Colors.orange.shade700),
+                          ),
+                        Text(
+                          "Bal: ${remaining.toStringAsFixed(2)}",
+                          style: TextStyle(color: Colors.blueGrey),
                         ),
                       ],
                     ),

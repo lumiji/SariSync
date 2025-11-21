@@ -99,7 +99,7 @@ class _LedgerAddPageState extends State<LedgerAddPage> {
       _contactController.text = item.contact;
       _paymentStatus = item.payStatus;
       _creditController.text = item.credit.toString();
-      _partialController.text = item.partialPay.toString();
+      _partialController.text = '';
       _receivedByController.text = item.received;
 
       // load image preview if existing
@@ -108,6 +108,17 @@ class _LedgerAddPageState extends State<LedgerAddPage> {
       }
     }
   }
+  
+  Future<void> addPartialPayment(LedgerItem item, double amountPaid) async {
+    final newPartial = (item.partialPay ?? 0) + amountPaid;
+
+    await _ledgerService.updateLedgerItem(item.id!, {
+      'partialPay': newPartial,
+      'updatedAt': FieldValue.serverTimestamp(),
+      'payStatus': newPartial >= item.credit ? 'Paid' : 'Partial',
+    });
+  }
+
 
   // Save ledger item
   void _saveLedger() async {
@@ -137,14 +148,33 @@ class _LedgerAddPageState extends State<LedgerAddPage> {
       } else {
         // UPDATE EXISTING ITEM
         final docId = widget.item!.id;
+        final enteredPartial = double.tryParse(_partialController.text) ?? 0.0;
+        double newPartial;
+        final updatedCredit = credit; 
+        double remaining;
+        String updatedStatus;
+
+        if (_paymentStatus == 'Paid') {
+          updatedStatus = 'Paid';
+          newPartial = updatedCredit;
+          remaining = 0.0; 
+        } else if (_paymentStatus == 'Partial') {
+          updatedStatus = 'Partial';
+          newPartial = (widget.item!.partialPay ?? 0) + enteredPartial;
+          remaining = (updatedCredit - newPartial).clamp(0.0, updatedCredit);
+        } else {
+          updatedStatus = 'Unpaid';
+          newPartial = 0.0;
+          remaining = updatedCredit;
+        }
 
         final data = {
           'name': _nameController.text.trim(),
           'customerID': widget.item!.customerID, 
           'contact': _contactController.text.trim(),
-          'payStatus': _paymentStatus,
-          'credit': credit,
-          'partialPay': partial,
+          'payStatus':updatedStatus,
+          'credit': updatedCredit,
+          'partialPay': newPartial,
           'received': _receivedByController.text.trim(),
           'updatedAt': FieldValue.serverTimestamp(),
         };
