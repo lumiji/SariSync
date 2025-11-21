@@ -6,6 +6,9 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import '../models/inventory_item.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+
 
 //firebase dependencies
 
@@ -174,50 +177,73 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
   }
 
   // for saving item
-  void _saveItem() async {
-    if (!_formKey.currentState!.validate()) return;
+    void _saveItem() async {
+      if (!_formKey.currentState!.validate()) return;
 
-    String? uploadedImageUrl = imageUrl;
+        // Show button loading (For Loading State)
+        setState(() {});
+          if (widget.item == null) {
+          // ADD - save first the item 
+          final docRef = await FirebaseFirestore.instance.collection('inventory').add({
+            "name": _nameController.text.trim(),
+            "quantity": int.parse(_quantityController.text),
+            "price": double.parse(_priceController.text),
+            "category": _selectedCategory ?? '',
+            "barcode": _barcodeController.text,
+            "unit": '${_unitAmountController.text} ${_unitDropdownValue ?? ''}',
+            "add_info": _infoController.text,
+            "expiration": _expirationController.text,
+            "imageUrl": null,
+            "createdAt": FieldValue.serverTimestamp(),
+            });
 
-    // If user picked a new image → upload it
-    if (_selectedImage != null) {
-      uploadedImageUrl = await _inventoryService.uploadImage(_selectedImage!);
-    }
+            //Upload image in the background
+            if (_selectedImage != null) {
+              FirebaseStorage.instance
+                      .ref()
+                      .child('inventory_images/${docRef.id}.jpg')
+                      .putFile(_selectedImage!)
+                      .then((task) async {
+                    final url = await task.ref.getDownloadURL();
+                    await docRef.update({"imageUrl": url});
+                  });
+                }
 
-    if (widget.item == null) {
-      // ADD
-      await _inventoryService.addItem(
-        name: _nameController.text.trim(),
-        quantity: int.parse(_quantityController.text),
-        price: double.parse(_priceController.text),
-        category: _selectedCategory ?? '',
-        barcode: _barcodeController.text,
-        unit: '${_unitAmountController.text} ${_unitDropdownValue ?? ''}',
-        info: _infoController.text,
-        expirationDate: _expirationController.text,
-        imageUrl: uploadedImageUrl,
-      );
+                Navigator.pop(context, "added");
+              } else {
+                // EDIT 
+                final docRef = FirebaseFirestore.instance
+                    .collection('inventory')
+                    .doc(widget.item!.id);
 
-      Navigator.pop(context, "added");
-    } else {
-      //EDIT
-      final updatedItem = InventoryItem(
-        id: widget.item!.id,
-        name: _nameController.text.trim(),
-        quantity: int.parse(_quantityController.text),
-        price: double.parse(_priceController.text),
-        category: _selectedCategory ?? '',
-        barcode: _barcodeController.text,
-        unit: '${_unitAmountController.text} ${_unitDropdownValue ?? ''}',
-        add_info: _infoController.text,
-        expiration: _expirationController.text,
-        imageUrl: uploadedImageUrl,
-        createdAt: widget.item!.createdAt, // keep original date
-      );
-      await _inventoryService.updateItem(updatedItem);
-      Navigator.pop(context, "updated");
-    }
-  }
+                await docRef.update({
+                  "name": _nameController.text.trim(),
+                  "quantity": int.parse(_quantityController.text),
+                  "price": double.parse(_priceController.text),
+                  "category": _selectedCategory ?? '',
+                  "barcode": _barcodeController.text,
+                  "unit": '${_unitAmountController.text} ${_unitDropdownValue ?? ''}',
+                  "add_info": _infoController.text,
+                  "expiration": _expirationController.text,
+                });
+
+                // Upload new image only if changed
+                if (_selectedImage != null) {
+                  FirebaseStorage.instance
+                      .ref()
+                      .child('inventory_images/${widget.item!.id}.jpg')
+                      .putFile(_selectedImage!)
+                      .then((task) async {
+                    final url = await task.ref.getDownloadURL();
+                    await docRef.update({"imageUrl": url});
+                  });
+                }
+
+                Navigator.pop(context, "updated");
+              }
+            }
+
+
 
   // for cleaning up controllers
   @override
