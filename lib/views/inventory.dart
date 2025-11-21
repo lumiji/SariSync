@@ -306,46 +306,64 @@ class _InventoryPageState extends State<InventoryPage> {
                     // Inventory items list (SliverList using precomputed filteredItems)
                     SliverPadding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      sliver: SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                            final item = filteredItems[index];
+                      sliver: filteredItems.isEmpty
+                          ? SliverToBoxAdapter(
+                              child: Padding(
+                                padding: const EdgeInsets.only(top:50),
+                                child: Center(
+                                  child: Text(
+                                    "No Items Found",
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            )
+                          : SliverList(
+                              delegate: SliverChildBuilderDelegate(
+                                (context, index) {
+                                  final item = filteredItems[index];
+                                  return Padding(
+                                    padding: const EdgeInsets.only(bottom: 12),
+                                    child: InvItemCard(
+                                      item: item,
+                                      onEdit: () async {
+                                        final result = await Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => InventoryAddPage(item: item),
+                                          ),
+                                        );
 
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 12),
-                              child: InvItemCard(
-                                item: item,
-                                onEdit: () async {
-                                  final result = await Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => InventoryAddPage(item: item),
+                                        if (result == "added") {
+                                          _successPopup(context, "Item successfully added.");
+                                        } else if (result == "updated") {
+                                          _successPopup(context, "Item successfully updated.");
+                                        }
+                                      },
+                                      onDelete: () {
+                                        _confirmDelete(context, () async {
+                                          await FirebaseFirestore.instance
+                                              .collection('inventory')
+                                              .doc(item.id)
+                                              .delete();
+
+                                          Navigator.pop(context);
+                                           Future.microtask(() {
+                                              if (mounted) _successPopup(context, "Item successfully deleted.");
+                                            });
+                                         // _successPopup(context, "Item successfully deleted.");
+                                        });
+                                      },
                                     ),
                                   );
-
-                                  if (result == "added") {
-                                    _successPopup(context, "Item successfully added.");
-                                  } else if (result == "updated") {
-                                    _successPopup(context, "Item successfully updated.");
-                                  }
                                 },
-                                onDelete: () {
-                                  _confirmDelete(context, () async {
-                                    await FirebaseFirestore.instance
-                                        .collection('inventory')
-                                        .doc(item.id)
-                                        .delete();
-
-                                    Navigator.pop(context);
-                                    _successPopup(context, "Item successfully deleted.");
-                                  });
-                                },
+                                childCount: filteredItems.length,
                               ),
-                            );
-                          },
-                          childCount: filteredItems.length,
-                        ),
-                      ),
+                            ),
                     ),
                   ],
                 );
