@@ -77,7 +77,7 @@ class InvItemCard extends StatelessWidget {
                       ),
                       child: const Icon(
                         Icons.delete_forever,
-                        color: Colors.red,
+                        color: Color(0xFFE53935),
                         size: 25,
                       ),
                     ),
@@ -117,8 +117,8 @@ class InvItemCard extends StatelessWidget {
           child: Row(
             children: [
               Container(
-                width: 60,
-                height: 60,
+                width: 80,
+                height: 80,
                 decoration: BoxDecoration(
                   color: Colors.grey.shade100,
                   borderRadius: BorderRadius.circular(8),
@@ -193,13 +193,6 @@ class InvItemCard extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 16),
-                        Text(
-                          'ED: ${item.expiration}',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            color: Colors.grey.shade700,
-                          ),
-                        ),
                       ],
                     ),
                   ],
@@ -209,7 +202,7 @@ class InvItemCard extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  //ADD BADGE HERE
+  
                   StatusBadge(
                     quantity: item.quantity,
                     expiration: item.expiration, // Format: MM/DD/YYYY 
@@ -233,6 +226,14 @@ class InvItemCard extends StatelessWidget {
                       color: Colors.grey,
                     ),
                   ),
+                  const SizedBox(height: 2),
+                  Text(
+                          'ED: ${item.expiration}',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
                 ],
               ),
 

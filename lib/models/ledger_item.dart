@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class LedgerItem {
-  final String? id; // Firestore document ID 
+  final String id; // Firestore document ID 
   final String name;
   final String customerID;
   final String contact;
@@ -11,9 +11,10 @@ class LedgerItem {
   final String received;
   final String? imageUrl; //  for uploaded images
   final DateTime createdAt;
+  final DateTime updatedAt;
 
   LedgerItem({
-    this.id,
+    required this.id,
     required this.name,
     required this.customerID,
     required this.contact,
@@ -23,6 +24,7 @@ class LedgerItem {
     required this.received,
     this.imageUrl,
     required this.createdAt,
+    required this.updatedAt,
   });
 
   // Convert InventoryItem → Firestore Map
@@ -37,6 +39,7 @@ class LedgerItem {
       'received': received,
       'imageUrl': imageUrl,
       'createdAt': createdAt,
+      'updatedAt' : updatedAt,
     };
   }
 
@@ -53,6 +56,7 @@ class LedgerItem {
       received: data['received'] ?? '',
       imageUrl: data['imageUrl'],
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      updatedAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
   }
 }

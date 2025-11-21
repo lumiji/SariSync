@@ -7,12 +7,18 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+//firebase dependencies
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 //models, widgets & services
 import '../services/ledger_service.dart';
 import 'package:sarisync/widgets/inv_add-label.dart';
+import 'package:sarisync/models/ledger_item.dart';
 
 class LedgerAddPage extends StatefulWidget {
-  const LedgerAddPage({Key? key}) : super(key: key);
+  final LedgerItem? item;
+
+  const LedgerAddPage({Key? key, this.item}) : super(key: key);
 
   @override
   State<LedgerAddPage> createState() => _LedgerAddPageState();
@@ -82,50 +88,86 @@ class _LedgerAddPageState extends State<LedgerAddPage> {
   String? imageUrl;
   String _paymentStatus = 'Unpaid';
  
+  
+  @override
+  void initState() {
+    super.initState();
+
+    if (widget.item != null) {
+      final item = widget.item!;
+      _nameController.text = item.name;
+      _contactController.text = item.contact;
+      _paymentStatus = item.payStatus;
+      _creditController.text = item.credit.toString();
+      _partialController.text = item.partialPay.toString();
+      _receivedByController.text = item.received;
+
+      // load image preview if existing
+      if (item.imageUrl != null && item.imageUrl!.isNotEmpty) {
+        imageUrl = item.imageUrl;
+      }
+    }
+  }
 
   // Save ledger item
   void _saveLedger() async {
-    print('Save button pressed');
-    if (!_formKey.currentState!.validate()) {
-      print('Form validation failed');
-      return;
-    }
+    if (!_formKey.currentState!.validate()) return;
 
-    print('Form validated successfully');
-    String? imageUrl;
-    if (_selectedImage != null) {
-      print('Uploading image...');
-      imageUrl = await _ledgerService.uploadImage(_selectedImage!);
-      print('Image uploaded: $imageUrl');
-    }
-    
-    final credit = double.tryParse(_creditController.text) ?? 0;
+    final credit = double.tryParse(_creditController.text) ?? 0.0;
     final partial = _paymentStatus == 'Partial'
-        ? double.tryParse(_partialController.text) ?? 0
+        ? double.tryParse(_partialController.text) ?? 0.0
         : 0.0;
-  try{
-    await _ledgerService.addLedgerItem(
-      name: _nameController.text.trim(),
-      customerID: DateTime.now().millisecondsSinceEpoch.toString(),
-      contact: _contactController.text.trim(),
-      payStatus: _paymentStatus,
-      credit: credit,
-      partialPay: partial,
-      received: _receivedByController.text.trim(),
-      imageUrl: imageUrl, 
-    );
-    print('Firestore addLedgerItem() completed');
 
-    if (mounted){
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Item saved Successfully!')),
-      );
-      Navigator.pop(context);
+    try {
+      if (widget.item == null) {
+        // ADD NEW ITEM
+        await _ledgerService.addLedgerItem(
+          name: _nameController.text.trim(),
+          customerID: DateTime.now().millisecondsSinceEpoch.toString(),
+          contact: _contactController.text.trim(),
+          payStatus: _paymentStatus,
+          credit: credit,
+          partialPay: partial,
+          received: _receivedByController.text.trim(),
+          imageFile: _selectedImage,
+        );
+
+        if (!mounted) return;
+        Navigator.pop(context, "added");
+      } else {
+        // UPDATE EXISTING ITEM
+        final docId = widget.item!.id;
+
+        final data = {
+          'name': _nameController.text.trim(),
+          'customerID': widget.item!.customerID, 
+          'contact': _contactController.text.trim(),
+          'payStatus': _paymentStatus,
+          'credit': credit,
+          'partialPay': partial,
+          'received': _receivedByController.text.trim(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        };
+
+        await _ledgerService.updateLedgerItem(docId, data);
+
+     
+        if (_selectedImage != null) {
+          final url = await _ledgerService.uploadImage(_selectedImage!);
+          if (url != null) {
+            await _ledgerService.updateLedgerItem(docId, {'imageUrl': url});
+          }
+        }
+
+        if (!mounted) return;
+        Navigator.pop(context, "updated");
+      }
+    } catch (e) {
+      print('Error saving ledger item: $e');
     }
-  } catch (e) {
-      print('Error saving item: $e');
   }
-}
+
+
 
 // for cleaning up controllers
   @override
@@ -149,8 +191,8 @@ class _LedgerAddPageState extends State<LedgerAddPage> {
           icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Add',
+        title: Text(
+          widget.item == null ? 'Add' : 'Edit',
           style: TextStyle(
             color: Colors.black,
             fontSize: 16,
