@@ -148,12 +148,15 @@ Widget build(BuildContext context) {
                   TextButton(
                     onPressed: () async {
                       //opens the search page
+                      _MobileScannerController.stop();
                       final selectedItem = await Navigator.push<InventoryItem>(
                         context,
                         MaterialPageRoute(
                           builder: (context) => SearchPage(),
                         ),
                       );
+                        _MobileScannerController.start();
+        
                       // adds the manually selected item to the scanned item list
                       if (selectedItem != null) {
                         setState(() {

@@ -72,39 +72,38 @@ class _SearchPageState extends State<SearchPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              SizedBox(height: 16), 
               // 1. Search bar
-              SearchAnchor(
-                searchController: _searchController,
-                builder: (context, controller) {
-                  return TextField(
-                    controller: controller,
-                    readOnly: true,
-                    decoration: InputDecoration(
-                      hintText: 'Search items...',
-                      prefixIcon: const Icon(Icons.search),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              Material( 
+                borderRadius: BorderRadius.circular(10),
+                color: Color(0xFFFCFCFC),
+                child: SizedBox (
+                  height: 50, 
+                  child: SearchBar(
+                    controller: _searchController,
+                    hintText: 'Search items...',
+                    leading: const Icon(Icons.search),
+                    backgroundColor: MaterialStatePropertyAll(Colors.transparent),
+                    elevation: MaterialStatePropertyAll(0),
+                    shape: MaterialStatePropertyAll(
+                      RoundedRectangleBorder(
+                        side: const BorderSide(
+                          color: Color(0xFFB4D7FF),
+                          width: 1,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
-                    onTap: () => controller.openView(),
-                  );
-                },
-                suggestionsBuilder: (context, controller) {
-                  final input = controller.value.text.toLowerCase();
-                  final filteredItems = allInventoryItems
-                      .where((item) => item.name.toLowerCase().contains(input))
-                      .toList();
-
-                  return filteredItems.map((item) {
-                    return ListTile(
-                      title: Text(item.name),
-                      onTap: () {
-                        controller.closeView(item.name);
-                        searchForItem(item); // Your function
-                      },
-                    );
-                  }).toList();
-                },
+                    onChanged: (value) {
+                          setState(() {});
+                    },
+                    onSubmitted: (value) {
+                      setState(() {});
+                    },
+                  ),
+                ),
               ),
-
+        
               const SizedBox(height: 16),
 
               const Text(
@@ -118,19 +117,29 @@ class _SearchPageState extends State<SearchPage> {
               const SizedBox(height: 12),
 
               Expanded(
-                child: ListView.builder(
-                  itemCount: allInventoryItems.length,
-                  itemBuilder: (context, index) {
-                    final item = allInventoryItems[index];
-                    return ListTile(
-                      title: Text(item.name),
-                      subtitle: Text(item.add_info ?? ''),
-                      onTap: () {
-                        Navigator.pop(context, item);
-                      },
-                    );
-                  },
-                ),
+                child: Builder(
+                  builder: (context) {
+                    final query = _searchController.text.toLowerCase();
+
+                    final filteredItems = allInventoryItems.where((item) {
+                      return item.name.toLowerCase().contains(query);
+                    }).toList();
+
+                  return ListView.builder(
+                    itemCount: filteredItems.length,
+                    itemBuilder: (context, index) {
+                      final item = filteredItems[index];
+                      return ListTile(
+                        title: Text(item.name),
+                        subtitle: Text(item.add_info ?? ''),
+                        onTap: () {
+                          Navigator.pop(context, item);
+                        },
+                      );
+                    },
+                  );
+                },
+              ),
               ),
             ],
           ),
