@@ -10,6 +10,45 @@ class LedgerService {
   //initialization
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
+  final ledger = FirebaseFirestore.instance.collection('ledger');
+
+  //checks if customer is in ledger
+  Future<QueryDocumentSnapshot?> findCustomerByName(String name) async {
+    final snap = await ledger.where('name', isEqualTo: name).limit(1).get();
+    return snap.docs.isEmpty ? null : snap.docs.first;
+  }
+
+  //Create NEW customer ledger record
+  Future<String> createCustomer({
+    required String name,
+    required double initialCredit,
+    required String receivedBy,
+  }) async {
+    final newId =  DateTime.now().millisecondsSinceEpoch.toString();
+
+    await ledger.doc(newId).set({
+      'customerID': newId,
+      'name': name,
+      'credit': initialCredit,
+      'payStatus' : 'Unpaid',
+      'image': null,
+      'receivedBy': receivedBy,
+      'createdAt': Timestamp.now(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+
+     return newId;
+  }
+
+  // Add credit to existing customer
+  Future<void> updateCustomerCredit(String customerID, double amount) async {
+  await ledger.doc(customerID).update({
+    'credit': FieldValue.increment(amount),
+    'updatedAt': FieldValue.serverTimestamp(),
+  });
+}
+
+
 
   // Upload image to Firebase Storage
   Future<String?> uploadImage(File imageFile) async {

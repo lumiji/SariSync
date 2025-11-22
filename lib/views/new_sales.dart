@@ -6,6 +6,8 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:sarisync/models/inventory_item.dart';
 import 'package:sarisync/widgets/pos-item_card.dart';
 import 'package:sarisync/views/search.dart';
+import 'package:sarisync/models/receipt_item.dart';
+import 'package:sarisync/views/receipt.dart';
 
 class PoSSystem extends StatefulWidget {
   final Function(String barcode)? onDetect;
@@ -220,16 +222,25 @@ Widget build(BuildContext context) {
               
 
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          // Navigate to receipt page or next screen
-          // Navigator.push(
-          //   context,
-          //   MaterialPageRoute(
-          //     builder: (context) => ReceiptPage(
-          //       scannedItems: scannedItemsList,
-          //     ),
-          //   ),
-          // );
+        onPressed: ()  async {
+          _MobileScannerController.stop();
+
+          final tabIndex = await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ReceiptPage(
+                scannedItems: scannedItemsList.map((item) => ReceiptItem(
+                  id: item.id!,
+                  name: item.name,
+                  price: item.price,
+                  quantity: 1,
+                )).toList(),
+              ),
+            ),
+          );
+          if (tabIndex != null && tabIndex is int) {
+            Navigator.pop(context, tabIndex);
+          }
         },
         backgroundColor: const Color(0xFFFF9800),
         label: Text(
