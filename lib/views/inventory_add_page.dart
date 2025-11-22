@@ -14,10 +14,12 @@ import 'package:firebase_storage/firebase_storage.dart';
 
 //pages
 import 'sku_scanner.dart';
+import 'package:sarisync/services/history_service.dart';
 
 //models, widgets & services
 import '../services/inventory_service.dart';
 import 'package:sarisync/widgets/inv_add-label.dart';
+import 'package:sarisync/services/history_service.dart';
 
 class InventoryAddPage extends StatefulWidget {
  
@@ -176,72 +178,99 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
     }
   }
 
-  // for saving item
-    void _saveItem() async {
-      if (!_formKey.currentState!.validate()) return;
+  // for saving item (Add/Edit)
+void _saveItem() async {
+  if (!_formKey.currentState!.validate()) return;
 
-        // Show button loading (For Loading State)
-        setState(() {});
-          if (widget.item == null) {
-          // ADD - save first the item 
-          final docRef = await FirebaseFirestore.instance.collection('inventory').add({
-            "name": _nameController.text.trim(),
-            "quantity": int.parse(_quantityController.text),
-            "price": double.parse(_priceController.text),
-            "category": _selectedCategory ?? '',
-            "barcode": _barcodeController.text,
-            "unit": '${_unitAmountController.text} ${_unitDropdownValue ?? ''}',
-            "add_info": _infoController.text,
-            "expiration": _expirationController.text,
-            "imageUrl": null,
-            "createdAt": FieldValue.serverTimestamp(),
-            });
+  setState(() {});
 
-            //Upload image in the background
-            if (_selectedImage != null) {
-              FirebaseStorage.instance
-                      .ref()
-                      .child('inventory_images/${docRef.id}.jpg')
-                      .putFile(_selectedImage!)
-                      .then((task) async {
-                    final url = await task.ref.getDownloadURL();
-                    await docRef.update({"imageUrl": url});
-                  });
-                }
+  if (widget.item == null) {
+    // ADD
+    final docRef = await FirebaseFirestore.instance.collection('inventory').add({
+      "name": _nameController.text.trim(),
+      "quantity": int.parse(_quantityController.text),
+      "price": double.parse(_priceController.text),
+      "category": _selectedCategory ?? '',
+      "barcode": _barcodeController.text,
+      "unit": '${_unitAmountController.text} ${_unitDropdownValue ?? ''}',
+      "add_info": _infoController.text,
+      "expiration": _expirationController.text,
+      "imageUrl": null,
+      "createdAt": FieldValue.serverTimestamp(),
+    });
 
-                Navigator.pop(context, "added");
-              } else {
-                // EDIT 
-                final docRef = FirebaseFirestore.instance
-                    .collection('inventory')
-                    .doc(widget.item!.id);
+    //AUTO HISTORY 
+    //(Out or Low stock / Added)
+    await HistoryService.checkStockEvent(
+      itemName: _nameController.text.trim(),
+      quantity: int.parse(_quantityController.text),
+    );
 
-                await docRef.update({
-                  "name": _nameController.text.trim(),
-                  "quantity": int.parse(_quantityController.text),
-                  "price": double.parse(_priceController.text),
-                  "category": _selectedCategory ?? '',
-                  "barcode": _barcodeController.text,
-                  "unit": '${_unitAmountController.text} ${_unitDropdownValue ?? ''}',
-                  "add_info": _infoController.text,
-                  "expiration": _expirationController.text,
-                });
+    // Expiry check
+    await HistoryService.checkExpiryEvent(
+      itemName: _nameController.text.trim(),
+      expirationDate: _expirationController.text,
+    );
 
-                // Upload new image only if changed
-                if (_selectedImage != null) {
-                  FirebaseStorage.instance
-                      .ref()
-                      .child('inventory_images/${widget.item!.id}.jpg')
-                      .putFile(_selectedImage!)
-                      .then((task) async {
-                    final url = await task.ref.getDownloadURL();
-                    await docRef.update({"imageUrl": url});
-                  });
-                }
+    // upload image
+    if (_selectedImage != null) {
+      FirebaseStorage.instance
+          .ref()
+          .child('inventory_images/${docRef.id}.jpg')
+          .putFile(_selectedImage!)
+          .then((task) async {
+        final url = await task.ref.getDownloadURL();
+        await docRef.update({"imageUrl": url});
+      });
+    }
 
-                Navigator.pop(context, "updated");
-              }
-            }
+    Navigator.pop(context, "added");
+  } else {
+    // EDIT
+    final docRef = FirebaseFirestore.instance
+        .collection('inventory')
+        .doc(widget.item!.id);
+
+    await docRef.update({
+      "name": _nameController.text.trim(),
+      "quantity": int.parse(_quantityController.text),
+      "price": double.parse(_priceController.text),
+      "category": _selectedCategory ?? '',
+      "barcode": _barcodeController.text,
+      "unit": '${_unitAmountController.text} ${_unitDropdownValue ?? ''}',
+      "add_info": _infoController.text,
+      "expiration": _expirationController.text,
+    });
+
+    // AUTO HISTORY 
+    //(Out or Low stock / Updated)
+    await HistoryService.checkStockEvent(
+      itemName: _nameController.text.trim(),
+      quantity: int.parse(_quantityController.text),
+    );
+
+    // Expiry check
+    await HistoryService.checkExpiryEvent(
+      itemName: _nameController.text.trim(),
+      expirationDate: _expirationController.text,
+    );
+
+    // upload new image if changed
+    if (_selectedImage != null) {
+      FirebaseStorage.instance
+          .ref()
+          .child('inventory_images/${widget.item!.id}.jpg')
+          .putFile(_selectedImage!)
+          .then((task) async {
+        final url = await task.ref.getDownloadURL();
+        await docRef.update({"imageUrl": url});
+      });
+    }
+
+    Navigator.pop(context, "updated");
+  }
+}
+
 
 
 

@@ -315,7 +315,7 @@ class _InventoryPageState extends State<InventoryPage> {
                                 padding: const EdgeInsets.only(top:50),
                                 child: Center(
                                   child: Text(
-                                    "No Items Found",
+                                    "No items found",
                                     style: TextStyle(
                                       fontSize: 15,
                                       fontWeight: FontWeight.w500,

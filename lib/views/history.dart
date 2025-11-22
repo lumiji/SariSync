@@ -1,0 +1,351 @@
+import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_fonts/google_fonts.dart';
+
+class HistoryPage extends StatefulWidget {
+  const HistoryPage({super.key});
+
+  @override
+  State<HistoryPage> createState() => _HistoryPageState();
+}
+
+class _HistoryPageState extends State<HistoryPage> {
+  String selectedCategory = "All";
+
+  // Confirm delete dialog
+  void _confirmDelete(BuildContext context, VoidCallback onConfirm) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: const Color(0xFFE8F3FF),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                "Delete from History?",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    onPressed: onConfirm,
+                    child: const Text("Yes"),
+                  ),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text("No"),
+                  ),
+                ],
+              )
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Success popup
+  void _successPopup(BuildContext context, String message) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: const Color(0xFFE8F3FF),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                message,
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                onPressed: () => Navigator.pop(context),
+                child: const Text("OK"),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Stack(
+        children: [
+          // BACKGROUND
+          Positioned.fill(
+            child: Image.asset("assets/images/gradient.png", fit: BoxFit.cover),
+          ),
+
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 16),
+
+                  // SEARCH + SETTINGS
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 10,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: TextField(
+                            decoration: InputDecoration(
+                              hintText: "Search",
+                              border: InputBorder.none,
+                              hintStyle: GoogleFonts.inter(
+                                fontSize: 14,
+                                color: const Color(0xFF757575),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      IconButton(
+                        icon: const Icon(Icons.settings_outlined, size: 24),
+                        onPressed: () {},
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // CATEGORY BAR
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 6,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: ["All", "Sales", "Credit", "Stocks"].map((cat) {
+                        final bool selected = selectedCategory == cat;
+                        return Expanded(
+                          child: GestureDetector(
+                            onTap: () => setState(() => selectedCategory = cat),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 220),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              decoration: BoxDecoration(
+                                color: selected ? const Color(0xFFB9D8FF) : Colors.white,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  cat,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w500,
+                                    color: selected ? Colors.black : Colors.black87,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // HISTORY LIST STREAM
+                  Expanded(
+                    child: StreamBuilder<QuerySnapshot>(
+                      stream: FirebaseFirestore.instance
+                          .collection("History")
+                          .orderBy("date", descending: true)
+                          .snapshots(),
+                      builder: (context, snapshot) {
+                        if (!snapshot.hasData) {
+                          return const Center(child: CircularProgressIndicator());
+                        }
+
+                        final docs = snapshot.data!.docs.where((e) {
+                          final cat = e['category'] ?? "";
+                          return selectedCategory == "All" || cat == selectedCategory;
+                        }).toList();
+
+                        if (docs.isEmpty) {
+                          return Center(
+                            child: Text(
+                              "No records found",
+                              style: GoogleFonts.inter(fontSize: 14, color: Colors.grey),
+                            ),
+                          );
+                        }
+
+                        return ListView.separated(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          separatorBuilder: (_, __) => Divider(color: Colors.grey.shade300, thickness: 1),
+                          itemCount: docs.length,
+
+                      itemBuilder: (context, index) {
+                         final d = docs[index];
+                         final timestamp = (d['date'] as Timestamp).toDate();
+                         final formattedDate =
+                        "${timestamp.month}-${timestamp.day}-${timestamp.year} "
+                        "${timestamp.hour == 0 ? 12 : (timestamp.hour > 12 ? timestamp.hour - 12 : timestamp.hour)}:"
+                        "${timestamp.minute.toString().padLeft(2, '0')} "
+                        "${timestamp.hour >= 12 ? "PM" : "AM"}";
+
+                        final double? amount = d["amount"];
+                        final String titleWithAmount =
+                            amount != null ? "${d['title']} - PhP ${amount.toStringAsFixed(2)}" : d['title'];
+
+                       return Padding(
+                         padding: const EdgeInsets.symmetric(vertical: 6),
+                         child: Row(
+                         crossAxisAlignment: CrossAxisAlignment.start,
+                         children: [
+                           Expanded(
+                            child: Column(
+                             crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                         // Title + Amount
+                           Text(
+                              titleWithAmount,
+                              style: GoogleFonts.inter(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.black87,
+                            ),
+                         ),
+
+                        // Description
+                         const SizedBox(height: 2),
+                         Text(
+                          d['description'],
+                          style: GoogleFonts.inter(
+                          fontSize: 15,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+
+                       // Date
+                       const SizedBox(height: 4),
+                       Text(
+                         formattedDate,
+                         style: GoogleFonts.inter(
+                         fontSize: 14,
+                         color: Colors.grey,
+                        ),
+                      ),
+                   ],
+                 ),
+                 ),
+
+                 PopupMenuButton(
+                   icon: const Icon(Icons.more_horiz, size: 22),
+                   shape: RoundedRectangleBorder(
+                   borderRadius: BorderRadius.circular(12),
+                  ),
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(
+                      value: "view",
+                      child: Text("View Transaction"),
+                  ),
+                      const PopupMenuItem(
+                      value: "delete",
+                      child: Text("Delete"),
+                  ),
+               ],
+                    onSelected: (value) {
+                   if (value == "delete") {
+                  // open delete popup
+                  Future.delayed(const Duration(milliseconds: 10), () {
+                    _confirmDelete(context, () async {
+                    Navigator.pop(context); // close the confirm dialog
+
+                   await FirebaseFirestore.instance
+                    .collection("History")
+                    .doc(d.id)
+                    .delete();
+
+                    _successPopup(context, "Record has been successfully deleted.");
+                  });
+              });
+           }
+                  if (value == "view") {
+                  // for open transaction page
+         }
+      },
+   )                       
+],
+  ),
+);
+   }
+);
+  },
+),
+  ),
+],
+  ),
+),
+  ),
+],
+ ),
+);
+  }
+}
