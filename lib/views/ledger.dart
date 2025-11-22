@@ -10,13 +10,17 @@ import 'package:sarisync/widgets/message_prompts.dart';
 
 //pages
 import 'ledger_add_page.dart';
+import 'package:sarisync/widgets/search_bar.dart';
+import 'package:sarisync/views/inventory.dart';
 
-//models
+//models & services
 import '../models/ledger_item.dart';
 import '../widgets/led-item_card.dart';
+import 'package:sarisync/services/seach_service.dart';
 
 class LedgerPage extends StatefulWidget {
-  const LedgerPage({Key? key}) : super(key: key);
+  final void Function(String type, String customerID)? onSearchSelected;
+  const LedgerPage({Key? key, this.onSearchSelected}) : super(key: key);
 
   @override
   State<LedgerPage> createState() => _LedgerPageState();
@@ -38,6 +42,7 @@ class _LedgerPageState extends State<LedgerPage> {
 
   @override
   Widget build(BuildContext context) {
+
     return Scaffold(
       body: Stack(
         children: [
@@ -58,40 +63,29 @@ class _LedgerPageState extends State<LedgerPage> {
                     children: [
                       Expanded(
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
-                                blurRadius: 10,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: TextField(
-                            decoration: InputDecoration(
-                              hintText: 'Search',
-                              border: InputBorder.none,
-                              hintStyle: const TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 14,
-                                color: Color(0xFF757575),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 0),
+                              child: SearchBarApp(
+                                items: GlobalSearchService.globalSearchList,
+                                onSearchSelected: (result) {
+                                        final type = result["type"];
+                                        final customerID = result["id"];
+
+                                        if (widget.onSearchSelected != null) {
+                                          widget.onSearchSelected!(type, customerID);
+                                        }
+                                      },
                               ),
                             ),
                           ),
-                        ),
+                          const SizedBox(width: 12),
+                          IconButton(
+                            icon: const Icon(Icons.settings_outlined),
+                            onPressed: () {},
+                            iconSize: 24,
+                          ),
+                        ],
                       ),
-                      
-                      const SizedBox(width: 12),
-                      IconButton(
-                        icon: const Icon(Icons.settings_outlined),
-                        onPressed: () {},
-                        iconSize: 24,
-                      ),
-                    ],
-                  ),
                   const SizedBox(height: 20),
 
                   /// Title

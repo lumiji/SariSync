@@ -6,20 +6,24 @@ import 'package:google_fonts/google_fonts.dart';
 
 // firebase dependencies
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:sarisync/views/ledger.dart';
 
 // widgets & pages
 import 'package:sarisync/widgets/inv-category_card.dart';
 import 'package:sarisync/widgets/inv-item_card.dart';
+import 'package:sarisync/widgets/search_bar.dart';
 import 'inventory_add_page.dart';
 import 'package:sarisync/widgets/image_helper.dart';
 import 'package:sarisync/widgets/message_prompts.dart';
 
-// models
+// models & services
 import '../models/inventory_item.dart';
+import 'package:sarisync/services/seach_service.dart';
 
 
 class InventoryPage extends StatefulWidget {
-  const InventoryPage({Key? key}) : super(key: key);
+  final void Function(String type, String id)? onSearchSelected;
+  const InventoryPage({Key? key, this.onSearchSelected}) : super(key: key);
 
   @override
   State<InventoryPage> createState() => _InventoryPageState();
@@ -28,6 +32,7 @@ class InventoryPage extends StatefulWidget {
 class _InventoryPageState extends State<InventoryPage> {
   int _selectedIndex = 1;
   String _selectedCategory = 'All';
+  
 
   // small optimization: only prefetch when items change
   int _lastPrefetchedCount = 0;
@@ -106,28 +111,17 @@ class _InventoryPageState extends State<InventoryPage> {
                                 Expanded(
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(
-                                        horizontal: 16),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(12),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withOpacity(0.05),
-                                          blurRadius: 10,
-                                          offset: const Offset(0, 2),
-                                        ),
-                                      ],
-                                    ),
-                                    child: const TextField(
-                                      decoration: InputDecoration(
-                                        hintText: 'Search',
-                                        border: InputBorder.none,
-                                        hintStyle: TextStyle(
-                                          fontFamily: 'Inter',
-                                          fontSize: 14,
-                                          color: Color(0xFF757575),
-                                        ),
-                                      ),
+                                        horizontal: 0),
+                                    child: SearchBarApp(
+                                      items: GlobalSearchService.globalSearchList,
+                                      onSearchSelected: (result) {
+                                        final type = result["type"];
+                                        final id = result["id"];
+
+                                        if (widget.onSearchSelected != null) {
+                                          widget.onSearchSelected!(type, id);
+                                        }          
+                                      },
                                     ),
                                   ),
                                 ),

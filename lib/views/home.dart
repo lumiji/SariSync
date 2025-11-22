@@ -17,6 +17,8 @@ import 'package:sarisync/widgets/home-pdf_btn.dart';
 import 'package:sarisync/widgets/home-category_card.dart';
 import 'package:sarisync/widgets/home-transaction_item.dart';
 import 'package:sarisync/models/inventory_item.dart';
+import 'package:sarisync/widgets/search_bar.dart';
+import 'package:sarisync/services/seach_service.dart';
 
 
 class HomePage extends StatefulWidget {
@@ -30,17 +32,19 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   late int _selectedIndex;
 
-  final List<Widget> _pages = [
-    HomeContent(), 
-    InventoryPage(),
-    LedgerPage(),
-    // HistoryPage(),
-  ];
-
+  late final List<Widget> _pages; 
+      
   @override
   void initState() {
     super.initState();
     _selectedIndex = widget.initialIndex;
+
+    _pages = [
+      HomeContent(onSearchSelected: switchToPage), 
+      InventoryPage(onSearchSelected: switchToPage),
+      LedgerPage(),
+      // HistoryPage(),
+    ];
   }
 
   void _onItemTapped(int index) {
@@ -48,6 +52,21 @@ class _HomePageState extends State<HomePage> {
       _selectedIndex = index;
     });
   }
+
+  void switchToPage(String type, String id) {
+  if (type == 'inventory') {
+    setState(() {
+      _selectedIndex = 1; // inventory tab
+    });
+    // pass the id to InventoryPage if needed (via a controller or provider)
+  } else if (type == 'ledger') {
+    setState(() {
+      _selectedIndex = 2; // ledger tab
+    });
+    // pass the id to LedgerPage if needed
+  }
+}
+
 
   Stream<List<InventoryItem>> getInventoryItems() {
   return FirebaseFirestore.instance
@@ -57,10 +76,12 @@ class _HomePageState extends State<HomePage> {
       .map((snapshot) => snapshot.docs
           .map((doc) => InventoryItem.fromMap(doc.data(), doc.id))
           .toList());
-}
+  }
+
 
   @override
   Widget build(BuildContext context) {
+
     return Scaffold(
       body: _pages[_selectedIndex],
 
@@ -174,7 +195,9 @@ class _HomePageState extends State<HomePage> {
 
 // Separate widget for Home content
 class HomeContent extends StatelessWidget {
-  HomeContent({Key? key}) : super(key: key);
+  final Function(String type, String id) onSearchSelected; // callback
+
+  HomeContent({Key? key, required this.onSearchSelected}) : super(key: key);
 
   final List<TransactionItem> recentTransactions = [
     TransactionItem(amount: 'Php 50.00', date: '20251105'),
@@ -200,23 +223,14 @@ class HomeContent extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
-                              blurRadius: 10,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: TextField(
-                          decoration: const InputDecoration(
-                            hintText: 'Search',
-                            border: InputBorder.none,
-                          ),
+                        padding: const EdgeInsets.symmetric(horizontal: 0),
+                        child: SearchBarApp(
+                          items: GlobalSearchService.globalSearchList,
+                          onSearchSelected: (result) {
+                            final type = result["type"];
+                            final id = result["id"];
+                            onSearchSelected(type, id);
+                          },
                         ),
                       ),
                     ),
@@ -227,6 +241,7 @@ class HomeContent extends StatelessWidget {
                     ),
                   ],
                 ),
+
                 const SizedBox(height: 20),
 
                 // Sales Card
@@ -295,29 +310,29 @@ class HomeContent extends StatelessWidget {
                   crossAxisSpacing: 16,
                   children: [
                     CategoryCard(
-                      label: 'Snacks',
-                      imagePath:  'assets/images/SNACKS.png',
-                      color:  Colors.teal),
+                        label: 'Snacks',
+                        imagePath: 'assets/images/SNACKS.png',
+                        color: Colors.teal),
                     CategoryCard(
-                      label: 'Drinks',
-                      imagePath:  'assets/images/DRINKS.png',
-                      color: Colors.blue),
+                        label: 'Drinks',
+                        imagePath: 'assets/images/DRINKS.png',
+                        color: Colors.blue),
                     CategoryCard(
-                      label: 'Cans & Packs',
-                      imagePath:  'assets/images/CANS&PACKS.png',
-                      color:  Colors.green),
+                        label: 'Cans & Packs',
+                        imagePath: 'assets/images/CANS&PACKS.png',
+                        color: Colors.green),
                     CategoryCard(
-                      label: 'Toiletries',
-                      imagePath:  'assets/images/TOILETRIES.png',
-                      color:  Colors.purple),
+                        label: 'Toiletries',
+                        imagePath: 'assets/images/TOILETRIES.png',
+                        color: Colors.purple),
                     CategoryCard(
-                      label: 'Condiments',
-                      imagePath:  'assets/images/CONDIMENTS.png',
-                      color:  Colors.orange),
+                        label: 'Condiments',
+                        imagePath: 'assets/images/CONDIMENTS.png',
+                        color: Colors.orange),
                     CategoryCard(
-                      label: 'Others',
-                      imagePath:  'assets/images/OTHERS.png',
-                      color:  Colors.pink),
+                        label: 'Others',
+                        imagePath: 'assets/images/OTHERS.png',
+                        color: Colors.pink),
                   ],
                 ),
 
@@ -336,8 +351,7 @@ class HomeContent extends StatelessWidget {
 
                 Column(
                   children: recentTransactions
-                      .map((transaction) => TrnscItemCard(
-                          transaction: transaction,))
+                      .map((transaction) => TrnscItemCard(transaction: transaction))
                       .toList(),
                 ),
               ],

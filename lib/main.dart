@@ -19,6 +19,7 @@ import 'views/sign-in_options.dart';
 
 //models, widgets, & services
 import 'services/local_storage_service.dart';
+import 'services/seach_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,6 +30,7 @@ Future<void> main() async {
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
+  
   bool hasPin = await LocalStorageService.getPin() != null;
 
   // Enable offline persistence
@@ -66,10 +68,9 @@ class MyApp extends StatelessWidget {
       home: const InitialNavigator(),
       //routes to other pages
       routes: {
-        '/home': (context) => HomePage(),
-        '/inventory': (context) => InventoryPage(),
-        '/ledger': (context) => LedgerPage(),
-        // '/history': (context) => HistoryPage(),
+        '/home': (context) => const HomePage(),
+        '/inventory': (context) => const InventoryPage(),
+        '/ledger': (context) => const LedgerPage(),
       },
     );
   }
@@ -87,6 +88,7 @@ class _InitialNavigatorState extends State<InitialNavigator> {
   void initState() {
     super.initState();
     _navigateAfterDelay();
+    GlobalSearchService.loadSearchData().then((_) => setState(() {}));
   }
 
   void _navigateAfterDelay() {
