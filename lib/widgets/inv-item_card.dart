@@ -124,15 +124,6 @@ class InvItemCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: item.imageUrl != null
-                    // ? ClipRRect(
-                    //     borderRadius: BorderRadius.circular(8),
-                    //     child: Image.network(
-                    //       item.imageUrl!,
-                    //       fit: BoxFit.cover,
-                    //       cacheWidth: 300,
-                    //       cacheHeight: 300,
-                    //     ),
-                    //   )
                   ? ClipRRect(
                     borderRadius: BorderRadius.circular(8),
                     child: CachedNetworkImage(
@@ -202,10 +193,10 @@ class InvItemCard extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-  
+                  // Add Badge Status Here
                   StatusBadge(
                     quantity: item.quantity,
-                    expiration: item.expiration, // Format: MM/DD/YYYY 
+                    expiration: item.expiration, // For Format: MM/DD/YYYY 
                   ),
                   const SizedBox(height: 4),
 

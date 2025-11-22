@@ -9,6 +9,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 // pages
 import 'package:sarisync/views/inventory.dart';
 import 'package:sarisync/views/ledger.dart';
+import 'package:sarisync/views/history.dart';
 
 // models, services, and widgets
 import 'package:sarisync/models/transaction_model.dart';
@@ -43,7 +44,7 @@ class _HomePageState extends State<HomePage> {
       HomeContent(onSearchSelected: switchToPage), 
       InventoryPage(onSearchSelected: switchToPage),
       LedgerPage(),
-      // HistoryPage(),
+      HistoryPage(),
     ];
   }
 

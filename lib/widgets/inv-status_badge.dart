@@ -30,7 +30,11 @@ class StatusBadge extends StatelessWidget {
           final expDate = DateTime(year, month, day);
 
           final now = DateTime.now();
-          final days = expDate.difference(now).inDays;
+          //final days = expDate.difference(now).inDays;
+          final today = DateTime(now.year, now.month, now.day);
+          final expiry = DateTime(expDate.year, expDate.month, expDate.day);
+          final days = expiry.difference(today).inDays;
+
 
           if (days < 1) {
             return _badge(Icons.block, "Expired", Colors.red.shade900);
