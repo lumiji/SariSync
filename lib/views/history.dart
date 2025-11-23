@@ -133,10 +133,9 @@ class _HistoryPageState extends State<HistoryPage> {
                             child: CircularProgressIndicator(),
                           );
                         }
-
                         final docs = snapshot.data!.docs.where((e) {
-                          final cat = e['category'] ?? "";
-                          return selectedCategory == "All" ||
+                        final cat = e.data().toString().contains('category') ? e['category'] : "Unknown";
+                        return selectedCategory == "All" ||
                               cat == selectedCategory;
                         }).toList();
 
@@ -162,14 +161,19 @@ class _HistoryPageState extends State<HistoryPage> {
 
                           itemBuilder: (context, index) {
                             final d = docs[index];
-                            final timestamp = (d['date'] as Timestamp).toDate();
+                            //final timestamp = (d['date'] as Timestamp).toDate();
+                            final data = d.data() as Map<String, dynamic>;
+                            final title = data.containsKey('title') ? data['title'] : "Untitled";
+                            final description = data.containsKey('description') ? data['description'] : "";
+                            final amount = data.containsKey('amount') ? data['amount'] : null;
+                            final timestamp = data.containsKey('date')
+                                ? (data['date'] as Timestamp).toDate()
+                                : DateTime.now();
                             final formattedDate =
                                 "${timestamp.month}-${timestamp.day}-${timestamp.year} "
                                 "${timestamp.hour == 0 ? 12 : (timestamp.hour > 12 ? timestamp.hour - 12 : timestamp.hour)}:"
                                 "${timestamp.minute.toString().padLeft(2, '0')} "
                                 "${timestamp.hour >= 12 ? "PM" : "AM"}";
-
-                            final String titleWithAmount = d['title'];  // no duplicate amount
 
                             return Padding(
                               padding: const EdgeInsets.symmetric(vertical: 6),
@@ -183,7 +187,7 @@ class _HistoryPageState extends State<HistoryPage> {
                                       children: [
                                         // Title + Amount
                                         Text(
-                                          titleWithAmount,
+                                          title,
                                           style: GoogleFonts.inter(
                                             fontSize: 18,
                                             fontWeight: FontWeight.w700,
@@ -192,14 +196,16 @@ class _HistoryPageState extends State<HistoryPage> {
                                         ),
 
                                         // Description
+                                        if (description.isNotEmpty) ...[
                                         const SizedBox(height: 2),
                                         Text(
-                                          d['description'],
+                                          description,
                                           style: GoogleFonts.inter(
                                             fontSize: 15,
                                             color: Colors.grey.shade700,
                                           ),
                                         ),
+                                        ],
 
                                         // Date
                                         const SizedBox(height: 4),
