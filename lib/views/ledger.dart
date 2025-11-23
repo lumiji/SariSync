@@ -144,21 +144,31 @@ class _LedgerPageState extends State<LedgerPage> {
                                   if (result == "added") {
                                     DialogHelper.success(context, "Customer successfully added.");
                                   } else if (result == "updated") {
-                                    DialogHelper.success(context, "Item successfully updated.");
+                                    DialogHelper.success(context, "Customer successfully updated.");
                                   }
                                 },
                                 onDelete: () {
-                                  DialogHelper.confirmDelete(context, () async {
-                                    await FirebaseFirestore.instance
-                                      .collection('ledger')
-                                      .doc(item.id)
-                                      .delete();
+                                  DialogHelper.confirmDelete(
+                                    context,
+                                    () async {
+                                      await FirebaseFirestore.instance
+                                          .collection('ledger')
+                                          .doc(item.id)
+                                          .delete();
 
-                                    Navigator.pop(context);
-                                    Future.microtask( () {
-                                      if (mounted) DialogHelper.success(context, "Item successfully deleted.");
-                                    });
-                                  });
+                                      DialogHelper.success(
+                                        context,
+                                        "Customer successfully deleted.",
+                                        onOk: () {
+                                          // refresh page automatically without pushing again
+                                          //setState(() {});
+                                        },
+                                      );
+                                    },
+                                    title: "Delete Customer?",
+                                    yesText:"Yes",
+                                    noText: "No",
+                                  );
                                 },
                               ),
                             );

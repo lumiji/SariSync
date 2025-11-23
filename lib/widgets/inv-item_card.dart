@@ -143,7 +143,7 @@ class InvItemCard extends StatelessWidget {
                   )
 
 
-                    : const Icon(Icons.inventory_2, color: Colors.grey),
+              : const Icon(Icons.inventory_2, color: Colors.grey),
               ),
               const SizedBox(width: 12),
               Expanded(

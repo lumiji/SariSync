@@ -14,6 +14,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/ledger_service.dart';
 import 'package:sarisync/widgets/inv_add-label.dart';
 import 'package:sarisync/models/ledger_item.dart';
+import 'package:sarisync/services/history_service.dart';
+
 
 class LedgerAddPage extends StatefulWidget {
   final LedgerItem? item;
@@ -131,7 +133,7 @@ class _LedgerAddPageState extends State<LedgerAddPage> {
 
     try {
       if (widget.item == null) {
-        // ADD NEW ITEM
+        // ADD NEW CUSTOMER
         await _ledgerService.addLedgerItem(
           name: _nameController.text.trim(),
           customerID: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -146,7 +148,7 @@ class _LedgerAddPageState extends State<LedgerAddPage> {
         if (!mounted) return;
         Navigator.pop(context, "added");
       } else {
-        // UPDATE EXISTING ITEM
+        // UPDATE EXISTING CUSTOMER
         final docId = widget.item!.id;
         final enteredPartial = double.tryParse(_partialController.text) ?? 0.0;
         double newPartial = (widget.item!.partialPay ?? 0) + enteredPartial;
@@ -189,6 +191,12 @@ class _LedgerAddPageState extends State<LedgerAddPage> {
           }
         }
 
+        await HistoryService.recordLedgerCreditEvent(
+          amount: updatedCredit,
+          customerName:  _nameController.text.trim(),
+          paymentStatus: updatedStatus, // "Unpaid" / "Partial" / "Paid"
+        );
+        
         if (!mounted) return;
         Navigator.pop(context, "updated");
       }

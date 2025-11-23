@@ -243,18 +243,24 @@ class _InventoryPageState extends State<InventoryPage> {
                                         }
                                       },
                                       onDelete: () {
-                                        DialogHelper.confirmDelete(context, () async {
-                                          await FirebaseFirestore.instance
-                                              .collection('inventory')
-                                              .doc(item.id)
-                                              .delete();
+                                        DialogHelper.confirmDelete(
+                                          context,
+                                          () async {
+                                            await FirebaseFirestore.instance
+                                                .collection('ledger')
+                                                .doc(item.id)
+                                                .delete();
 
-                                          Navigator.pop(context);
-                                          Future.microtask(() {
-                                            if (mounted) DialogHelper.success(context, "Item successfully deleted.");
-                                          });
-                                        });
-                                         // _successPopup(context, "Item successfully deleted.");
+                                            DialogHelper.success(
+                                              context,
+                                              "Item successfully deleted.",
+                                              onOk: () {
+                                                // refresh page automatically without pushing again
+                                                //setState(() {});
+                                              },
+                                            );
+                                          },
+                                        );
                                       },
                                     ),
                                   );

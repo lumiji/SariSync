@@ -2,6 +2,86 @@ import 'package:flutter/material.dart';
 import 'package:sarisync/models/receipt_item.dart';
 import 'package:sarisync/services/process_sale.dart';
 import 'package:sarisync/views/home.dart';
+import 'package:sarisync/widgets/message_prompts.dart';
+import 'package:sarisync/services/history_service.dart';
+import 'package:sarisync/services/process_sale.dart';
+import 'package:sarisync/services/receipt_service.dart';
+
+
+//  Local message prompts for Receipt page only
+// 🔔 Message Prompts UI copied from global version for Receipt page
+class ReceiptMessagePrompts {
+  static Future<void> confirm(
+    BuildContext context, {
+    required String title,
+    required String message,
+    required VoidCallback onConfirm,
+  }) {
+    return showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: "",
+      transitionDuration: const Duration(milliseconds: 250),
+      pageBuilder: (context, anim1, anim2) => const SizedBox.shrink(),
+      transitionBuilder: (context, anim1, anim2, child) {
+        return Transform.scale(
+          scale: anim1.value,
+          child: Opacity(
+            opacity: anim1.value,
+            child: AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+              content: Text(message),
+              actionsPadding: const EdgeInsets.only(bottom: 12, right: 12),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("Cancel"),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    onConfirm();
+                  },
+                  child: const Text("Confirm", style: TextStyle(color: Colors.red)),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  static Future<void> success(BuildContext context, String message) {
+    return showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: "",
+      transitionDuration: const Duration(milliseconds: 250),
+      pageBuilder: (context, anim1, anim2) => const SizedBox.shrink(),
+      transitionBuilder: (context, anim1, anim2, child) {
+        return Transform.scale(
+          scale: anim1.value,
+          child: Opacity(
+            opacity: anim1.value,
+            child: AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              content: Text(message, textAlign: TextAlign.center),
+            ),
+          ),
+        );
+      },
+    ).then((_) => Future.delayed(const Duration(milliseconds: 800), () {
+          if (Navigator.canPop(context)) Navigator.pop(context);
+        }));
+  }
+}
+
 
 
 class ReceiptPage extends StatefulWidget {
@@ -179,11 +259,29 @@ class _ReceiptPageState extends State<ReceiptPage> {
                 padding: const EdgeInsets.all(24),
                 child: Row(
                   children: [
+
+                    //DISCARD BUTTON
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () {
-                          // Handle discard
-                          Navigator.pop(context);
+                        DialogHelper.confirmDelete(
+                          context,
+                          () {
+                            DialogHelper.success(
+                              context,
+                              "Receipt has been successfully deleted.",
+                              onOk: () {
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => HomePage()),
+                                );
+                              },
+                            );
+                          },
+                          title: "Discard Receipt?",
+                          yesText: "Yes",
+                          noText: "No",
+                        );
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.red,
@@ -199,12 +297,14 @@ class _ReceiptPageState extends State<ReceiptPage> {
                       ),
                     ),
                     const SizedBox(width: 16),
+
+                    //SAVE BUTTON
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () async {
                           final now = DateTime.now();
+                          final tid = transactionId; // Reference for Receipt ID
 
-                          
                           final itemsWithTimestamp = widget.scannedItems.map((item) => ReceiptItem(
                             id: item.id,
                             name: item.name,
@@ -216,6 +316,19 @@ class _ReceiptPageState extends State<ReceiptPage> {
                           final paidAmount = paymentMethod == 'cash' ? totalPaid : 0.0;
                           final changeAmount = paymentMethod == 'cash' ? paidAmount - totalAmount : 0.0;
                           final status = paymentMethod == 'cash' ? 'paid' : 'credit';
+
+                          // //SAVE RECEIPT FIRST
+                          // await ReceiptService().createReceipt(
+                          //   transactionId: tid,
+                          //   items: itemsWithTimestamp,
+                          //   paymentMethod: paymentMethod,
+                          //   totalAmount: totalAmount,
+                          //   totalPaid: paidAmount,
+                          //   change: changeAmount,
+                          //   paymentMethod: paymentMethod == 'credit' ? nameController.text : "N/A",
+                          //   //cashier: "Lorena",
+                          //   createdAt: now,
+                          // );
 
                           // Call processSale
                           await processSale(
@@ -230,22 +343,38 @@ class _ReceiptPageState extends State<ReceiptPage> {
                             createdAt: now,
                           );
 
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Receipt saved successfully!')),
-                          );
-
-                          // Navigate
+                          // Save to History  for CASH/CREDIT transactions
                           if (paymentMethod == 'cash') {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => HomePage()),
-                            );
-                          } else {
-                            Navigator.pushReplacement(
-                              context, 
-                              MaterialPageRoute(builder: (_) => HomePage(initialIndex: 2)),
+                            await HistoryService.recordSalesEvent(
+                              totalAmount: totalAmount,
+                              //transactionId: tid,
+                              );
+                          } else if 
+                          (paymentMethod == 'credit') {
+                            await HistoryService.recordCreditEvent(
+                              totalAmount: totalAmount,
+                              customerName: nameController.text, 
+                             // transactionId: tid,
                             );
                           }
+
+                          DialogHelper.success(
+                            context,
+                            "Transaction saved successfully.",
+                            onOk: () {
+                              if (paymentMethod == 'cash') {
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => HomePage()),
+                                );
+                              } else {
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => HomePage(initialIndex: 2)),
+                                );
+                              }
+                            },
+                          );
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.green,
