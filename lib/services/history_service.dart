@@ -44,31 +44,6 @@ static Future<void> recordCreditEvent({
 }
 
 // CREDIT
-// static Future<void> recordLedgerCreditEvent({
-//   required String customerName,
-//   required double amount,
-//   required String paymentStatus, // unpaid, partial, paid
-// }) async {
-//   String description;
-
-//   if (paymentStatus == "unpaid") {
-//     description = "$customerName was added to credit";
-//   } else if (paymentStatus == "partial") {
-//     description = "$customerName made a partial payment";
-//   } else if (paymentStatus == "paid") {
-//     description = "$customerName fully settled credit";
-//   } else {
-//     description = customerName;
-//   }
-
-//   await addHistory(
-//     title: "$paymentStatus – Php ${amount.toStringAsFixed(2)}",
-//     description: description,
-//     category: "Credit",
-//     amount: amount,
-//   );
-// }
-
 static Future<void> recordLedgerCreditEvent({
   required double amount,
   required String customerName,
@@ -103,7 +78,7 @@ static Future<void> recordLedgerCreditEvent({
   );
 }
 
-// STOCKS
+// STOCKS 
 static Future<void> checkStockEvent({
   required String itemName,
   required int quantity,
@@ -123,6 +98,7 @@ static Future<void> checkStockEvent({
   }
 }
 
+//STOCKS - EXPIRY
 static Future<void> checkExpiryEvent({
   required String itemName,
   required String expirationDate,
@@ -167,6 +143,4 @@ static Future<void> checkExpiryEvent({
     print("Expiry parsing error: $e");
   }
 }
-
-
 }

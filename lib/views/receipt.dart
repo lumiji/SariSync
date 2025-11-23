@@ -269,7 +269,7 @@ class _ReceiptPageState extends State<ReceiptPage> {
                           () {
                             DialogHelper.success(
                               context,
-                              "Receipt has been successfully deleted.",
+                              "Receipt has been successfully discarded.",
                               onOk: () {
                                 Navigator.pushReplacement(
                                   context,
@@ -316,19 +316,6 @@ class _ReceiptPageState extends State<ReceiptPage> {
                           final paidAmount = paymentMethod == 'cash' ? totalPaid : 0.0;
                           final changeAmount = paymentMethod == 'cash' ? paidAmount - totalAmount : 0.0;
                           final status = paymentMethod == 'cash' ? 'paid' : 'credit';
-
-                          // //SAVE RECEIPT FIRST
-                          // await ReceiptService().createReceipt(
-                          //   transactionId: tid,
-                          //   items: itemsWithTimestamp,
-                          //   paymentMethod: paymentMethod,
-                          //   totalAmount: totalAmount,
-                          //   totalPaid: paidAmount,
-                          //   change: changeAmount,
-                          //   paymentMethod: paymentMethod == 'credit' ? nameController.text : "N/A",
-                          //   //cashier: "Lorena",
-                          //   createdAt: now,
-                          // );
 
                           // Call processSale
                           await processSale(
