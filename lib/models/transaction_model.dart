@@ -1,31 +1,28 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class TransactionItem {
-  final String amount;
-  final String date;
-  final String? id; // optional unique ID
-  final String? customerName; 
+  final double totalAmount;
+  final DateTime createdAt;
+  final String transactionId;
+  final String paymentMethod;
 
   TransactionItem({
-    required this.amount,
-    required this.date,
-    this.id,
-    this.customerName,
+    required this.totalAmount,
+    required this.createdAt,
+    required this.transactionId,
+    required this.paymentMethod,
   });
 
   factory TransactionItem.fromJson(Map<String, dynamic> json) {
     return TransactionItem(
-      amount: json['amount'] ?? 'Php 0.00',
-      date: json['date'] ?? '',
-      id: json['id'],
-      customerName: json['customerName'],
+      totalAmount: (json['totalAmount'] != null)
+        ? double.tryParse(json['totalAmount'].toString()) ?? 0.0
+        : 0.0,
+      createdAt: json['createdAt'] is Timestamp
+        ? (json['createdAt'] as Timestamp).toDate()
+        : DateTime.tryParse(json['createdAt'].toString()) ?? DateTime.now(),
+      transactionId: json['transactionId'],
+      paymentMethod: json['paymentMethod'],
     );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'amount': amount,
-      'date': date,
-      'id': id,
-      'customerName': customerName,
-    };
   }
 }

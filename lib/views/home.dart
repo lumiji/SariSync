@@ -5,8 +5,6 @@ import 'package:sarisync/views/new_sales.dart';
 import 'package:sarisync/widgets/bottom_nav_item.dart';
 import 'package:async/async.dart';
 
-
-
 //firebase dependencies
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -42,6 +40,7 @@ class _HomePageState extends State<HomePage> {
   final LedgerService debtService = LedgerService();
   late final Stream<Map<String, dynamic>> todaySalesStream;
   late final Stream<double> totalDebtStream;
+  late final Stream<List<TransactionItem>> _recentTransactions;
   String? _selectedCategory;
       
   @override
@@ -50,6 +49,21 @@ class _HomePageState extends State<HomePage> {
     _selectedIndex = widget.initialIndex;
     todaySalesStream = salesService.todaySalesStream();
     totalDebtStream = debtService.totalDebtStream();
+    _recentTransactions = FirebaseFirestore.instance
+    .collection('receipts')
+    .orderBy('createdAt', descending: true)
+    .limit(5)
+    .snapshots()
+    .map((snapshot) => snapshot.docs.map((doc) {
+      final data = doc.data();
+      return TransactionItem.fromJson({
+        'totalAmount': data['totalAmount']?.toString() ?? '0.00',
+        'createdAt': data['createdAt'],
+        'transactionId': data['transactionId'] ?? '',
+        'paymentMethod': data['paymentMethod'] ?? '',
+      });
+    }).toList())
+    .asBroadcastStream();
 
     // _pages = [
     //   InventoryPage(
@@ -115,11 +129,11 @@ class _HomePageState extends State<HomePage> {
                 return const Center(child: CircularProgressIndicator());
               }
 
-              final totalSalesData = snapshot.data![0] as Map<String, dynamic>;
+              final totalSalesData = snapshot.data?[0] as Map<String,dynamic>? ?? {};
               final totalSales = totalSalesData['totalSales'] ?? 0;
               final totalItems = totalSalesData['totalItemsSold'] ?? 0;
 
-              final totalDebt = snapshot.data![1] as double;
+              final totalDebt = snapshot.data?[1] as double? ?? 0.0;
 
               return HomeContent(
                 onSearchSelected: switchToPage,
@@ -131,7 +145,8 @@ class _HomePageState extends State<HomePage> {
                     _selectedCategory = cat;
                     _selectedIndex = 1;
                   });
-                }
+                },
+                recentTransactions: _recentTransactions,
               );
             },
           )
@@ -252,6 +267,7 @@ class HomeContent extends StatelessWidget {
   final double totalSales;
   final int totalItemsSold;
   final double totalDebt;
+  final Stream<List<TransactionItem>> recentTransactions;
 
   HomeContent({
     Key? key, 
@@ -260,14 +276,10 @@ class HomeContent extends StatelessWidget {
     required this.totalItemsSold,
     required this.totalDebt,
     required this.setCategory,
+    required this.recentTransactions,
+
   }) : super(key: key);
-
-  final List<TransactionItem> recentTransactions = [
-    TransactionItem(amount: 'Php 50.00', date: '20251105'),
-    TransactionItem(amount: 'Php 150.00', date: '20251106'),
-    TransactionItem(amount: 'Php 15.00', date: '20251107'),
-  ];
-
+  
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -424,10 +436,32 @@ class HomeContent extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
 
-                Column(
-                  children: recentTransactions
-                      .map((transaction) => TrnscItemCard(transaction: transaction))
-                      .toList(),
+                // For recent transactions
+                 StreamBuilder<List<TransactionItem>>(
+                  stream: recentTransactions,
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+
+                    if (snapshot.hasError) {
+                      return Center(child: Text('Error loading transactions'));
+                    }
+                    if (!snapshot.hasData) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+
+                    final recentTransactions = snapshot.data!;
+
+                    return ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: recentTransactions.length,
+                      itemBuilder: (context, index) {
+                        return TrnscItemCard(transaction: recentTransactions[index]);
+                      },
+                    );
+                  },
                 ),
               ],
             ),
