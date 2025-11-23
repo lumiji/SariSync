@@ -47,12 +47,17 @@ class _SearchBarAppState extends State<SearchBarApp> {
           ),
           onTap: controller.openView,
           onChanged: _onSearchChanged,
-          autoFocus: false,
+          autoFocus: true,
           backgroundColor: const MaterialStatePropertyAll<Color>(Colors.white),
+          side: MaterialStateProperty.resolveWith<BorderSide?>((states) {
+                if (states.contains(MaterialState.focused)) {
+                  return BorderSide(color:  Color(0xFF327CD1), width: 2); // When tapped
+                }
+                return BorderSide(color: Colors.grey, width: 1); // Default
+              }),
           shape: MaterialStatePropertyAll<RoundedRectangleBorder>(
             RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
-              side: const BorderSide(color: Color(0xFF327CD1), width: 1),
             ),
           ),
           elevation: const MaterialStatePropertyAll<double>(0),

@@ -1,7 +1,11 @@
 // flutter dependencies
 import 'package:flutter/material.dart';
+import 'package:sarisync/services/sales_card_service.dart';
 import 'package:sarisync/views/new_sales.dart';
 import 'package:sarisync/widgets/bottom_nav_item.dart';
+import 'package:async/async.dart';
+
+
 
 //firebase dependencies
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -19,12 +23,13 @@ import 'package:sarisync/widgets/home-category_card.dart';
 import 'package:sarisync/widgets/home-transaction_item.dart';
 import 'package:sarisync/models/inventory_item.dart';
 import 'package:sarisync/widgets/search_bar.dart';
-import 'package:sarisync/services/seach_service.dart';
+import 'package:sarisync/services/search_service.dart';
+import 'package:sarisync/services/ledger_service.dart';
 
 
 class HomePage extends StatefulWidget {
   final int initialIndex;
-  const HomePage({Key? key, this.initialIndex = 0});
+  const HomePage({Key? key, this.initialIndex = 0}) : super(key: key);
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -32,16 +37,20 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   late int _selectedIndex;
-
   late final List<Widget> _pages; 
+  final SalesService salesService = SalesService();
+  final LedgerService debtService = LedgerService();
+  late final Stream<Map<String, dynamic>> todaySalesStream;
+  late final Stream<double> totalDebtStream;
       
   @override
   void initState() {
     super.initState();
     _selectedIndex = widget.initialIndex;
+    todaySalesStream = salesService.todaySalesStream();
+    totalDebtStream = debtService.totalDebtStream();
 
     _pages = [
-      HomeContent(onSearchSelected: switchToPage), 
       InventoryPage(onSearchSelected: switchToPage),
       LedgerPage(),
       HistoryPage(),
@@ -68,7 +77,6 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-
   Stream<List<InventoryItem>> getInventoryItems() {
   return FirebaseFirestore.instance
       .collection('inventory') 
@@ -84,7 +92,32 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
 
     return Scaffold(
-      body: _pages[_selectedIndex],
+      body: _selectedIndex == 0
+        ? StreamBuilder<List<dynamic>>(
+            stream: StreamZip([
+              salesService.todaySalesStream(),  // Stream<Map<String,dynamic>>
+              debtService.totalDebtStream(),    // Stream<double>
+            ]),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              final totalSalesData = snapshot.data![0] as Map<String, dynamic>;
+              final totalSales = totalSalesData['totalSales'] ?? 0;
+              final totalItems = totalSalesData['totalItemsSold'] ?? 0;
+
+              final totalDebt = snapshot.data![1] as double;
+
+              return HomeContent(
+                onSearchSelected: switchToPage,
+                totalSales: totalSales,
+                totalItemsSold: totalItems,
+                totalDebt: totalDebt,
+              );
+            },
+          )
+        : _pages[_selectedIndex - 1],
 
       // Floating Action Button
       floatingActionButton: SizedBox(
@@ -196,9 +229,18 @@ class _HomePageState extends State<HomePage> {
 
 // Separate widget for Home content
 class HomeContent extends StatelessWidget {
-  final Function(String type, String id) onSearchSelected; // callback
+  final Function(String type, String id) onSearchSelected;
+  final double totalSales;
+  final int totalItemsSold;
+  final double totalDebt;
 
-  HomeContent({Key? key, required this.onSearchSelected}) : super(key: key);
+  HomeContent({
+    Key? key, 
+    required this.onSearchSelected,
+    required this.totalSales,
+    required this.totalItemsSold,
+    required this.totalDebt,
+  }) : super(key: key);
 
   final List<TransactionItem> recentTransactions = [
     TransactionItem(amount: 'Php 50.00', date: '20251105'),
@@ -247,20 +289,20 @@ class HomeContent extends StatelessWidget {
 
                 // Sales Card
                 InfoCard(
-                  title: "Today's Total Sales",
-                  subtitle: 'No. of items sold: 00',
-                  amount: 'Php 00.00',
-                  imagePath: 'assets/images/SALES.png',
-                  gradientColors: const [Color(0xFF6DE96D), Color(0xFF7FE3B5)],
-                ),
-
+                      title: "Today's Total Sales",
+                      subtitle: "No. of items sold: $totalItemsSold",
+                      amount: "Php ${totalSales.toStringAsFixed(2)}",
+                      imagePath: 'assets/images/SALES.png',
+                      gradientColors: const [Color(0xFF6DE96D), Color(0xFF7FE3B5)],
+                    ),
+                  
                 const SizedBox(height: 16),
 
                 // Debt Card
                 InfoCard(
                   title: 'Outstanding Debt',
                   subtitle: '(total amount to be collected)',
-                  amount: 'Php 00.00',
+                  amount: 'Php ${totalDebt.toStringAsFixed(2)}',
                   imagePath: 'assets/images/CREDITS.png',
                   gradientColors: const [Color(0xFF4393EE), Color(0xFF7BB3FF)],
                 ),

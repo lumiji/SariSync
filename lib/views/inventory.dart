@@ -6,7 +6,6 @@ import 'package:google_fonts/google_fonts.dart';
 
 // firebase dependencies
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:sarisync/views/ledger.dart';
 
 // widgets & pages
 import 'package:sarisync/widgets/inv-category_card.dart';
@@ -18,7 +17,7 @@ import 'package:sarisync/widgets/message_prompts.dart';
 
 // models & services
 import '../models/inventory_item.dart';
-import 'package:sarisync/services/seach_service.dart';
+import 'package:sarisync/services/search_service.dart';
 
 
 class InventoryPage extends StatefulWidget {

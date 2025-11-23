@@ -149,19 +149,19 @@ class _LedgerAddPageState extends State<LedgerAddPage> {
         // UPDATE EXISTING ITEM
         final docId = widget.item!.id;
         final enteredPartial = double.tryParse(_partialController.text) ?? 0.0;
-        double newPartial;
-        final updatedCredit = credit; 
-        double remaining;
-        String updatedStatus;
+        double newPartial = (widget.item!.partialPay ?? 0) + enteredPartial;
+        final updatedCredit = credit;
+
+        double remaining = (updatedCredit - newPartial).clamp(0.0, updatedCredit);
+        
+        String updatedStatus = _paymentStatus;
 
         if (_paymentStatus == 'Paid') {
           updatedStatus = 'Paid';
-          newPartial = updatedCredit;
-          remaining = 0.0; 
+          newPartial = credit;
+          remaining = 0.0;
         } else if (_paymentStatus == 'Partial') {
           updatedStatus = 'Partial';
-          newPartial = (widget.item!.partialPay ?? 0) + enteredPartial;
-          remaining = (updatedCredit - newPartial).clamp(0.0, updatedCredit);
         } else {
           updatedStatus = 'Unpaid';
           newPartial = 0.0;

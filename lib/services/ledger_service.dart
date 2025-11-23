@@ -147,5 +147,22 @@ class LedgerService {
       rethrow;
     }
   }
+
+  Stream<double> totalDebtStream() {
+    return FirebaseFirestore.instance
+        .collection('ledger')
+        .where('payStatus', isNotEqualTo: 'Paid')
+        .snapshots()
+        .map((snapshot) {
+          double totalDebt = 0;
+          for (var doc in snapshot.docs) {
+            final data = doc.data();
+            final credit = (data['credit'] ?? 0).toDouble();
+            final partialPay = (data['partialPay'] ?? 0).toDouble();
+            totalDebt += (credit - partialPay);
+          }
+          return totalDebt;
+        });
+    }
 }
 

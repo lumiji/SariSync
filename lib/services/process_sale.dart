@@ -62,4 +62,18 @@ Future<void> processSale({
     status: 'credit',
     createdAt: createdAt,
   );
+
+  // update daily summary for cash sales
+  if (paymentMethod == 'cash') {
+    final now = DateTime.now();
+    final docId = '${now.year}-${now.month}-${now.day}';
+    final dailyRef = FirebaseFirestore.instance.collection('dailySales').doc(docId);
+
+    await dailyRef.set({
+      'totalSales': FieldValue.increment(totalAmount),
+      'totalItemsSold': FieldValue.increment(
+        items.fold<int>(0, (sum, item) => sum + (item.quantity)),
+      ),
+    }, SetOptions(merge: true));
+  }
 }

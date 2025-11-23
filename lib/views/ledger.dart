@@ -11,12 +11,11 @@ import 'package:sarisync/widgets/message_prompts.dart';
 //pages
 import 'ledger_add_page.dart';
 import 'package:sarisync/widgets/search_bar.dart';
-import 'package:sarisync/views/inventory.dart';
 
 //models & services
 import '../models/ledger_item.dart';
 import '../widgets/led-item_card.dart';
-import 'package:sarisync/services/seach_service.dart';
+import 'package:sarisync/services/search_service.dart';
 
 class LedgerPage extends StatefulWidget {
   final void Function(String type, String customerID)? onSearchSelected;
