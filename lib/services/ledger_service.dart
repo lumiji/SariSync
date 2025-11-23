@@ -1,5 +1,6 @@
 // for saving customer into Firebase database
 import 'dart:io';
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:sarisync/models/ledger_item.dart';
@@ -9,6 +10,45 @@ class LedgerService {
   //initialization
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
+  final ledger = FirebaseFirestore.instance.collection('ledger');
+
+  //checks if customer is in ledger
+  Future<QueryDocumentSnapshot?> findCustomerByName(String name) async {
+    final snap = await ledger.where('name', isEqualTo: name).limit(1).get();
+    return snap.docs.isEmpty ? null : snap.docs.first;
+  }
+
+  //Create NEW customer ledger record
+  Future<String> createCustomer({
+    required String name,
+    required double initialCredit,
+    required String receivedBy,
+  }) async {
+    final newId =  DateTime.now().millisecondsSinceEpoch.toString();
+
+    await ledger.doc(newId).set({
+      'customerID': newId,
+      'name': name,
+      'credit': initialCredit,
+      'payStatus' : 'Unpaid',
+      'image': null,
+      'receivedBy': receivedBy,
+      'createdAt': Timestamp.now(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+
+     return newId;
+  }
+
+  // Add credit to existing customer
+  Future<void> updateCustomerCredit(String customerID, double amount) async {
+  await ledger.doc(customerID).update({
+    'credit': FieldValue.increment(amount),
+    'updatedAt': FieldValue.serverTimestamp(),
+  });
+}
+
+
 
   // Upload image to Firebase Storage
   Future<String?> uploadImage(File imageFile) async {
@@ -39,10 +79,12 @@ class LedgerService {
     required double credit,
     double? partialPay,
     required String received,
-    String? imageUrl,
+    File? imageFile,
   }) async {
     try {
-      await _firestore.collection('ledger').add({
+
+      final docRef = _firestore.collection('ledger').doc();
+      await docRef.set({
         'name': name,
         'customerID': customerID,
         'contact': contact,
@@ -50,13 +92,25 @@ class LedgerService {
         'credit': credit,
         'partialPay':  partialPay,
         'received': received,
-        'imageUrl': imageUrl,
+        'imageUrl': null,
         'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt' : FieldValue.serverTimestamp(),
       });
+
       print("Item added successfully!");
-    } catch (e) {
-      print("Error adding item: $e");
+  
+      if (imageFile != null){
+        uploadImage(imageFile).then((url) async {
+          if (url != null) {
+            await docRef.update({'imageUrl' : url});
+            print('Ledger item updated with image URL: $url');
+          }
+      });
     }
+  } catch (e) {
+    print('Error adding ledger item: $e');
+    rethrow;
+  }
   }
 
   // Retrieve items from Firestore as a stream
@@ -69,4 +123,29 @@ class LedgerService {
             .map((doc) => LedgerItem.fromMap(doc.data(), doc.id))
             .toList());
   }
+
+  Future<void> updateLedgerItem(String docId, Map<String, dynamic> data) async {
+    try{
+      await _firestore
+        .collection('ledger')
+        .doc(docId)
+        .update(data);
+    } catch (e) {
+      print("Error updating ledger item: $e");
+      rethrow;
+    }
+  }
+
+  Future<void> deleteLedgerItem(String docId) async {
+    try {
+      await _firestore
+        .collection('ledger')
+        .doc(docId)
+        .delete();
+    } catch (e) {
+      print("Error deleting ledger item: $e");
+      rethrow;
+    }
+  }
 }
+

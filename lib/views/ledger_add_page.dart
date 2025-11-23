@@ -7,12 +7,20 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+//firebase dependencies
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 //models, widgets & services
 import '../services/ledger_service.dart';
 import 'package:sarisync/widgets/inv_add-label.dart';
+import 'package:sarisync/models/ledger_item.dart';
+import 'package:sarisync/services/history_service.dart';
+
 
 class LedgerAddPage extends StatefulWidget {
-  const LedgerAddPage({Key? key}) : super(key: key);
+  final LedgerItem? item;
+
+  const LedgerAddPage({Key? key, this.item}) : super(key: key);
 
   @override
   State<LedgerAddPage> createState() => _LedgerAddPageState();
@@ -82,50 +90,122 @@ class _LedgerAddPageState extends State<LedgerAddPage> {
   String? imageUrl;
   String _paymentStatus = 'Unpaid';
  
+  
+  @override
+  void initState() {
+    super.initState();
+
+    if (widget.item != null) {
+      final item = widget.item!;
+      _nameController.text = item.name;
+      _contactController.text = item.contact;
+      _paymentStatus = item.payStatus;
+      _creditController.text = item.credit.toString();
+      _partialController.text = '';
+      _receivedByController.text = item.received;
+
+      // load image preview if existing
+      if (item.imageUrl != null && item.imageUrl!.isNotEmpty) {
+        imageUrl = item.imageUrl;
+      }
+    }
+  }
+  
+  Future<void> addPartialPayment(LedgerItem item, double amountPaid) async {
+    final newPartial = (item.partialPay ?? 0) + amountPaid;
+
+    await _ledgerService.updateLedgerItem(item.id!, {
+      'partialPay': newPartial,
+      'updatedAt': FieldValue.serverTimestamp(),
+      'payStatus': newPartial >= item.credit ? 'Paid' : 'Partial',
+    });
+  }
+
 
   // Save ledger item
   void _saveLedger() async {
-    print('Save button pressed');
-    if (!_formKey.currentState!.validate()) {
-      print('Form validation failed');
-      return;
-    }
+    if (!_formKey.currentState!.validate()) return;
 
-    print('Form validated successfully');
-    String? imageUrl;
-    if (_selectedImage != null) {
-      print('Uploading image...');
-      imageUrl = await _ledgerService.uploadImage(_selectedImage!);
-      print('Image uploaded: $imageUrl');
-    }
-    
-    final credit = double.tryParse(_creditController.text) ?? 0;
+    final credit = double.tryParse(_creditController.text) ?? 0.0;
     final partial = _paymentStatus == 'Partial'
-        ? double.tryParse(_partialController.text) ?? 0
+        ? double.tryParse(_partialController.text) ?? 0.0
         : 0.0;
-  try{
-    await _ledgerService.addLedgerItem(
-      name: _nameController.text.trim(),
-      customerID: DateTime.now().millisecondsSinceEpoch.toString(),
-      contact: _contactController.text.trim(),
-      payStatus: _paymentStatus,
-      credit: credit,
-      partialPay: partial,
-      received: _receivedByController.text.trim(),
-      imageUrl: imageUrl, 
-    );
-    print('Firestore addLedgerItem() completed');
 
-    if (mounted){
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Item saved Successfully!')),
-      );
-      Navigator.pop(context);
+    try {
+      if (widget.item == null) {
+        // ADD NEW CUSTOMER
+        await _ledgerService.addLedgerItem(
+          name: _nameController.text.trim(),
+          customerID: DateTime.now().millisecondsSinceEpoch.toString(),
+          contact: _contactController.text.trim(),
+          payStatus: _paymentStatus,
+          credit: credit,
+          partialPay: partial,
+          received: _receivedByController.text.trim(),
+          imageFile: _selectedImage,
+        );
+
+        if (!mounted) return;
+        Navigator.pop(context, "added");
+      } else {
+        // UPDATE EXISTING CUSTOMER
+        final docId = widget.item!.id;
+        final enteredPartial = double.tryParse(_partialController.text) ?? 0.0;
+        double newPartial;
+        final updatedCredit = credit; 
+        double remaining;
+        String updatedStatus;
+
+        if (_paymentStatus == 'Paid') {
+          updatedStatus = 'Paid';
+          newPartial = updatedCredit;
+          remaining = 0.0; 
+        } else if (_paymentStatus == 'Partial') {
+          updatedStatus = 'Partial';
+          newPartial = (widget.item!.partialPay ?? 0) + enteredPartial;
+          remaining = (updatedCredit - newPartial).clamp(0.0, updatedCredit);
+        } else {
+          updatedStatus = 'Unpaid';
+          newPartial = 0.0;
+          remaining = updatedCredit;
+        }
+
+        final data = {
+          'name': _nameController.text.trim(),
+          'customerID': widget.item!.customerID, 
+          'contact': _contactController.text.trim(),
+          'payStatus':updatedStatus,
+          'credit': updatedCredit,
+          'partialPay': newPartial,
+          'received': _receivedByController.text.trim(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        };
+
+        await _ledgerService.updateLedgerItem(docId, data);
+
+     
+        if (_selectedImage != null) {
+          final url = await _ledgerService.uploadImage(_selectedImage!);
+          if (url != null) {
+            await _ledgerService.updateLedgerItem(docId, {'imageUrl': url});
+          }
+        }
+
+        await HistoryService.recordLedgerCreditEvent(
+          amount: updatedCredit,
+          customerName:  _nameController.text.trim(),
+          paymentStatus: updatedStatus, // "Unpaid" / "Partial" / "Paid"
+        );
+        
+        if (!mounted) return;
+        Navigator.pop(context, "updated");
+      }
+    } catch (e) {
+      print('Error saving ledger item: $e');
     }
-  } catch (e) {
-      print('Error saving item: $e');
   }
-}
+
+
 
 // for cleaning up controllers
   @override
@@ -149,8 +229,8 @@ class _LedgerAddPageState extends State<LedgerAddPage> {
           icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Add',
+        title: Text(
+          widget.item == null ? 'Add' : 'Edit',
           style: TextStyle(
             color: Colors.black,
             fontSize: 16,

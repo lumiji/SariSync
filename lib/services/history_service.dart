@@ -17,6 +17,93 @@ class HistoryService {
     });
   }
 
+//SALES-Cash
+static Future<void> recordSalesEvent({
+  required double totalAmount,
+}) async {
+  await addHistory(
+    title: "Sales – Php ${totalAmount.toStringAsFixed(2)}",
+    description: "A successful Transaction",
+    category: "Sales",
+    amount: totalAmount,
+  );
+}
+
+// SALES-Credit
+static Future<void> recordCreditEvent({
+  required double totalAmount,
+  required String customerName,
+}) async {
+  await addHistory(
+    title: "Credit – Php ${totalAmount.toStringAsFixed(2)}",
+    //description: "Customer: $customerName",
+    description: "$customerName added to credit",
+    category: "Credit",
+    amount: totalAmount,
+  );
+}
+
+// CREDIT
+// static Future<void> recordLedgerCreditEvent({
+//   required String customerName,
+//   required double amount,
+//   required String paymentStatus, // unpaid, partial, paid
+// }) async {
+//   String description;
+
+//   if (paymentStatus == "unpaid") {
+//     description = "$customerName was added to credit";
+//   } else if (paymentStatus == "partial") {
+//     description = "$customerName made a partial payment";
+//   } else if (paymentStatus == "paid") {
+//     description = "$customerName fully settled credit";
+//   } else {
+//     description = customerName;
+//   }
+
+//   await addHistory(
+//     title: "$paymentStatus – Php ${amount.toStringAsFixed(2)}",
+//     description: description,
+//     category: "Credit",
+//     amount: amount,
+//   );
+// }
+
+static Future<void> recordLedgerCreditEvent({
+  required double amount,
+  required String customerName,
+  required String paymentStatus,
+}) async {
+  String title;
+  String description;
+
+  if (paymentStatus.toLowerCase() == "unpaid") {
+    title = "Unpaid – Php ${amount.toStringAsFixed(2)}";
+    description = "$customerName has 0 payments";
+  } 
+  else if (paymentStatus.toLowerCase() == "partial") {
+    title = "Partial Payment – Php ${amount.toStringAsFixed(2)}";
+    description = "$customerName made a partial payment";
+  } 
+  else if (paymentStatus.toLowerCase() == "paid") {
+    title = "Paid – Php ${amount.toStringAsFixed(2)}";
+    description = "$customerName has fully paid their total credit";
+  } 
+  else {
+    // fallback
+    title = "Credit – Php ${amount.toStringAsFixed(2)}";
+    description = customerName;
+  }
+
+  await addHistory(
+    title: title,
+    description: description,
+    category: "Credit",
+    amount: amount,
+  );
+}
+
+// STOCKS
 static Future<void> checkStockEvent({
   required String itemName,
   required int quantity,

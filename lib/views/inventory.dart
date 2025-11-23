@@ -6,17 +6,16 @@ import 'package:google_fonts/google_fonts.dart';
 
 // firebase dependencies
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 
 // widgets & pages
 import 'package:sarisync/widgets/inv-category_card.dart';
 import 'package:sarisync/widgets/inv-item_card.dart';
 import 'inventory_add_page.dart';
+import 'package:sarisync/widgets/image_helper.dart';
+import 'package:sarisync/widgets/message_prompts.dart';
 
 // models
 import '../models/inventory_item.dart';
-import 'package:sarisync/widgets/inv-category_card.dart';
-import 'package:sarisync/widgets/inv-item_card.dart';
 
 
 class InventoryPage extends StatefulWidget {
@@ -53,121 +52,11 @@ class _InventoryPageState extends State<InventoryPage> {
             .toList());
   }
 
-  //For Message Prompts
-  void _confirmDelete(BuildContext context, VoidCallback onConfirm) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: const Color(0xFFE8F3FF),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                "Delete Item?",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    onPressed: onConfirm,
-                    child: const Text("Yes"),
-                  ),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text("No"),
-                  ),
-                ],
-              )
-            ],
-          ),
-        ),
-      ),
-    );
+  void _onInventoryLoaded(List<InventoryItem> items) {
+    final urls = items.map((item) => item.imageUrl).toList();
+    ImageHelper.prefetchImages(context: context, urls: urls, limit: 8);
   }
 
-  void _successPopup(BuildContext context, String message) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: const Color(0xFFE8F3FF),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                message,
-                style:
-                    const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-                onPressed: () => Navigator.pop(context),
-                child: const Text("OK"),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // Prefetch a few images (so first open is faster). Only prefetch when item
-  // count changes, and only up to a small number to avoid heavy work.
-  void _prefetchImages(List<InventoryItem> items) {
-    // only prefetch first N images
-    const int prefetchLimit = 8;
-    final int toPrefetch = items.length < prefetchLimit ? items.length : prefetchLimit;
-
-    if (_lastPrefetchedCount == items.length) return; // already prefetched same set
-    _lastPrefetchedCount = items.length;
-
-    for (int i = 0; i < toPrefetch; i++) {
-      final url = items[i].imageUrl;
-      if (url != null && url.isNotEmpty) {
-        // use CachedNetworkImageProvider so cached_network_image can reuse it
-        final provider = CachedNetworkImageProvider(url);
-        // precache into Flutter image cache asynchronously
-        precacheImage(provider, context).catchError((_) {});
-      }
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -198,7 +87,7 @@ class _InventoryPageState extends State<InventoryPage> {
 
                 // prefetch a handful of images to reduce the perceived load time
                 WidgetsBinding.instance.addPostFrameCallback((_) {
-                  _prefetchImages(filteredItems);
+                  _onInventoryLoaded(filteredItems);
                 });
 
                 return CustomScrollView(
@@ -342,24 +231,30 @@ class _InventoryPageState extends State<InventoryPage> {
                                         );
 
                                         if (result == "added") {
-                                          _successPopup(context, "Item successfully added.");
+                                          DialogHelper.success(context, "Item successfully added.");
                                         } else if (result == "updated") {
-                                          _successPopup(context, "Item successfully updated.");
+                                          DialogHelper.success(context, "Item successfully updated.");
                                         }
                                       },
                                       onDelete: () {
-                                        _confirmDelete(context, () async {
-                                          await FirebaseFirestore.instance
-                                              .collection('inventory')
-                                              .doc(item.id)
-                                              .delete();
+                                        DialogHelper.confirmDelete(
+                                          context,
+                                          () async {
+                                            await FirebaseFirestore.instance
+                                                .collection('ledger')
+                                                .doc(item.id)
+                                                .delete();
 
-                                          Navigator.pop(context);
-                                           Future.microtask(() {
-                                              if (mounted) _successPopup(context, "Item successfully deleted.");
-                                            });
-                                         // _successPopup(context, "Item successfully deleted.");
-                                        });
+                                            DialogHelper.success(
+                                              context,
+                                              "Item successfully deleted.",
+                                              onOk: () {
+                                                // refresh page automatically without pushing again
+                                                //setState(() {});
+                                              },
+                                            );
+                                          },
+                                        );
                                       },
                                     ),
                                   );
@@ -388,7 +283,7 @@ class _InventoryPageState extends State<InventoryPage> {
                 );
 
                 if (result == "added") {
-                  _successPopup(context, "Item successfully added.");
+                  DialogHelper.success(context, "Item successfully added.");
                 }
               },
               backgroundColor: const Color(0xFF1565C0),

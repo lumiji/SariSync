@@ -21,14 +21,15 @@ import 'package:sarisync/models/inventory_item.dart';
 
 
 class HomePage extends StatefulWidget {
-  const HomePage({Key? key}) : super(key: key);
+  final int initialIndex;
+  const HomePage({Key? key, this.initialIndex = 0});
 
   @override
   State<HomePage> createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> {
-  int _selectedIndex = 0;
+  late int _selectedIndex;
 
   final List<Widget> _pages = [
     HomeContent(), 
@@ -36,6 +37,12 @@ class _HomePageState extends State<HomePage> {
     LedgerPage(),
     HistoryPage(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedIndex = widget.initialIndex;
+  }
 
   void _onItemTapped(int index) {
     setState(() {
@@ -63,15 +70,23 @@ class _HomePageState extends State<HomePage> {
         width: 60,
         height: 60,
         child: FloatingActionButton(
-          onPressed: () {
-            Navigator.push(
+          onPressed: () async {
+            // Open PoSSystem and wait for tabIndex returned
+            final tabIndex = await Navigator.push<int>(
               context,
               MaterialPageRoute(
                 builder: (context) => PoSSystem(
                   inventoryStream: getInventoryItems(),
+                ),
               ),
-            ),
             );
+
+            // If ReceiptPage returned a tab index (Ledger), switch tab
+            if (tabIndex != null) {
+              setState(() {
+                _selectedIndex = tabIndex; // 2 = Ledger tab
+              });
+            }
           },
           backgroundColor: const Color(0xFFFF9800),
           shape: const CircleBorder(),

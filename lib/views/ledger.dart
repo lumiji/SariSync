@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 //firebase dependencies
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:sarisync/widgets/message_prompts.dart';
 
 //pages
 import 'ledger_add_page.dart';
@@ -132,10 +133,53 @@ class _LedgerPageState extends State<LedgerPage> {
                             return Padding(
                               padding: const EdgeInsets.only(bottom: 12),
                               child: LedItemCard(
-                                item: item
+                                item: item,
+                                onEdit: () async {
+                                  await FirebaseFirestore.instance
+                                    .collection("ledger")
+                                    .doc(item.id)
+                                    .update({
+                                      "updatedAt": FieldValue.serverTimestamp(),
+                                    });
+                                  final result = await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => LedgerAddPage(item: item),
+                                    ),
+                                  );
+
+                                  if (result == "added") {
+                                    DialogHelper.success(context, "Customer successfully added.");
+                                  } else if (result == "updated") {
+                                    DialogHelper.success(context, "Customer successfully updated.");
+                                  }
+                                },
+                                onDelete: () {
+                                  DialogHelper.confirmDelete(
+                                    context,
+                                    () async {
+                                      await FirebaseFirestore.instance
+                                          .collection('ledger')
+                                          .doc(item.id)
+                                          .delete();
+
+                                      DialogHelper.success(
+                                        context,
+                                        "Customer successfully deleted.",
+                                        onOk: () {
+                                          // refresh page automatically without pushing again
+                                          //setState(() {});
+                                        },
+                                      );
+                                    },
+                                    title: "Delete Customer?",
+                                    yesText:"Yes",
+                                    noText: "No",
+                                  );
+                                },
                               ),
                             );
-                          },
+                          }, 
                         );
                       },
                     ),
