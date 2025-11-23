@@ -37,11 +37,12 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   late int _selectedIndex;
-  late final List<Widget> _pages; 
+  // late final List<Widget> _pages; 
   final SalesService salesService = SalesService();
   final LedgerService debtService = LedgerService();
   late final Stream<Map<String, dynamic>> todaySalesStream;
   late final Stream<double> totalDebtStream;
+  String? _selectedCategory;
       
   @override
   void initState() {
@@ -50,11 +51,13 @@ class _HomePageState extends State<HomePage> {
     todaySalesStream = salesService.todaySalesStream();
     totalDebtStream = debtService.totalDebtStream();
 
-    _pages = [
-      InventoryPage(onSearchSelected: switchToPage),
-      LedgerPage(),
-      HistoryPage(),
-    ];
+    // _pages = [
+    //   InventoryPage(
+    //     onSearchSelected: switchToPage,
+    //     selectedCategory: _selectedCategory ?? 'All'),
+    //   LedgerPage(),
+    //   HistoryPage(),
+    // ];
   }
 
   void _onItemTapped(int index) {
@@ -91,6 +94,15 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
 
+    final List<Widget> pages = [
+      InventoryPage(
+        selectedCategory: _selectedCategory ?? 'All',
+        onSearchSelected: switchToPage,
+      ),
+      LedgerPage(),
+      HistoryPage(),
+    ];
+
     return Scaffold(
       body: _selectedIndex == 0
         ? StreamBuilder<List<dynamic>>(
@@ -114,10 +126,16 @@ class _HomePageState extends State<HomePage> {
                 totalSales: totalSales,
                 totalItemsSold: totalItems,
                 totalDebt: totalDebt,
+                setCategory: (cat) {
+                  setState(() {
+                    _selectedCategory = cat;
+                    _selectedIndex = 1;
+                  });
+                }
               );
             },
           )
-        : _pages[_selectedIndex - 1],
+        : pages[_selectedIndex - 1],
 
       // Floating Action Button
       floatingActionButton: SizedBox(
@@ -230,6 +248,7 @@ class _HomePageState extends State<HomePage> {
 // Separate widget for Home content
 class HomeContent extends StatelessWidget {
   final Function(String type, String id) onSearchSelected;
+  final Function(String category) setCategory;
   final double totalSales;
   final int totalItemsSold;
   final double totalDebt;
@@ -240,6 +259,7 @@ class HomeContent extends StatelessWidget {
     required this.totalSales,
     required this.totalItemsSold,
     required this.totalDebt,
+    required this.setCategory,
   }) : super(key: key);
 
   final List<TransactionItem> recentTransactions = [
@@ -327,7 +347,7 @@ class HomeContent extends StatelessWidget {
                       ),
                     ),
                     TextButton(
-                      onPressed: () {},
+                      onPressed: () => setCategory('All'),
                       child: const Text(
                         'View All',
                         style: TextStyle(
@@ -353,29 +373,41 @@ class HomeContent extends StatelessWidget {
                   crossAxisSpacing: 16,
                   children: [
                     CategoryCard(
-                        label: 'Snacks',
-                        imagePath: 'assets/images/SNACKS.png',
-                        color: Colors.teal),
+                      label: 'Snacks',
+                      imagePath: 'assets/images/SNACKS.png',
+                      color: Colors.teal,
+                      onTap: () => setCategory('Snacks'),
+                    ),
                     CategoryCard(
-                        label: 'Drinks',
-                        imagePath: 'assets/images/DRINKS.png',
-                        color: Colors.blue),
+                      label: 'Drinks',
+                      imagePath: 'assets/images/DRINKS.png',
+                      color: Colors.blue,
+                      onTap: () => setCategory('Drinks'),
+                    ),
                     CategoryCard(
-                        label: 'Cans & Packs',
-                        imagePath: 'assets/images/CANS&PACKS.png',
-                        color: Colors.green),
+                      label: 'Cans & Packs',
+                      imagePath: 'assets/images/CANS&PACKS.png',
+                      color: Colors.green,
+                      onTap: () => setCategory('Cans & Packs'),
+                    ),
                     CategoryCard(
-                        label: 'Toiletries',
-                        imagePath: 'assets/images/TOILETRIES.png',
-                        color: Colors.purple),
+                      label: 'Toiletries',
+                      imagePath: 'assets/images/TOILETRIES.png',
+                      color: Colors.purple,
+                      onTap: () => setCategory('Toiletries'),
+                    ),
                     CategoryCard(
-                        label: 'Condiments',
-                        imagePath: 'assets/images/CONDIMENTS.png',
-                        color: Colors.orange),
+                      label: 'Condiments',
+                      imagePath: 'assets/images/CONDIMENTS.png',
+                      color: Colors.orange,
+                      onTap: () => setCategory('Condiments'),
+                    ),
                     CategoryCard(
-                        label: 'Others',
-                        imagePath: 'assets/images/OTHERS.png',
-                        color: Colors.pink),
+                      label: 'Others',
+                      imagePath: 'assets/images/OTHERS.png',
+                      color: Colors.pink,
+                      onTap: () => setCategory('Others'),
+                    ),
                   ],
                 ),
 

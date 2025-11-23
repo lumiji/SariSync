@@ -22,7 +22,12 @@ import 'package:sarisync/services/search_service.dart';
 
 class InventoryPage extends StatefulWidget {
   final void Function(String type, String id)? onSearchSelected;
-  const InventoryPage({Key? key, this.onSearchSelected}) : super(key: key);
+  final String? selectedCategory;
+  const InventoryPage({
+    Key? key, 
+    this.onSearchSelected,
+    this.selectedCategory
+    }) : super(key: key);
 
   @override
   State<InventoryPage> createState() => _InventoryPageState();
@@ -30,7 +35,15 @@ class InventoryPage extends StatefulWidget {
 
 class _InventoryPageState extends State<InventoryPage> {
   int _selectedIndex = 1;
-  String _selectedCategory = 'All';
+
+  //default selected category when pressing inventory page icon
+  late String _selectedCategory;
+
+  @override
+  void initState(){
+    super.initState();
+    _selectedCategory = widget.selectedCategory ?? 'All';
+  }
   
 
   // small optimization: only prefetch when items change

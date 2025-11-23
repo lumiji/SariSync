@@ -47,7 +47,7 @@ class _SearchBarAppState extends State<SearchBarApp> {
           ),
           onTap: controller.openView,
           onChanged: _onSearchChanged,
-          autoFocus: true,
+          autoFocus: false,
           backgroundColor: const MaterialStatePropertyAll<Color>(Colors.white),
           side: MaterialStateProperty.resolveWith<BorderSide?>((states) {
                 if (states.contains(MaterialState.focused)) {
