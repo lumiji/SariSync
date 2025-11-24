@@ -191,10 +191,12 @@ class _LedgerAddPageState extends State<LedgerAddPage> {
           }
         }
 
+        String transactionId = DateTime.now().millisecondsSinceEpoch.toString();
         await HistoryService.recordLedgerCreditEvent(
           amount: updatedCredit,
           customerName:  _nameController.text.trim(),
           paymentStatus: updatedStatus, // "Unpaid" / "Partial" / "Paid"
+          transactionId: transactionId,
         );
         
         if (!mounted) return;

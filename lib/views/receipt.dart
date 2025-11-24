@@ -330,6 +330,7 @@ class _ReceiptPageState extends State<ReceiptPage> {
                             totalPaid: paidAmount,
                             change: changeAmount,
                             status: status,
+                            transactionId: transactionId, // 🔥 pass SAME ID
                             receivedBy: ' ', // ledger field
                             createdAt: now,
                           );
@@ -338,14 +339,14 @@ class _ReceiptPageState extends State<ReceiptPage> {
                           if (paymentMethod == 'cash') {
                             await HistoryService.recordSalesEvent(
                               totalAmount: totalAmount,
-                              //transactionId: tid,
+                              transactionId: transactionId,
                               );
                           } else if 
                           (paymentMethod == 'credit') {
                             await HistoryService.recordCreditEvent(
                               totalAmount: totalAmount,
                               customerName: nameController.text, 
-                             // transactionId: tid,
+                              transactionId: transactionId,
                             );
                           }
 

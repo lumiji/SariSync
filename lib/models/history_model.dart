@@ -1,4 +1,6 @@
-//import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:sarisync/services/history_service.dart';
+import 'package:sarisync/views/receipt.dart';
 
 // MODEL
 class HistoryItem {
@@ -8,6 +10,7 @@ class HistoryItem {
   final DateTime date;
   final String category; // "Sales", "Credit", "Stocks"
   final double? amount; // optional for stocks events
+  final String transactionId; // For retrieve of receipt
 
   HistoryItem({
     required this.id,
@@ -15,6 +18,7 @@ class HistoryItem {
     required this.description,
     required this.date,
     required this.category,
+    required this.transactionId,
     this.amount,
   });
 
@@ -25,6 +29,7 @@ class HistoryItem {
       "date": date.toIso8601String(),
       "category": category,
       "amount": amount,
+      "transactionId": transactionId,
     };
   }
 
@@ -36,6 +41,7 @@ class HistoryItem {
       category: map["category"],
       amount: (map["amount"] != null) ? map["amount"]!.toDouble() : null,
       date: DateTime.parse(map["date"]),
+      transactionId: map["transactionId"] ?? "",
     );
   }
 }

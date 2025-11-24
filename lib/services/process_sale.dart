@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 
 Future<void> processSale({
+  required String transactionId,
   required List<ReceiptItem> items,
   required String paymentMethod,
   required String? name,
@@ -51,7 +52,7 @@ Future<void> processSale({
 
   // Save receipt
   await receiptService.createReceipt(
-    transactionId: DateTime.now().millisecondsSinceEpoch.toString(),
+    transactionId: transactionId,
     items: items,
     total: totalAmount,
     totalPaid: paidAmount,
@@ -59,7 +60,7 @@ Future<void> processSale({
     customerID: customerID,
     name: paymentMethod == 'credit' ? name : null,
     paymentMethod: paymentMethod,
-    status: 'credit',
+    status: paymentStatus,     //status: 'credit',
     createdAt: createdAt,
   );
 }

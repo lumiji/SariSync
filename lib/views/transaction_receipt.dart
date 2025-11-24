@@ -1,298 +1,316 @@
-// // import 'package:flutter/material.dart';
-// // import 'package:sarisync/services/ledger_service.dart';
-// // import 'package:sarisync/services/receipt_service.dart';
-// // import 'package:sarisync/models/receipt_item.dart';
-// // import 'package:sarisync/services/process_sale.dart';
-// // import 'package:sarisync/views/ledger.dart';
-// // import 'package:sarisync/views/new_sales.dart';
-// // import 'package:sarisync/views/home.dart';
-// // import 'package:sarisync/widgets/message_prompts.dart';
-// // import 'package:sarisync/services/history_service.dart';
-// // import 'package:sarisync/services/process_sale.dart';
-// // import 'package:sarisync/services/receipt_service.dart';
-// // import 'package:sarisync/models/receipt_model.dart';
-// // import 'package:intl/intl.dart';
+import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:sarisync/models/receipt_item.dart';
 
+class TransactionReceipt extends StatelessWidget {
+  final String transactionId;
 
+  const TransactionReceipt({super.key, required this.transactionId});
 
-// // class ReceiptMainPage extends StatelessWidget {
-// //   final String receiptId;
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
+        elevation: 0,
+        title: const Text("Receipt"),
+      ),
+      body: FutureBuilder<DocumentSnapshot>(
+        future: FirebaseFirestore.instance
+            .collection('receipts')
+            .doc(transactionId)
+            .get(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-// //   const ReceiptMainPage({super.key, required this.receiptId});
+          final docData = snapshot.data!.data();
+          if (docData == null) {
+            return const Center(child: Text("No receipt found"));
+          }
 
-// //   @override
-// //   Widget build(BuildContext context) {
-// //     return FutureBuilder(
-// //       future: ReceiptService().getReceiptById(receiptId),
-// //       builder: (context, snapshot) {
-// //         if (!snapshot.hasData) {
-// //           return Scaffold(
-// //             appBar: AppBar(title: Text("Viewing Receipt")),
-// //             body: Center(child: CircularProgressIndicator()),
-// //           );
-// //         }
+          final data = docData as Map<String, dynamic>;
+          final items = (data['items'] as List<dynamic>)
+              .map((e) => ReceiptItem.fromJson(e))
+              .toList();
 
-// //         final receipt = snapshot.data!;
-// //         return ReceiptLayout(receipt: receipt);
-// //       },
-// //     );
-// //   }
-// // }
+          final createdAt = data['createdAt'] != null
+              ? (data['createdAt'] as Timestamp).toDate()
+              : DateTime.now();
 
-// // class ReceiptLayout extends StatelessWidget {
-// //   final Receipt receipt;
+          return SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 15),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ITEM LIST
+                ...items.map((item) => Padding(
+                      padding: const EdgeInsets.only(bottom: 20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(item.name,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 16)),
+                              Text(
+                                item.price.toStringAsFixed(2),
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold, fontSize: 16),
+                              ),
+                            ],
+                          ),
+                          Text(item.description ?? "",
+                              style: const TextStyle(fontSize: 13)),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text("${item.weight ?? ""}"),
+                              Text("x ${item.quantity}"),
+                            ],
+                          ),
+                        ],
+                      ),
+                    )),
 
-// //   const ReceiptLayout({super.key, required this.receipt});
+                const SizedBox(height: 15),
 
-// //   @override
-// //   Widget build(BuildContext context) {
-// //     return Scaffold(
-// //       backgroundColor: Colors.white,
-// //       appBar: AppBar(
-// //         title: const Text("Receipt"),
-// //         centerTitle: true,
-// //       ),
-// //       body: SingleChildScrollView(
-// //         padding: const EdgeInsets.all(20),
-// //         child: Column(
-// //           crossAxisAlignment: CrossAxisAlignment.center,
-// //           children: [
-// //             Text("SariSync Store",
-// //                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-// //             SizedBox(height: 4),
-// //             Text(DateFormat("MMM dd | hh:mm a").format(receipt.createdAt)),
-// //             SizedBox(height: 8),
-// //             Text("Transaction ID: ${receipt.transactionId}",
-// //                 style: TextStyle(fontSize: 12)),
-// //             Divider(thickness: 1),
+                // PAYMENT BREAKDOWN HEADER
+                const Text(
+                  "PAYMENT BREAKDOWN",
+                  style: TextStyle(fontWeight: FontWeight.w900, fontSize: 17),
+                ),
+                const SizedBox(height: 12),
 
-// //             // ITEMS LIST
-// //             ListView.builder(
-// //               shrinkWrap: true,
-// //               physics: NeverScrollableScrollPhysics(),
-// //               itemCount: receipt.items.length,
-// //               itemBuilder: (_, i) {
-// //                 final item = receipt.items[i];
-// //                 return Row(
-// //                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-// //                   children: [
-// //                     Expanded(child: Text("${item.name}  x${item.quantity}")),
-// //                     Text("₱${(item.price * item.quantity).toStringAsFixed(2)}"),
-// //                   ],
-// //                 );
-// //               },
-// //             ),
+                // Payment method
+                Row(
+                  children: [
+                    GestureDetector(
+                      child: Container(
+                        width: 22,
+                        height: 22,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(6), // <-- Radius adjustable
+                          border: Border.all(color: Colors.black, width: 2),
+                          color: data['paymentMethod'].toString().toLowerCase() == "cash"
+                              ? Colors.blue.shade800  // filled when selected
+                              : Colors.transparent,   // empty when not selected
+                        ),
+                        child: data['paymentMethod'].toString().toLowerCase() == "cash"
+                            ? const Icon(Icons.check, size: 16, color: Colors.white)
+                            : null,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Text("Cash", style: TextStyle(fontSize: 16)),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    GestureDetector(
+                      child: Container(
+                        width: 22,
+                        height: 22,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: Colors.black, width: 2),
+                          color: data['paymentMethod'].toString().toLowerCase() == "credit"
+                              ? Colors.blue.shade800
+                              : Colors.transparent,
+                        ),
+                        child: data['paymentMethod'].toString().toLowerCase() == "credit"
+                            ? const Icon(Icons.check, size: 16, color: Colors.white)
+                            : null,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Text("Credit", style: TextStyle(fontSize: 16)),
+                  ],
+                ),
 
-// //             Divider(thickness: 1),
+                const SizedBox(height: 20),
 
-// //             // TOTALS
-// //             Row(
-// //               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-// //               children: [
-// //                 const Text("Total Amount:",
-// //                     style: TextStyle(fontWeight: FontWeight.bold)),
-// //                 Text("₱${receipt.totalAmount.toStringAsFixed(2)}",
-// //                     style: TextStyle(fontWeight: FontWeight.bold)),
-// //               ],
-// //             ),
+                // PAYMENT VALUES
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      "Total Amount",
+                      style: TextStyle(fontWeight: FontWeight.w100, fontSize: 15),
+                      ),
+                    Text(
+                      data['totalAmount'].toStringAsFixed(2),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w400,
+                        color: Colors.black87,
+                        ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 5),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      "Total Paid",
+                      style: TextStyle(fontWeight: FontWeight.w100, fontSize: 15),
+                      ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 4),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.black54),
+                        borderRadius: BorderRadius.circular(7),
+                      ),
+                      child: Text(
+                        data['totalPaid'].toStringAsFixed(2),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w400,
+                          color: Colors.black87,
+                          ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 5),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      "Change",
+                       style: TextStyle(fontWeight: FontWeight.w100, fontSize: 15),
+                      ),
+                    Text(
+                      data['change'].toStringAsFixed(2),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w400,
+                        color: Colors.black87,
+                        ),
+                    ),
+                  ],
+                ),
 
-// //             // CASH / CHANGE
-// //             if (receipt.paymentMethod == 'cash') ...[
-// //               SizedBox(height: 4),
-// //               Row(
-// //                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-// //                 children: [
-// //                   const Text("Cash Tendered:"),
-// //                   Text("₱${receipt.totalPaid.toStringAsFixed(2)}"),
-// //                 ],
-// //               ),
-// //               Row(
-// //                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-// //                 children: [
-// //                   const Text("Change:"),
-// //                   Text("₱${receipt.change.toStringAsFixed(2)}"),
-// //                 ],
-// //               ),
-// //             ],
+                const SizedBox(height: 30),
 
-// //             // CREDIT INFO
-// //             if (receipt.paymentMethod == 'credit') ...[
-// //               Row(
-// //                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-// //                 children: [
-// //                   const Text("Customer Name:"),
-// //                   Text(receipt.name ?? "Unknown Customer"),
-// //                 ],
-// //               ),
-// //             ],
+               // FOOTER DETAILS
+                const SizedBox(height: 20),
 
-// //             SizedBox(height: 10),
+                // CUSTOMER NAME
+                Row(
+                  children: [
+                    const Text(
+                      "Customer: ",
+                      style: TextStyle(fontWeight: FontWeight.w500, fontSize: 15),
+                    ),
+                    Expanded(
+                      child: Text(
+                        data['name'] ?? "N/A",
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          color: Colors.black,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
 
-// //             Text(
-// //               "Status: ${receipt.status.toUpperCase()}",
-// //               style: TextStyle(
-// //                 fontWeight: FontWeight.bold,
-// //                 color: receipt.status == 'paid' ? Colors.green
-// //                     : receipt.status == 'partial' ? Colors.orange
-// //                     : Colors.red,
-// //               ),
-// //             ),
+                // CASHIER NAME
+                Row(
+                  children: const [
+                    Text(
+                      "Cashier: ",
+                      style: TextStyle(fontWeight: FontWeight.w500, fontSize: 15),
+                    ),
+                    Expanded(
+                      child: Text(
+                        "Lorena", // make dynamic later if needed
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          color: Colors.black,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
 
-// //             SizedBox(height: 25),
-// //             Text("Thank you for your purchase!",
-// //                 style: TextStyle(fontSize: 12))
-// //           ],
-// //         ),
-// //       ),
-// //     );
-// //   }
-// // }
+                // TRANSACTION NUMBER — VALUE RIGHT ALIGN
+                Row(
+                  children: [
+                    const Text(
+                      "Transaction No.:",
+                      style: TextStyle(fontWeight: FontWeight.w500, fontSize: 15),
+                    ),
+                    Expanded(child: Container()), // pushes value to the right
+                    Text(
+                      transactionId,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ],
+                ),
 
+                // DATE/TIME — VALUE RIGHT ALIGN
+                Row(
+                  children: [
+                    const Text(
+                      "Date/Time",
+                      style: TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
+                    ),
+                    Expanded(child: Container()), // pushes value to the right
+                    Text(
+                      "${createdAt.month}-${createdAt.day}-${createdAt.year} "
+                      "${(createdAt.hour % 12 == 0 ? 12 : createdAt.hour % 12)}:"
+                      "${createdAt.minute.toString().padLeft(2, '0')} "
+                      "${createdAt.hour >= 12 ? 'PM' : 'AM'}",
+                      style: const TextStyle(
+                        fontSize: 15,
+                        color: Colors.grey,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
 
-// import 'package:flutter/material.dart';
-// import 'package:sarisync/models/receipt_model.dart';
-// import 'package:sarisync/services/receipt_service.dart';
-// import 'package:intl/intl.dart';
+                const SizedBox(height: 25),
 
-// class ReceiptMainPage extends StatefulWidget {
-//   final String receiptId;
-//   const ReceiptMainPage({super.key, required this.receiptId});
-
-//   @override
-//   State<ReceiptMainPage> createState() => _ReceiptMainPageState();
-// }
-
-// class _ReceiptMainPageState extends State<ReceiptMainPage> {
-//   late Future<Receipt> receiptFuture;
-
-//   @override
-//   void initState() {
-//     super.initState();
-//     receiptFuture = ReceiptService().getReceiptById(widget.receiptId); // load once
-//   }
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return FutureBuilder(
-//       future: receiptFuture,
-//       builder: (context, snapshot) {
-//         if (!snapshot.hasData) {
-//           return Scaffold(
-//             appBar: AppBar(title: const Text("Viewing Receipt")),
-//             body: const Center(child: CircularProgressIndicator()),
-//           );
-//         }
-
-//         final receipt = snapshot.data!;
-//         return ReceiptLayout(receipt: receipt);
-//       },
-//     );
-//   }
-// }
-
-// class ReceiptLayout extends StatelessWidget {
-//   final Receipt receipt;
-//   const ReceiptLayout({super.key, required this.receipt});
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       backgroundColor: Colors.white,
-//       appBar: AppBar(
-//         title: const Text("Receipt"),
-//         centerTitle: true,
-//       ),
-//       body: SingleChildScrollView(
-//         padding: const EdgeInsets.all(20),
-//         child: Column(
-//           crossAxisAlignment: CrossAxisAlignment.center,
-//           children: [
-//             Text("SariSync Store",
-//                 style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-//             const SizedBox(height: 4),
-//             Text(DateFormat("MMM dd | hh:mm a").format(receipt.createdAt)),
-//             const SizedBox(height: 8),
-//             Text("Transaction ID: ${receipt.transactionId}",
-//                 style: const TextStyle(fontSize: 12)),
-//             const Divider(thickness: 1),
-
-//             // ITEMS LIST
-//             Column(
-//               children: receipt.items.map((item) {
-//                 return Row(
-//                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//                   children: [
-//                     Expanded(child: Text("${item.name}  x${item.quantity}")),
-//                     Text("₱${(item.price * item.quantity).toStringAsFixed(2)}"),
-//                   ],
-//                 );
-//               }).toList(),
-//             ),
-
-//             const Divider(thickness: 1),
-
-//             // TOTAL
-//             Row(
-//               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//               children: [
-//                 const Text("Total Amount:",
-//                     style: TextStyle(fontWeight: FontWeight.bold)),
-//                 Text("₱${receipt.totalAmount.toStringAsFixed(2)}",
-//                     style: const TextStyle(fontWeight: FontWeight.bold)),
-//               ],
-//             ),
-
-//             // CASH DETAILS
-//             if (receipt.paymentMethod == 'cash') ...[
-//               const SizedBox(height: 4),
-//               Row(
-//                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//                 children: [
-//                   const Text("Cash Tendered:"),
-//                   Text("₱${receipt.totalPaid.toStringAsFixed(2)}"),
-//                 ],
-//               ),
-//               Row(
-//                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//                 children: [
-//                   const Text("Change:"),
-//                   Text("₱${receipt.change.toStringAsFixed(2)}"),
-//                 ],
-//               ),
-//             ],
-
-//             // CREDIT DETAILS
-//             if (receipt.paymentMethod == 'credit') ...[
-//               const SizedBox(height: 4),
-//               Row(
-//                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//                 children: [
-//                   const Text("Customer Name:"),
-//                   Text(receipt.name ?? "Unknown Customer"),
-//                 ],
-//               ),
-//             ],
-
-//             const SizedBox(height: 12),
-
-//             Text(
-//               "Status: ${receipt.status.toUpperCase()}",
-//               style: TextStyle(
-//                 fontWeight: FontWeight.bold,
-//                 color: receipt.status == 'paid'
-//                     ? Colors.green
-//                     : receipt.status == 'partial'
-//                         ? Colors.orange
-//                         : Colors.red,
-//               ),
-//             ),
-
-//             const SizedBox(height: 25),
-//             const Text("Thank you for your purchase!",
-//                 style: TextStyle(fontSize: 12)),
-//           ],
-//         ),
-//       ),
-//     );
-//   }
-// }
+                // SariSync Logo Button at Bottom
+                Padding(
+                   padding: const EdgeInsets.only(top: 0.5),
+                 child: Center(
+                  child: GestureDetector(
+                    onTap: () {
+                      Navigator.pop(context); //Can be used later if want the Logo to use as button to download the Receipt.
+                    },
+                    child: SizedBox(
+                      height: 160,
+                      width: 160,
+                      child: Image.asset(
+                        'assets/images/Receipt Logo.png',
+                        fit: BoxFit.contain,
+                        ),
+                    ),
+                  ),
+                ),
+               // const SizedBox(height: 20),
+                )
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
