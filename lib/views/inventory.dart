@@ -174,7 +174,7 @@ class _InventoryPageState extends State<InventoryPage> {
                               style: GoogleFonts.inter(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w700,
-                              ),
+                                color: Color(0xFF212121)),
                             ),
                             const SizedBox(height: 12),
 
@@ -206,17 +206,17 @@ class _InventoryPageState extends State<InventoryPage> {
                                 },
                               ),
                             ),
-                            const SizedBox(height: 24),
+                            const SizedBox(height: 20),
 
                             // Items header
                             Text(
                               'Items',
-                              style: GoogleFonts.inter(
+                             style: GoogleFonts.inter(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w700,
-                              ),
+                                color: Color(0xFF212121)),
                             ),
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 8),
                           ],
                         ),
                       ),
@@ -233,9 +233,10 @@ class _InventoryPageState extends State<InventoryPage> {
                                   child: Text(
                                     "No items found",
                                     style: TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w500,
-                                      color: Colors.grey,
+                                      fontFamily: 'Inter',
+                                      color: Color(0xFF757575),
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 16,
                                     ),
                                   ),
                                 ),
@@ -246,7 +247,7 @@ class _InventoryPageState extends State<InventoryPage> {
                                 (context, index) {
                                   final item = filteredItems[index];
                                   return Padding(
-                                    padding: const EdgeInsets.only(bottom: 12),
+                                    padding: const EdgeInsets.only(bottom: 8),
                                     child: InvItemCard(
                                       item: item,
                                       onEdit: () async {
@@ -300,21 +301,26 @@ class _InventoryPageState extends State<InventoryPage> {
           Positioned(
             bottom: 20,
             right: 20,
-            child: FloatingActionButton(
-              onPressed: () async {
-                final result = await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const InventoryAddPage(),
-                  ),
-                );
+            child: SizedBox(
+              width: 64,
+              height: 64,
+              child:  FloatingActionButton(
+                onPressed: () async {
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const InventoryAddPage(),
+                    ),
+                  );
 
-                if (result == "added") {
-                  DialogHelper.success(context, "Item successfully added.");
-                }
-              },
-              backgroundColor: const Color(0xFF1565C0),
-              child: const Icon(Icons.add, color: Colors.white, size: 28),
+                  if (result == "added") {
+                    DialogHelper.success(context, "Item successfully added.");
+                  }
+                },
+                backgroundColor: const Color(0xFF1565C0),
+                shape: const CircleBorder(),
+                child: const Icon(Icons.add, color: Colors.white, size: 24),
+              ),
             ),
           ),
         ],

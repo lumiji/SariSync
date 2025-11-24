@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:sarisync/models/inventory_item.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
-import 'package:sarisync/views/inventory_add_page.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 
@@ -38,47 +37,62 @@ class InvItemCard extends StatelessWidget {
               decoration: const BoxDecoration(
                 color: Color(0xFFD9E8FF),
                 borderRadius: BorderRadius.only(
-                  topRight: Radius.circular(12),
-                  bottomRight: Radius.circular(12),
+                  topRight: Radius.circular(8),
+                  bottomRight: Radius.circular(8),
                   topLeft: Radius.circular(1),
                   bottomLeft: Radius.circular(1),
                 ),
               ),
             
-              padding: const EdgeInsets.symmetric(horizontal: 18),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   GestureDetector(
                     onTap: onEdit,
                     child: Container(
-                      width: 48,
-                      height: 48,
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: Color(0xFFFEFEFE),
                         shape: BoxShape.circle,
+                        boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.15),
+                              blurRadius: 2,
+                              offset: const Offset(0, 2),
+                            ),
+                        ],
                       ),
                       child: const Icon(
                         Icons.edit,
-                        color: Color.fromARGB(255, 9, 115, 201),
-                        size: 25,
+                        color: Color(0xFF1565C0),
+                        size: 24,
                       ),
                     ),
                   ),
                   const SizedBox(width: 14),
+
                   GestureDetector(
                     onTap: onDelete,
                     child: Container(
-                      width: 48,
-                      height: 48,
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color:Color(0xFFFEFEFE),
                         shape: BoxShape.circle,
+                        boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.15),
+                              blurRadius: 2,
+                              offset: const Offset(0, 2),
+                            ),
+                        ],
                       ),
                       child: const Icon(
                         Icons.delete_forever,
                         color: Color(0xFFE53935),
-                        size: 25,
+                        size: 24,
                       ),
                     ),
                   ),
@@ -108,7 +122,7 @@ class InvItemCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withOpacity(0.15),
                 blurRadius: 4,
                 offset: const Offset(0, 2),
               ),
@@ -117,8 +131,8 @@ class InvItemCard extends StatelessWidget {
           child: Row(
             children: [
               Container(
-                width: 80,
-                height: 80,
+                width: 90,
+                height: 90,
                 decoration: BoxDecoration(
                   color: Colors.grey.shade100,
                   borderRadius: BorderRadius.circular(8),
@@ -133,8 +147,8 @@ class InvItemCard extends StatelessWidget {
                       memCacheHeight: 300,
                       placeholder: (context, url) => Center(
                         child: SizedBox(
-                          width: 20,
-                          height: 20,
+                          width: 24,
+                          height: 24,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         ),
                       ),
@@ -145,68 +159,77 @@ class InvItemCard extends StatelessWidget {
 
               : const Icon(Icons.inventory_2, color: Colors.grey),
               ),
-              const SizedBox(width: 12),
+
+              const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    //name
                     Text(
                       item.name,
                       style: GoogleFonts.inter(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 2),
+                    
+
+                    // Additional Info
                     Text(
                       item.add_info,
                       style: GoogleFonts.inter(
-                        fontSize: 13,
-                        color: Colors.grey,
+                        fontSize: 14,
+                        color: Color(0xFF757575),
+                        fontWeight: FontWeight.normal,
                       ),
                     ),
-                    const SizedBox(height: 2),
+                    
+
+                    //unit of measure
                     Text(
                       item.unit,
                       style: GoogleFonts.inter(
                         fontSize: 12,
-                        color: Colors.grey.shade500,
+                        color: Color(0xFF757575),
+                        fontWeight: FontWeight.normal,
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Text(
-                          'Qty: ${item.quantity}',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            color: Colors.grey.shade700,
-                          ),
+                    
+
+                    //Quantity
+                    Text(
+                      'Qty: ${item.quantity}',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: Color(0xFF757575),
+                          fontWeight: FontWeight.normal,
                         ),
-                        const SizedBox(width: 16),
-                      ],
                     ),
                   ],
                 ),
               ),
 
+              const SizedBox(width: 10),
+
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
+
                   // Add Badge Status Here
                   StatusBadge(
                     quantity: item.quantity,
                     expiration: item.expiration, // For Format: MM/DD/YYYY 
                   ),
-                  const SizedBox(height: 4),
 
                   //Price
                   Text(
                     item.price.toStringAsFixed(2),
-                    style: GoogleFonts.inter(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
+                      style: GoogleFonts.inter(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF4CAF50),
+                      ),
                   ),
 
                   //PHP label
@@ -214,20 +237,19 @@ class InvItemCard extends StatelessWidget {
                     'PHP',
                     style: GoogleFonts.inter(
                       fontSize: 12,
-                      color: Colors.grey,
+                      color: Color(0xFF757575),
                     ),
                   ),
-                  const SizedBox(height: 2),
+                  
                   Text(
-                          'ED: ${item.expiration}',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            color: Colors.grey.shade700,
-                          ),
-                        ),
+                    'ED: ${item.expiration}',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: Color(0xFF757575),
+                      ),
+                  ),
                 ],
               ),
-
             ],
           ),
         ),

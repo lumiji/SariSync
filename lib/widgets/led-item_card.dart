@@ -96,7 +96,7 @@ class LedItemCard extends StatelessWidget {
                         child: const Icon(
                           Icons.delete_forever,
                           color: Color(0xFFE53935),
-                          size: 25,
+                          size: 24,
                         ),
                       ),
                     ),
@@ -234,7 +234,7 @@ class LedItemCard extends StatelessWidget {
                         Text(
                           item.credit.toStringAsFixed(2),
                           style: GoogleFonts.inter(
-                            fontSize: 18,
+                            fontSize: 20,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
