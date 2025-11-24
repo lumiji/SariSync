@@ -48,7 +48,7 @@ class LedgerItem {
     return LedgerItem(
       id: documentId,
       name: data['name'] ?? '',
-      customerID: (data['customerID'] ?? ''),
+      customerID: documentId,
       contact: (data['contact'] ?? ''),
       payStatus: (data['payStatus'] ?? ''),
       credit: (data['credit'] ?? 0).toDouble(),

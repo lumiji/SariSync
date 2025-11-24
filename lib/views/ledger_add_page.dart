@@ -134,9 +134,12 @@ class _LedgerAddPageState extends State<LedgerAddPage> {
     try {
       if (widget.item == null) {
         // ADD NEW CUSTOMER
+
+        final customerID = await _ledgerService.generateCustomerId();
+
         await _ledgerService.addLedgerItem(
           name: _nameController.text.trim(),
-          customerID: DateTime.now().millisecondsSinceEpoch.toString(),
+          customerID: customerID,
           contact: _contactController.text.trim(),
           payStatus: _paymentStatus,
           credit: credit,

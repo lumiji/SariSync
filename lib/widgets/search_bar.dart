@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 
 class SearchBarApp extends StatefulWidget {
@@ -17,15 +16,15 @@ class SearchBarApp extends StatefulWidget {
 }
 
 class _SearchBarAppState extends State<SearchBarApp> {
-
+  final TextEditingController _controller = TextEditingController();
   Timer? _debounce;
   String _query = '';
 
-  void _onSearchChanged(String query) {
+  void _onSearchChanged(String value) {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
     _debounce = Timer(const Duration(milliseconds: 200), () {
       setState(() {
-        _query = query.toLowerCase();
+        _query = value.toLowerCase();
       });
     });
   }
@@ -33,69 +32,66 @@ class _SearchBarAppState extends State<SearchBarApp> {
   @override
   void dispose() {
     _debounce?.cancel();
+    _controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return SearchAnchor(
-      builder: (BuildContext context, SearchController controller) {
-        return SearchBar(
-          controller: controller,
-          padding: const MaterialStatePropertyAll<EdgeInsets>(
-            EdgeInsets.symmetric(horizontal: 8.0),
+    final results = _query.isEmpty
+        ? []
+        : widget.items
+            .where((entry) => entry["name"].toLowerCase().contains(_query))
+            .toList();
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TextField(
+          controller: _controller,
+          decoration: InputDecoration(
+            hintText: 'Search',
+            prefixIcon: const Icon(Icons.search),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Colors.grey, width: 1),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFF327CD1), width: 2),
+            ),
+            filled: true,
+            fillColor: Colors.white,
           ),
-          onTap: controller.openView,
           onChanged: _onSearchChanged,
-          autoFocus: false,
-          backgroundColor: const MaterialStatePropertyAll<Color>(Colors.white),
-          side: MaterialStateProperty.resolveWith<BorderSide?>((states) {
-                if (states.contains(MaterialState.focused)) {
-                  return BorderSide(color:  Color(0xFF327CD1), width: 2); // When tapped
-                }
-                return BorderSide(color: Colors.grey, width: 1); // Default
-              }),
-          shape: MaterialStatePropertyAll<RoundedRectangleBorder>(
-            RoundedRectangleBorder(
+        ),
+        if (results.isNotEmpty)
+          Container(
+            margin: const EdgeInsets.only(top: 4),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border.all(color: Colors.grey.shade300),
               borderRadius: BorderRadius.circular(12),
             ),
-          ),
-          elevation: const MaterialStatePropertyAll<double>(0),
-          constraints: const BoxConstraints(
-            minWidth: 300,
-            minHeight: 40,
-            maxHeight: 50,
-          ),
-          hintText: 'Search',
-          hintStyle: const MaterialStatePropertyAll<TextStyle>(
-            TextStyle(color: Colors.grey),
-          ),
-          leading: const Icon(Icons.search),
-        );
-      },
-
-      suggestionsBuilder: (BuildContext context, SearchController controller) {
-        final query = controller.text.toLowerCase();
-
-        final results = widget.items.where((entry) {
-          return entry["name"].toLowerCase().contains(query);
-        }).toList();
-
-        return results.map((entry) {
-          return ListTile(
-            title: Text(entry["name"]),
-            subtitle: Text(
-              entry["type"] == "inventory"
-                  ? "Inventory Item"
-                  : "Ledger Item",
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: results.length,
+              itemBuilder: (context, index) {
+                final entry = results[index];
+                return ListTile(
+                  title: Text(entry["name"]),
+                  onTap: () {
+                    _controller.text = entry["name"]; // keep value
+                    setState(() {
+                      _query = entry["name"].toLowerCase();
+                    });
+                    widget.onSearchSelected(entry); // filter the list
+                  },
+                );
+              },
             ),
-            onTap: () {
-              controller.closeView(entry["name"]);
-              widget.onSearchSelected(entry);
-            },
-          );
-        }).toList();
-      },
+          ),
+      ],
     );
   }
 }
