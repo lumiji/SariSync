@@ -98,7 +98,7 @@ class _LedgerAddPageState extends State<LedgerAddPage> {
     if (widget.item != null) {
       final item = widget.item!;
       _nameController.text = item.name;
-      _contactController.text = item.contact;
+      _contactController.text = item.contact.toString();
       _paymentStatus = item.payStatus;
       _creditController.text = item.credit.toString();
       _partialController.text = '';
@@ -307,8 +307,6 @@ class _LedgerAddPageState extends State<LedgerAddPage> {
                 decoration:
                   _inputDecoration(
                     hintText:  'Enter contact number (Optional)'),
-                validator: (v) =>
-                  v == null || v.isEmpty ? 'Please enter contact number': null,
               ),
 
               const SizedBox(height: 16),

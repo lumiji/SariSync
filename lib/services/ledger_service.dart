@@ -74,7 +74,7 @@ class LedgerService {
   Future<void> addLedgerItem({
     required String name,
     required String customerID,
-    required String contact,
+    String? contact,
     required String payStatus,
     required double credit,
     double? partialPay,
@@ -122,6 +122,29 @@ class LedgerService {
         .map((snapshot) => snapshot.docs
             .map((doc) => LedgerItem.fromMap(doc.data(), doc.id))
             .toList());
+  }
+
+  Future<void> addCustomerDebt({
+    required String customerID,
+    required String name, 
+    required double credit, 
+    String? contact,
+    required String receivedBy
+  }) async {
+    final docRef = ledger.doc();
+
+    await docRef.set({
+      'customerID': customerID,
+      'name': name, 
+      'contact' : contact, 
+      'credit': credit,
+      'partialPay' : 0,
+      'payStatus': 'Unpaid',
+      'image': null,
+      'receivedBy' : receivedBy,
+      'createdAt' : Timestamp.now(),
+      'updatedAt' : FieldValue.serverTimestamp(),
+    });
   }
 
   Future<void> updateLedgerItem(String docId, Map<String, dynamic> data) async {

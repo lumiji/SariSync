@@ -4,12 +4,10 @@ import 'package:sarisync/services/process_sale.dart';
 import 'package:sarisync/views/home.dart';
 import 'package:sarisync/widgets/message_prompts.dart';
 import 'package:sarisync/services/history_service.dart';
-import 'package:sarisync/services/process_sale.dart';
-import 'package:sarisync/services/receipt_service.dart';
 
 
 //  Local message prompts for Receipt page only
-// 🔔 Message Prompts UI copied from global version for Receipt page
+// Message Prompts UI copied from global version for Receipt page
 class ReceiptMessagePrompts {
   static Future<void> confirm(
     BuildContext context, {

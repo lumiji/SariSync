@@ -247,7 +247,7 @@ class _InventoryPageState extends State<InventoryPage> {
                                           context,
                                           () async {
                                             await FirebaseFirestore.instance
-                                                .collection('ledger')
+                                                .collection('inventory')
                                                 .doc(item.id)
                                                 .delete();
 

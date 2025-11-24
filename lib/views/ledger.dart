@@ -187,13 +187,17 @@ class _LedgerPageState extends State<LedgerPage> {
             bottom: 20,
             right: 20,
             child: FloatingActionButton(
-              onPressed: () {
-                Navigator.push(
+              onPressed: () async {
+                final result = await Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (context) => const LedgerAddPage(),
                   ),
                 );
+              
+                if (result == "added") {
+                    DialogHelper.success(context, "Customer successfully added.");
+                  }
               },
               backgroundColor: const Color(0xFF1565C0),
               child: const Icon(Icons.add, color: Colors.white, size: 28),

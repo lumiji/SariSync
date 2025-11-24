@@ -69,20 +69,24 @@ class TrnscItemCard extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(
-                transaction.totalAmount.toString(),
-                style: GoogleFonts.inter(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Text(
-                'PHP',
-                style: GoogleFonts.inter(
-                  fontSize: 12,
-                  color: Colors.grey,
-                ),
-              ),
+              Row(
+                children: [
+                  Text (
+                    transaction.totalAmount.toString(),
+                    style: GoogleFonts.inter(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    'PHP',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ],
+              ),              
               const SizedBox(height: 2),
               Text(
                 DateFormat('MMM d, yyyy – h:mm a').format(transaction.createdAt.toLocal()),

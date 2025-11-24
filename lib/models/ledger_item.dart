@@ -4,7 +4,7 @@ class LedgerItem {
   final String id; // Firestore document ID 
   final String name;
   final String customerID;
-  final String contact;
+  final String? contact;
   final String payStatus;
   final double credit;
   final double? partialPay;
@@ -17,7 +17,7 @@ class LedgerItem {
     required this.id,
     required this.name,
     required this.customerID,
-    required this.contact,
+    this.contact,
     required this.payStatus,
     required this.credit,
     this.partialPay,

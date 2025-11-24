@@ -28,7 +28,12 @@ Future<void> processSale({
     if (existingCustomer != null) {
       customerID = existingCustomer['customerID'];
       try{
-      await ledgerService.updateCustomerCredit(customerID!, totalAmount);
+      await ledgerService.addCustomerDebt(
+        customerID: customerID!,
+        name: name,
+        credit: totalAmount,
+        receivedBy: receivedBy,
+      );
       print("EXISTING CUSTOMER: $existingCustomer");
       } catch (e) {
         print("error updating credit: $e");
