@@ -3,7 +3,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:sarisync/widgets/message_prompts.dart';
 import 'ledger_add_page.dart';
-import 'package:sarisync/widgets/search_bar.dart';
 import '../models/ledger_item.dart';
 import '../widgets/led-item_card.dart';
 
@@ -220,22 +219,27 @@ class _LedgerPageState extends State<LedgerPage> {
           Positioned(
             bottom: 20,
             right: 20,
-            child: FloatingActionButton(
-              onPressed: () async {
-                final result = await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => const LedgerAddPage()),
-                );
+            child: SizedBox(
+              width: 64,
+              height: 64,
+              child: 
+                FloatingActionButton(
+                  onPressed: () async {
+                    final result = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const LedgerAddPage()),
+                    );
 
-                if (result == "added") {
-                  DialogHelper.success(context, "Customer successfully added.");
-                }
-              },
-              backgroundColor: const Color(0xFF1565C0),
-              shape: const CircleBorder(),
-              child: const Icon(Icons.add, color: Colors.white, size: 28),
-            ),
+                    if (result == "added") {
+                      DialogHelper.success(context, "Customer successfully added.");
+                    }
+                  },
+                  backgroundColor: const Color(0xFF1565C0),
+                  shape: const CircleBorder(),
+                  child: const Icon(Icons.add, color: Colors.white, size: 24),
+                ),
+            ), 
           ),
         ],
       ),

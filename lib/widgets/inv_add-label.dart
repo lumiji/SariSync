@@ -14,8 +14,9 @@ class InvAddLabel extends StatelessWidget {
     return Text(
       text,
       style: const TextStyle(
-        fontSize: 13,
-        fontWeight: FontWeight.w500,
+        fontFamily: 'Inter',
+        fontSize: 16,
+        fontWeight: FontWeight.bold,
         color: Color(0xFF424242),
       ),
     );
