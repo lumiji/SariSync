@@ -1,18 +1,23 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-  
+import 'package:sarisync/views/receipt.dart'; 
 class HistoryService {
   static Future<void> addHistory({
     required String title,
     required String description,
     required String category, // Sales, Credit, Stocks
     double? amount,
+    //required String transactionId,
+    String? transactionId,
+
   }) async {
     await FirebaseFirestore.instance.collection("History").add({
       "title": title,
       "description": description,
       "category": category,
       "amount": amount,
+      "transactionId": transactionId,
       "date": FieldValue.serverTimestamp(),
+      //"transactionId": transactionId ?? null,
 
     });
   }
@@ -20,12 +25,14 @@ class HistoryService {
 //SALES-Cash
 static Future<void> recordSalesEvent({
   required double totalAmount,
+  required String transactionId,
 }) async {
   await addHistory(
     title: "Sales – Php ${totalAmount.toStringAsFixed(2)}",
     description: "A successful Transaction",
     category: "Sales",
     amount: totalAmount,
+    transactionId: transactionId,
   );
 }
 
@@ -33,6 +40,7 @@ static Future<void> recordSalesEvent({
 static Future<void> recordCreditEvent({
   required double totalAmount,
   required String customerName,
+  required String transactionId,
 }) async {
   await addHistory(
     title: "Credit – Php ${totalAmount.toStringAsFixed(2)}",
@@ -40,6 +48,7 @@ static Future<void> recordCreditEvent({
     description: "$customerName added to credit",
     category: "Credit",
     amount: totalAmount,
+    transactionId: transactionId,
   );
 }
 
@@ -48,6 +57,7 @@ static Future<void> recordLedgerCreditEvent({
   required double amount,
   required String customerName,
   required String paymentStatus,
+  required String transactionId,
 }) async {
   String title;
   String description;
@@ -75,6 +85,7 @@ static Future<void> recordLedgerCreditEvent({
     description: description,
     category: "Credit",
     amount: amount,
+    transactionId: transactionId,
   );
 }
 

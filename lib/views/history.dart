@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:sarisync/widgets/message_prompts.dart';
+import 'transaction_receipt.dart';
+import 'package:sarisync/models/receipt_model.dart';
+import 'transaction_receipt.dart';
 
 class HistoryPage extends StatefulWidget {
   const HistoryPage({super.key});
@@ -134,8 +137,10 @@ class _HistoryPageState extends State<HistoryPage> {
                           );
                         }
                         final docs = snapshot.data!.docs.where((e) {
-                        final cat = e.data().toString().contains('category') ? e['category'] : "Unknown";
-                        return selectedCategory == "All" ||
+                          final cat = e.data().toString().contains('category')
+                              ? e['category']
+                              : "Unknown";
+                          return selectedCategory == "All" ||
                               cat == selectedCategory;
                         }).toList();
 
@@ -163,9 +168,19 @@ class _HistoryPageState extends State<HistoryPage> {
                             final d = docs[index];
                             //final timestamp = (d['date'] as Timestamp).toDate();
                             final data = d.data() as Map<String, dynamic>;
-                            final title = data.containsKey('title') ? data['title'] : "Untitled";
-                            final description = data.containsKey('description') ? data['description'] : "";
-                            final amount = data.containsKey('amount') ? data['amount'] : null;
+
+                            // DEBUG PRINT TO SEE REAL FIREBASE DATA
+                            // print("HISTORY DATA → ${data}");
+
+                            final title = data.containsKey('title')
+                                ? data['title']
+                                : "Untitled";
+                            final description = data.containsKey('description')
+                                ? data['description']
+                                : "";
+                            final amount = data.containsKey('amount')
+                                ? data['amount']
+                                : null;
                             final timestamp = data.containsKey('date')
                                 ? (data['date'] as Timestamp).toDate()
                                 : DateTime.now();
@@ -197,14 +212,14 @@ class _HistoryPageState extends State<HistoryPage> {
 
                                         // Description
                                         if (description.isNotEmpty) ...[
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          description,
-                                          style: GoogleFonts.inter(
-                                            fontSize: 15,
-                                            color: Colors.grey.shade700,
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            description,
+                                            style: GoogleFonts.inter(
+                                              fontSize: 15,
+                                              color: Colors.grey.shade700,
+                                            ),
                                           ),
-                                        ),
                                         ],
 
                                         // Date
@@ -238,7 +253,7 @@ class _HistoryPageState extends State<HistoryPage> {
                                         child: Text("Delete"),
                                       ),
                                     ],
-                                      onSelected: (value) {
+                                    onSelected: (value) {
                                       if (value == "delete") {
                                         DialogHelper.confirmDelete(
                                           context,
@@ -265,10 +280,17 @@ class _HistoryPageState extends State<HistoryPage> {
 
                                       if (value == "view") {
                                         // open transaction page here
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => TransactionReceipt(
+                                              transactionId:
+                                                  data['transactionId'] ?? d.id,
+                                            ),
+                                          ),
+                                        );
                                       }
-                                    }
-
-      
+                                    },
                                   ),
                                 ],
                               ),
