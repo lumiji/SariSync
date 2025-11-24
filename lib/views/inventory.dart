@@ -10,14 +10,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 // widgets & pages
 import 'package:sarisync/widgets/inv-category_card.dart';
 import 'package:sarisync/widgets/inv-item_card.dart';
-import 'package:sarisync/widgets/search_bar.dart';
 import 'inventory_add_page.dart';
 import 'package:sarisync/widgets/image_helper.dart';
 import 'package:sarisync/widgets/message_prompts.dart';
 
 // models & services
 import '../models/inventory_item.dart';
-import 'package:sarisync/services/search_service.dart';
 
 
 class InventoryPage extends StatefulWidget {
@@ -34,10 +32,13 @@ class InventoryPage extends StatefulWidget {
 }
 
 class _InventoryPageState extends State<InventoryPage> {
-  int _selectedIndex = 1;
+  // final int _selectedIndex = 1;
 
   //default selected category when pressing inventory page icon
   late String _selectedCategory;
+  List<InventoryItem> inventoryList = [];
+  List<InventoryItem> filteredInventory = [];
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState(){
@@ -47,7 +48,7 @@ class _InventoryPageState extends State<InventoryPage> {
   
 
   // small optimization: only prefetch when items change
-  int _lastPrefetchedCount = 0;
+  // int _lastPrefetchedCount = 0;
 
   final List<Map<String, String>> _categories = [
     {'name': 'All', 'imagePath': 'assets/images/ALL.png'},
@@ -94,13 +95,19 @@ class _InventoryPageState extends State<InventoryPage> {
 
                 final items = snapshot.data!;
 
-                // do filtering once here (outside the Sliver builder)
-                final List<InventoryItem> filteredItems =
-                    _selectedCategory == 'All'
-                        ? items
-                        : items
-                            .where((item) => item.category == _selectedCategory)
-                            .toList();
+                //filtering items
+                final query = _searchController.text.toLowerCase();
+
+                final List<InventoryItem> filteredItems = items.where((item) {
+                  final matchesCategory = _selectedCategory == 'All'
+                      ? true
+                      : item.category == _selectedCategory;
+
+                  final matchesSearch = item.name.toLowerCase().contains(query);
+
+                  return matchesCategory && matchesSearch;
+                }).toList();
+
 
                 // prefetch a handful of images to reduce the perceived load time
                 WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -121,27 +128,41 @@ class _InventoryPageState extends State<InventoryPage> {
                             Row(
                               children: [
                                 Expanded(
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 0),
-                                    child: SearchBarApp(
-                                      items: GlobalSearchService.globalSearchList,
-                                      onSearchSelected: (result) {
-                                        final type = result["type"];
-                                        final id = result["id"];
-
-                                        if (widget.onSearchSelected != null) {
-                                          widget.onSearchSelected!(type, id);
-                                        }          
-                                      },
+                                  child: SizedBox ( 
+                                    height: 45, 
+                                    child: TextField(
+                                      controller: _searchController,
+                                      onChanged: (value) {
+                                        setState(() {});
+                                      }, 
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontFamily: 'Inter',
+                                        color: Color(0xFF212121),
+                                      ),
+                                      decoration: InputDecoration(
+                                        hintText: 'Search',
+                                        prefixIcon: const Icon(Icons.search),
+                                        contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(10),
+                                          borderSide: BorderSide.none,
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(10),
+                                          borderSide: const BorderSide(color: Color(0xFF327CD1)),
+                                        ),
+                                        filled: true,
+                                        fillColor: Colors.white,
+                                      ),
                                     ),
                                   ),
                                 ),
                                 const SizedBox(width: 12),
                                 IconButton(
                                   icon: const Icon(Icons.settings_outlined),
-                                  onPressed: () {},
                                   iconSize: 24,
+                                  onPressed: () {},
                                 ),
                               ],
                             ),

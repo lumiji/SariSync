@@ -47,9 +47,6 @@ Future<void> processSale({
     }
   }
 
-  // Default status
-  final paymentStatus = status ?? (paymentMethod == 'cash' ? 'paid' : 'credit');
-
   // Default totalPaid & change
   final paidAmount = totalPaid ?? totalAmount;
   final changeAmount = change ?? (paymentMethod == 'cash' ? paidAmount - totalAmount : 0.0);
