@@ -64,8 +64,8 @@ class _LedgerPageState extends State<LedgerPage> {
     return Scaffold(
       body: Stack(
         children: [
-          Positioned.fill(
-            child: Image.asset('assets/images/gradient.png', fit: BoxFit.cover),
+           Container(
+            color: Color(0xFFF7FBFF),
           ),
           SafeArea(
             child: Padding(
@@ -99,7 +99,7 @@ class _LedgerPageState extends State<LedgerPage> {
                                 borderSide: const BorderSide(color: Color(0xFF327CD1)),
                               ),
                               filled: true,
-                              fillColor: Colors.white,
+                              fillColor: Colors.blueGrey.shade50,
                             ),
                           ),
                         ),
@@ -107,6 +107,7 @@ class _LedgerPageState extends State<LedgerPage> {
                       const SizedBox(width: 12),
                       IconButton(
                         icon: const Icon(Icons.settings_outlined),
+                        color: Color(0xFF212121),
                         iconSize: 24,
                         onPressed: () {},
                       ),

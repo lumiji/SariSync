@@ -172,14 +172,14 @@ class _InventoryPageState extends State<InventoryPage> {
                                         contentPadding: const EdgeInsets.symmetric(vertical: 10),
                                         border: OutlineInputBorder(
                                           borderRadius: BorderRadius.circular(10),
-                                          borderSide: BorderSide(color: Colors.grey.shade400),
+                                          borderSide: BorderSide.none,
                                         ),
                                         focusedBorder: OutlineInputBorder(
                                           borderRadius: BorderRadius.circular(10),
                                           borderSide: const BorderSide(color: Color(0xFF327CD1)),
                                         ),
                                         filled: true,
-                                        fillColor: Colors.white,
+                                        fillColor: Colors.blueGrey.shade50,
                                       ),
                                     ),
                                   ),
@@ -187,7 +187,7 @@ class _InventoryPageState extends State<InventoryPage> {
                                 const SizedBox(width: 12),
                                 IconButton(
                                   icon: const Icon(Icons.settings_outlined),
-                                  color: Color(0xFF1565C0),
+                                  color: Color(0xFF212121),
                                   iconSize: 24,
                                   onPressed: () {},
                                 ),

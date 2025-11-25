@@ -348,7 +348,7 @@ class HomeContent extends StatelessWidget {
                     IconButton(
                       icon: const Icon(
                         Icons.settings_outlined,
-                        color: Color(0xFF1565C0)),
+                        color: Color(0xFF212121)),
                       onPressed: () {},
                     ),
                   ],
