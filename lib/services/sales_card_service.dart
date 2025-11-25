@@ -1,11 +1,16 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class SalesService {
   Stream<Map<String, dynamic>> todaySalesStream() {
     final now = DateTime.now();
     final docId = '${now.year}-${now.month}-${now.day}';
+    final uid = FirebaseAuth.instance.currentUser!.uid;
+    
 
     return FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
         .collection('dailySales')
         .doc(docId)
         .snapshots()

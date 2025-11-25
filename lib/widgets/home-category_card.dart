@@ -20,9 +20,15 @@ class CategoryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color:  Color(0xFFF7FBFF),
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 2))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.15),
+            blurRadius: 4, 
+            offset: const Offset(0, 2)
+            ),
+          ],
       ),
       child: Material(
         color: Colors.transparent,
@@ -34,9 +40,24 @@ class CategoryCard extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                SizedBox(width: 48, height: 48, child: Image.asset(imagePath, fit: BoxFit.contain)),
+                SizedBox(
+                  width: 36, 
+                  height: 36, 
+                  child: 
+                    Image.asset(
+                      imagePath, 
+                      fit: BoxFit.contain
+                    ),
+                  ),
                 const SizedBox(height: 8),
-                Text(label, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+                Text(
+                  label, 
+                  textAlign: TextAlign.center, 
+                  style: const TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 12, 
+                    fontWeight: FontWeight.w500),
+                  ),
               ],
             ),
           ),

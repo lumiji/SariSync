@@ -2,6 +2,7 @@ import 'package:sarisync/models/receipt_item.dart';
 import 'package:sarisync/services/ledger_service.dart';
 import 'package:sarisync/services/receipt_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 
 Future<void> processSale({
@@ -17,6 +18,7 @@ Future<void> processSale({
 }) async {
   final ledgerService = LedgerService();
   final receiptService = ReceiptService();
+  final uid = FirebaseAuth.instance.currentUser!.uid;
 
   String? customerID;
 
@@ -69,7 +71,11 @@ Future<void> processSale({
   if (paymentMethod == 'cash') {
     final now = DateTime.now();
     final docId = '${now.year}-${now.month}-${now.day}';
-    final dailyRef = FirebaseFirestore.instance.collection('dailySales').doc(docId);
+    final dailyRef = FirebaseFirestore.instance
+      .collection('users')
+      .doc(uid)
+      .collection('dailySales')
+      .doc(docId);
 
     await dailyRef.set({
       'totalSales': FieldValue.increment(totalAmount),

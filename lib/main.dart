@@ -19,7 +19,6 @@ import 'views/sign-in_options.dart';
 
 //models, widgets, & services
 import 'services/local_storage_service.dart';
-import 'services/search_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -89,7 +88,6 @@ class _InitialNavigatorState extends State<InitialNavigator> {
   void initState() {
     super.initState();
     _navigateAfterDelay();
-    GlobalSearchService.loadSearchData().then((_) => setState(() {}));
   }
 
   void _navigateAfterDelay() {

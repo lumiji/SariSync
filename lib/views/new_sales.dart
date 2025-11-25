@@ -5,7 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:sarisync/models/inventory_item.dart';
 import 'package:sarisync/widgets/pos-item_card.dart';
-import 'package:sarisync/views/search.dart';
+import 'package:sarisync/views/new_sales_search.dart';
 import 'package:sarisync/models/receipt_item.dart';
 import 'package:sarisync/views/receipt.dart';
 
