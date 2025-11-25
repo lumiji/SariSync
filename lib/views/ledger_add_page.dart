@@ -238,21 +238,21 @@ class _LedgerAddPageState extends State<LedgerAddPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFEFEFE),
+      backgroundColor: const Color(0xFFF7FBFF),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFFEFEFE),
+        backgroundColor:  const Color(0xFF1565C0),
         elevation: 0,
         leading: IconButton(
           icon: const Icon(
             Icons.arrow_back_rounded, 
-            color: Colors.black,
+            color: Colors.white,
             size: 24),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           widget.item == null ? 'Add' : 'Edit',
           style: TextStyle(
-            color: Colors.black,
+            color: Colors.white,
             fontFamily: 'Inter',
             fontSize: 16,
             fontWeight: FontWeight.bold,

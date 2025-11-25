@@ -5,9 +5,6 @@ import 'package:sarisync/views/home.dart';
 import 'package:sarisync/widgets/message_prompts.dart';
 import 'package:sarisync/services/history_service.dart';
 
-
-//  Local message prompts for Receipt page only
-// Message Prompts UI copied from global version for Receipt page
 class ReceiptMessagePrompts {
   static Future<void> confirm(
     BuildContext context, {
@@ -20,8 +17,15 @@ class ReceiptMessagePrompts {
       barrierDismissible: true,
       barrierLabel: "",
       transitionDuration: const Duration(milliseconds: 250),
-      pageBuilder: (context, anim1, anim2) => const SizedBox.shrink(),
-      transitionBuilder: (context, anim1, anim2, child) {
+      pageBuilder: (
+        context, 
+        anim1, 
+        anim2) => const SizedBox.shrink(),
+      transitionBuilder: (
+        context, 
+        anim1, 
+        anim2, 
+        child) {
         return Transform.scale(
           scale: anim1.value,
           child: Opacity(
@@ -30,7 +34,11 @@ class ReceiptMessagePrompts {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
               ),
-              title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+              title: Text(
+                title, 
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold),
+                ),
               content: Text(message),
               actionsPadding: const EdgeInsets.only(bottom: 12, right: 12),
               actions: [
@@ -43,7 +51,11 @@ class ReceiptMessagePrompts {
                     Navigator.pop(context);
                     onConfirm();
                   },
-                  child: const Text("Confirm", style: TextStyle(color: Colors.red)),
+                  child: const Text(
+                    "Confirm", 
+                    style: TextStyle(
+                      color: Colors.red),
+                  ),
                 ),
               ],
             ),
@@ -94,7 +106,7 @@ class _ReceiptPageState extends State<ReceiptPage> {
  
   String paymentMethod = 'cash';
   final TextEditingController totalPaidController = TextEditingController(text: '00.00');
-  final TextEditingController nameController = TextEditingController(text: 'Customer Name');
+  final TextEditingController nameController = TextEditingController(text:  'Customer Name');
   final transactionId = DateTime.now().millisecondsSinceEpoch.toString();
   final now = DateTime.now();
 
@@ -134,17 +146,22 @@ class _ReceiptPageState extends State<ReceiptPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: const Color(0xFFF7FBFF),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: const Color(0xFF1565C0),
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: const Icon(
+            Icons.arrow_back, 
+            color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
           'Receipt',
-          style: TextStyle(color: Colors.black, fontSize: 20, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: Colors.white, 
+            fontSize: 16, 
+            fontWeight: FontWeight.w700),
         ),
       ),
       body: SingleChildScrollView(
@@ -167,7 +184,10 @@ class _ReceiptPageState extends State<ReceiptPage> {
               Padding(
                 padding: const EdgeInsets.all(24),
                 child: Column(
-                  children: widget.scannedItems.map((item) => _buildItemCard(item)).toList(),
+                  children: 
+                    widget.scannedItems.map(
+                      (item) => _buildItemCard(item))
+                      .toList(),
                 ),
               ),
 
@@ -194,7 +214,7 @@ class _ReceiptPageState extends State<ReceiptPage> {
                       setState(() => paymentMethod = 'cash'
                       );
                     }),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 4),
                     _buildCheckbox(
                       'Credit', 
                       paymentMethod == 'credit', () {
@@ -207,7 +227,10 @@ class _ReceiptPageState extends State<ReceiptPage> {
                     Center(
                       child: Text(
                         '$totalItems Item(s)',
-                        style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                        style: TextStyle(
+                          fontSize: 16, 
+                          color: Colors.grey[600],
+                        ),
                       ),
                     ),
                     const SizedBox(height: 24),
@@ -237,15 +260,39 @@ class _ReceiptPageState extends State<ReceiptPage> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Transaction No. :', style: TextStyle(fontSize: 16)),
-                        Text(transactionId, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        const Text(
+                          'Transaction No. :', 
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Color(0xFF212121),
+                            fontFamily: 'Inter'),
+                          ),
+                        Text(transactionId, 
+                          style: const TextStyle(
+                            color: Color(0xFF212121),
+                            fontFamily: 'Inter',
+                            fontSize: 14, 
+                            fontWeight: FontWeight.bold),
+                        ),
                       ],
                     ),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Date/Time', style: TextStyle(color: Colors.grey[600])),
-                        Text('${now.month}-${now.day}-${now.year} ${now.hour}:${now.minute.toString().padLeft(2,'0')}', style: TextStyle(color: Colors.grey[600])),
+                        Text(
+                          'Date/Time', 
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Color(0xFF757575),
+                            fontFamily: 'Inter',
+                          ),
+                        ),
+                        Text(
+                          '${now.month}-${now.day}-${now.year} ${now.hour}:${now.minute.toString().padLeft(2,'0')}', 
+                          style: TextStyle(
+                            color: Color(0xFF757575),
+                          ),
+                        ),
                       ],
                     ),
                   ],
@@ -282,7 +329,7 @@ class _ReceiptPageState extends State<ReceiptPage> {
                         );
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
+                          backgroundColor: Color(0xFFE53935),
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8),
@@ -290,7 +337,11 @@ class _ReceiptPageState extends State<ReceiptPage> {
                         ),
                         child: const Text(
                           'Discard',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                          style: TextStyle(
+                            fontSize: 18, 
+                            fontWeight: FontWeight.bold, 
+                            color: Colors.white
+                          ),
                         ),
                       ),
                     ),
@@ -362,7 +413,7 @@ class _ReceiptPageState extends State<ReceiptPage> {
                           );
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
+                          backgroundColor: Color(0xFF4CAF50),
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8),
@@ -370,7 +421,11 @@ class _ReceiptPageState extends State<ReceiptPage> {
                         ),
                         child: const Text(
                           'Save',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                          style: TextStyle(
+                            fontSize: 18, 
+                            fontWeight: FontWeight.bold, 
+                            color: Colors.white
+                          ),
                         ),
                       ),
                     ),
@@ -387,10 +442,13 @@ class _ReceiptPageState extends State<ReceiptPage> {
 
   Widget _buildItemCard(ReceiptItem item) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 24),
-      padding: const EdgeInsets.only(bottom: 24),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: Colors.grey[300]!)),
+        border: Border(
+          bottom: BorderSide(
+            color: Colors.grey[300]!),
+          ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -401,12 +459,16 @@ class _ReceiptPageState extends State<ReceiptPage> {
               Expanded(
                 child: Text(
                   item.name,
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 16, 
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
               Text(
                 item.price.toStringAsFixed(2),
-                style: const TextStyle(fontSize: 16),
+                style: const TextStyle(
+                  fontSize: 14),
               ),
             ],
           ),
@@ -423,7 +485,8 @@ class _ReceiptPageState extends State<ReceiptPage> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.remove, size: 20),
+                      icon: const Icon(
+                        Icons.remove, size: 24),
                       onPressed: () => updateQuantity(item.id, -1),
                       padding: const EdgeInsets.all(8),
                       constraints: const BoxConstraints(),
@@ -433,11 +496,17 @@ class _ReceiptPageState extends State<ReceiptPage> {
                       child: Text(
                         '${item.quantity}',
                         textAlign: TextAlign.center,
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Inter', 
+                          color: Color(0xFF212121),
+                          fontSize: 16),
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.add, size: 20),
+                      icon: const Icon(
+                        Icons.add, 
+                        size: 24),
                       onPressed: () => updateQuantity(item.id, 1),
                       padding: const EdgeInsets.all(8),
                       constraints: const BoxConstraints(),
@@ -447,7 +516,11 @@ class _ReceiptPageState extends State<ReceiptPage> {
               ),
               Text(
                 (item.price * item.quantity).toStringAsFixed(2),
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 20, 
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Inter',
+                ),
               ),
             ],
           ),
@@ -461,12 +534,29 @@ class _ReceiptPageState extends State<ReceiptPage> {
       onTap: onChanged,
       child: Row(
         children: [
-          Checkbox(
+          Transform.scale(
+          scale: 1.3, 
+          child: Checkbox(
             value: value,
             onChanged: (_) => onChanged(),
             materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            side: const BorderSide(
+              color: Color(0xFF1565C0), 
+              width: 2,                
+            ),
+            checkColor: Colors.white,     
+            activeColor: Color(0xFF1565C0), 
           ),
-          Text(label, style: const TextStyle(fontSize: 16)),
+        ),
+          Text(
+            label, 
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+              fontFamily: 'Inter',
+              color: Color(0xFF212121),
+            ),
+          ),
         ],
       ),
     );
@@ -480,6 +570,7 @@ class _ReceiptPageState extends State<ReceiptPage> {
         Text(
           amount,
           style: TextStyle(
+            fontFamily: 'Inter',
             fontSize: bold ? 20 : 18,
             fontWeight: bold ? FontWeight.bold : FontWeight.normal,
           ),
@@ -492,19 +583,32 @@ class _ReceiptPageState extends State<ReceiptPage> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        const Text('Total Paid', style: TextStyle(fontSize: 16)),
+        const Text(
+          'Total Paid', 
+          style: TextStyle(
+            fontSize: 16,
+            fontFamily: 'Inter'),
+          ),
         SizedBox(
           width: 120,
           child: TextField(
             controller: totalPaidController,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             textAlign: TextAlign.right,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+              fontSize: 18, 
+              fontWeight: FontWeight.bold),
             decoration: InputDecoration(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12, 
+                vertical: 8,
+              ),
+              filled: true,
+              fillColor: Color(0xFFF0F8FF),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: Colors.grey[400]!),
+                borderSide: BorderSide(
+                  color: Colors.grey[400]!),
               ),
             ),
             onChanged: (_) => setState(() {}),
@@ -519,14 +623,29 @@ class _ReceiptPageState extends State<ReceiptPage> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        const Text('Name:', style: TextStyle(fontSize: 16)),
+        const Text(
+          'Name:', style: 
+          TextStyle(
+            fontSize: 16,
+            fontFamily: 'Inter',
+          ),
+        ),
         const SizedBox(width: 12),
         Expanded(
           child: TextField(
             controller: nameController,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 16, 
+              fontWeight: FontWeight.bold,
+            ),
             decoration: InputDecoration(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12, 
+                vertical: 12,
+              ),
+              filled: true,
+              fillColor: Color(0xFFF0F8FF),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
                 borderSide: BorderSide(color: Colors.grey[400]!),

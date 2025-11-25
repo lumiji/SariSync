@@ -81,18 +81,18 @@ class _PoSSystem extends State<PoSSystem> {
 @override
 Widget build(BuildContext context) {
   return Scaffold(
-    backgroundColor: const Color(0xFFFEFEFE),
+    backgroundColor: const Color(0xFFF7FBFF),
     appBar: AppBar(
-      backgroundColor: const Color(0xFFFEFEFE),
+      backgroundColor: const Color(0xFF1565C0),
       elevation: 0,
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back, color: Colors.black),
+        icon: const Icon(Icons.arrow_back, color: Colors.white),
         onPressed: () => Navigator.pop(context),
       ),
       title: const Text(
         'Scan',
         style: TextStyle(
-          color: Colors.black,
+          color: Colors.white,
           fontSize: 16,
           fontWeight: FontWeight.w700,
         ),
@@ -142,7 +142,7 @@ Widget build(BuildContext context) {
                   Text(
                     "Total Scanned Items: $_scannedItems",
                     style: GoogleFonts.inter(
-                      color: Colors.black,
+                      color: Color(0xFF212121),
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
@@ -179,17 +179,21 @@ Widget build(BuildContext context) {
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               Expanded(
                 child: scannedItemsList.isEmpty
                     ? Center(
                         child: Text(
                           "No scanned items",
-                          style: GoogleFonts.inter(fontSize: 14, color: Colors.grey),
+                          style: GoogleFonts.inter(
+                            fontSize: 14, 
+                            color: Colors.grey,
+                            fontWeight: FontWeight.w500),
                         ),
                       )
                     : ListView.separated(
-                        padding: const EdgeInsets.only(top: 12),
+                        padding: const EdgeInsets.only(top: 8
+                        ),
                         itemCount: scannedItemsList.length,
                         itemBuilder: (context, index) {
                           final item = scannedItemsList[index];
