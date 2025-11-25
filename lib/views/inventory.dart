@@ -39,6 +39,7 @@ class _InventoryPageState extends State<InventoryPage> {
   late String _selectedCategory;
   List<InventoryItem> inventoryList = [];
   List<InventoryItem> filteredInventory = [];
+  final Set<String> _prefetchedUrls = {};
   final TextEditingController _searchController = TextEditingController();
   final uid = FirebaseAuth.instance.currentUser!.uid;
 
@@ -62,21 +63,43 @@ class _InventoryPageState extends State<InventoryPage> {
     {'name': 'Others', 'imagePath': 'assets/images/OTHERS.png'},
   ];
 
-  Stream<List<InventoryItem>> getInventoryItems() {
-    return FirebaseFirestore.instance
+  Stream<List<InventoryItem>> getInventoryItems() async* {
+    final coll = FirebaseFirestore.instance
         .collection('users')
         .doc(uid)
         .collection('inventory')
-        .orderBy('createdAt', descending: true)
-        .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => InventoryItem.fromMap(doc.data(), doc.id))
-            .toList());
+        .orderBy('createdAt', descending: true);
+
+    // reads cache data first
+    try {
+      final cacheSnapshot = await coll.get(const GetOptions(source: Source.cache));
+      yield cacheSnapshot.docs
+          .map((doc) => InventoryItem.fromMap(doc.data(), doc.id))
+          .toList();
+    } catch (_) {
+      // cache may be empty on first load
+      yield [];
+    }
+
+    // Then listen to live updates from the serve
+    yield* coll.snapshots().map(
+          (snapshot) => snapshot.docs
+              .map((doc) => InventoryItem.fromMap(doc.data(), doc.id))
+              .toList(),
+        );
   }
 
   void _onInventoryLoaded(List<InventoryItem> items) {
-    final urls = items.map((item) => item.imageUrl).toList();
-    ImageHelper.prefetchImages(context: context, urls: urls, limit: 8);
+    final urls = items
+      .map((item) => item.imageUrl)
+      .whereType<String>()
+      .where((url) => !_prefetchedUrls.contains(url))
+      .toList();
+      
+    if (urls.isNotEmpty) {
+      ImageHelper.prefetchImages(context: context, urls: urls, limit: 8);
+      _prefetchedUrls.addAll(urls);
+    }
   }
 
 

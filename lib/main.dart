@@ -36,6 +36,7 @@ Future<void> main() async {
   // Enable offline persistence
   FirebaseFirestore.instance.settings = const Settings(
     persistenceEnabled: true,
+    cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED
   );
 
   if (kDebugMode) {

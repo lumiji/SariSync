@@ -460,6 +460,22 @@ class HomeContent extends StatelessWidget {
 
                     final recentTransactions = snapshot.data!;
 
+                    if(recentTransactions.isEmpty) {
+                        return Padding(
+                            padding: const EdgeInsets.only(top: 100, bottom: 100),
+                          child: Center(                       
+                            child: Text(
+                              'No recent transactions',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 14,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ),
+                        );
+                    }
+
                     return ListView.builder(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),

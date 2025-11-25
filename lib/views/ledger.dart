@@ -6,6 +6,7 @@ import 'package:sarisync/widgets/message_prompts.dart';
 import 'ledger_add_page.dart';
 import '../models/ledger_item.dart';
 import '../widgets/led-item_card.dart';
+import 'package:sarisync/widgets/image_helper.dart';
 
 class LedgerPage extends StatefulWidget {
   final void Function(String type, String customerID)? onSearchSelected;
@@ -144,6 +145,12 @@ class _LedgerPageState extends State<LedgerPage> {
                               .where((item) => item.name.toLowerCase().contains(query))
                               .toList();
                         }
+
+                        // Prefetch images for first few ledger items
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          final urls = filteredLedger.map((item) => item.imageUrl).toList();
+                          ImageHelper.prefetchImages(context: context, urls: urls, limit: 8);
+                        });
 
 
                         if (filteredLedger.isEmpty) {

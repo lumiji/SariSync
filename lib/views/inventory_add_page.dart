@@ -9,6 +9,7 @@ import 'dart:io';
 //firebase dependencies
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:sarisync/widgets/message_prompts.dart';
 
 //pages
 import 'sku_scanner.dart';
@@ -178,87 +179,97 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
 
   // for saving item (Add/Edit)
 void _saveItem() async {
+
   if (!_formKey.currentState!.validate()) return;
+  
 
-  setState(() {});
+  DialogHelper.showLoading(context,message: "Saving item. Please wait.");
 
-  final name = _nameController.text.trim();
-  final quantity = int.parse(_quantityController.text);
-  final price = double.parse(_priceController.text);
-  final category = _selectedCategory ?? '';
-  final barcode = _barcodeController.text;
-  final unit = '${_unitAmountController.text} ${_unitDropdownValue ?? ''}';
-  final info = _infoController.text;
-  final expiration = _expirationController.text;
+  try{
+    
+    setState(() {});
 
-  String? uploadedImageUrl = imageUrl;
+    final name = _nameController.text.trim();
+    final quantity = int.parse(_quantityController.text);
+    final price = double.parse(_priceController.text);
+    final category = _selectedCategory ?? '';
+    final barcode = _barcodeController.text;
+    final unit = '${_unitAmountController.text} ${_unitDropdownValue ?? ''}';
+    final info = _infoController.text;
+    final expiration = _expirationController.text;
 
-  // Upload image if selected
-  if (_selectedImage != null) {
-    uploadedImageUrl = await _inventoryService.uploadImage(_selectedImage!);
-  }
+    String? uploadedImageUrl = imageUrl;
 
-  if (widget.item == null) {
-    // ADD
-    await _inventoryService.addItem(
-      name: name,
-      quantity: quantity,
-      price: price,
-      category: category,
-      barcode: barcode,
-      unit: unit,
-      info: info,
-      expirationDate: expiration,
-      imageUrl: uploadedImageUrl,
-    );
+    // Upload image if selected
+    if (_selectedImage != null) {
+      uploadedImageUrl = await _inventoryService.uploadImage(_selectedImage!);
+    }
+
+    if (widget.item == null) {
+      // ADD
+      await Future.wait([
+        _inventoryService.addItem(
+        name: name,
+        quantity: quantity,
+        price: price,
+        category: category,
+        barcode: barcode,
+        unit: unit,
+        info: info,
+        expirationDate: expiration,
+        imageUrl: uploadedImageUrl,
+      ),
+      //AUTO HISTORY 
+      //(Out or Low stock / Added)
+      HistoryService.checkStockEvent(
+        itemName: _nameController.text.trim(),
+        quantity: int.parse(_quantityController.text),
+      ),
+
+      // Expiry check
+      HistoryService.checkExpiryEvent(
+        itemName: _nameController.text.trim(),
+        expirationDate: _expirationController.text,
+      )
+    ]);
+
+      Navigator.pop(context, "added");
+    } else {
+      // EDIT
+      final updatedItem = InventoryItem(
+        id: widget.item!.id,
+        name: name,
+        quantity: quantity,
+        price: price,
+        category: category,
+        barcode: barcode,
+        unit: unit,
+        add_info: info,
+        expiration: expiration,
+        imageUrl: uploadedImageUrl,
+        createdAt: widget.item!.createdAt,
+      );
 
 
-    //AUTO HISTORY 
-    //(Out or Low stock / Added)
-    await HistoryService.checkStockEvent(
-      itemName: _nameController.text.trim(),
-      quantity: int.parse(_quantityController.text),
-    );
+      await _inventoryService.updateItem(updatedItem);
 
-    // Expiry check
-    await HistoryService.checkExpiryEvent(
-      itemName: _nameController.text.trim(),
-      expirationDate: _expirationController.text,
-    );
+      // AUTO HISTORY 
+      //(Out or Low stock / Updated)
+      await HistoryService.checkStockEvent(
+        itemName: _nameController.text.trim(),
+        quantity: int.parse(_quantityController.text),
+      );
 
-     Navigator.pop(context, "added");
-  } else {
-    // EDIT
-    final updatedItem = InventoryItem(
-      id: widget.item!.id,
-      name: name,
-      quantity: quantity,
-      price: price,
-      category: category,
-      barcode: barcode,
-      unit: unit,
-      add_info: info,
-      expiration: expiration,
-      imageUrl: uploadedImageUrl,
-      createdAt: widget.item!.createdAt,
-    );
+      // Expiry check
+      await HistoryService.checkExpiryEvent(
+        itemName: _nameController.text.trim(),
+        expirationDate: _expirationController.text,
+      );
 
-    await _inventoryService.updateItem(updatedItem);
-
-    // AUTO HISTORY 
-    //(Out or Low stock / Updated)
-    await HistoryService.checkStockEvent(
-      itemName: _nameController.text.trim(),
-      quantity: int.parse(_quantityController.text),
-    );
-
-    // Expiry check
-    await HistoryService.checkExpiryEvent(
-      itemName: _nameController.text.trim(),
-      expirationDate: _expirationController.text,
-    );
-
-    Navigator.pop(context, "updated");
+      Navigator.pop(context, "updated");
+    }
+  } finally {
+    DialogHelper.closeLoading(context);
   }
 }
 
