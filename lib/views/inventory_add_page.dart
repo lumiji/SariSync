@@ -7,9 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 
 //firebase dependencies
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
-import 'package:sarisync/widgets/message_prompts.dart';
+
 
 //pages
 import 'sku_scanner.dart';
@@ -19,6 +17,7 @@ import 'package:sarisync/services/history_service.dart';
 import '../services/inventory_service.dart';
 import 'package:sarisync/widgets/inv_add-label.dart';
 import '../models/inventory_item.dart';
+import 'package:sarisync/widgets/message_prompts.dart';
 
 class InventoryAddPage extends StatefulWidget {
  

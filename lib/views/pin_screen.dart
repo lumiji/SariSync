@@ -123,7 +123,7 @@ class _PinScreenState extends State<PinScreen> {
                         width: 80,
                         height: 80,
                       ),
-                      const SizedBox(width: 10),
+                      const SizedBox(width: 4),
                       Text(
                         "SariSync",
                         style: GoogleFonts.inter(

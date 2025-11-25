@@ -5,6 +5,48 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 
+Future<void> subtractStock(ReceiptItem item) async {
+    final uid = FirebaseAuth.instance.currentUser!.uid;
+    final docRef = FirebaseFirestore.instance
+      .collection('users')
+      .doc(uid)
+      .collection('inventory')
+      .doc(item.id);
+
+    await FirebaseFirestore.instance.runTransaction((transaction) async {
+      final snapshot = await transaction.get(docRef);
+      if (!snapshot.exists) return;
+
+      final currentQty = snapshot.get('quantity') as int? ?? 0;
+      final newQty = (currentQty - item.quantity).clamp(0, currentQty);
+
+      transaction.update(docRef, {'quantity': newQty});
+    });
+  }
+
+  //for combining similar scanned items
+  List<ReceiptItem> combineDuplicates(List<ReceiptItem> items) {
+  final Map<String, ReceiptItem> combined = {};
+
+  for (var item in items) {
+    if (combined.containsKey(item.id)) {
+      // Increase the quantity of the existing item
+      combined[item.id]!.quantity += item.quantity;
+    } else {
+      // Add a copy of the item
+      combined[item.id] = ReceiptItem(
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+      );
+    }
+  }
+
+  return combined.values.toList();
+}
+
+
 Future<void> processSale({
   required List<ReceiptItem> items,
   required String paymentMethod,
@@ -21,6 +63,11 @@ Future<void> processSale({
   final uid = FirebaseAuth.instance.currentUser!.uid;
 
   String? customerID;
+
+   for (var item in items) {
+    await subtractStock(item);
+  }
+
 
   // Credit payment handling
   if (paymentMethod == 'credit' && name != null && name.isNotEmpty) {
@@ -48,7 +95,6 @@ Future<void> processSale({
       );
     }
   }
-
   // Default totalPaid & change
   final paidAmount = totalPaid ?? totalAmount;
   final changeAmount = change ?? (paymentMethod == 'cash' ? paidAmount - totalAmount : 0.0);
@@ -84,4 +130,6 @@ Future<void> processSale({
       ),
     }, SetOptions(merge: true));
   }
+
+  
 }

@@ -101,8 +101,8 @@ class DialogHelper {
                   ),
                 ),
                 onPressed: () {
-                  Navigator.pop(context); // close popup first
-                  if (onOk != null) onOk(); // run callback after closing
+                  Navigator.pop(context); 
+                  if (onOk != null) onOk();
                 },
                 child: const Text("OK"),
               ),
@@ -112,6 +112,63 @@ class DialogHelper {
       ),
     );
   }
+
+  
+// Success Popup
+  static warning(
+    BuildContext context,
+    String message, {
+    VoidCallback? onOk,
+  }) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: const Color(0xFFE8F3FF),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                 Icons.warning_rounded,
+                 color: Color(0xFFFFC107),
+                 size: 48,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                message,
+                style: const TextStyle(
+                  fontSize: 18, 
+                  fontWeight: FontWeight.w600),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                onPressed: () {
+                  Navigator.pop(context); 
+                  if (onOk != null) onOk();
+                },
+                child: const Text("OK"),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
 
   // Loading message
   static void showLoading(BuildContext context, {String message = "Loading..."}) {

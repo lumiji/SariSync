@@ -8,6 +8,8 @@ import 'package:sarisync/widgets/pos-item_card.dart';
 import 'package:sarisync/views/new_sales_search.dart';
 import 'package:sarisync/models/receipt_item.dart';
 import 'package:sarisync/views/receipt.dart';
+import 'package:sarisync/widgets/message_prompts.dart';
+import 'package:intl/intl.dart';
 
 class PoSSystem extends StatefulWidget {
   final Function(String barcode)? onDetect;
@@ -224,11 +226,44 @@ Widget build(BuildContext context) {
         },
       ),
               
-
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: ()  async {
+        onPressed: () async {
           _MobileScannerController.stop();
 
+          final now = DateTime.now();
+          final today = DateTime(now.year, now.month, now.day);
+
+          List<String> warnings = [];
+
+          for (var item in scannedItemsList) {
+            final parts = item.expiration.split('/'); // ["11", "25", "2025"]
+              final expiryDate = DateTime(
+                int.parse(parts[2]), // year
+                int.parse(parts[0]), // month
+                int.parse(parts[1]), // day
+              );
+
+
+            final isExpired = expiryDate != null &&
+                !DateTime(expiryDate.year, expiryDate.month, expiryDate.day)
+                    .isAfter(today);
+
+            // Combine quantity and expiration check with OR
+            if (item.quantity == 0 || isExpired) {
+              if (item.quantity == 0) warnings.add("${item.name} is out of stock.");
+              if (isExpired) warnings.add("${item.name} is expired.");
+            }
+          }
+
+          if (warnings.isNotEmpty) {
+            await DialogHelper.warning(
+              context,
+              warnings.join("\n"),
+            );
+            return;
+          }
+
+          // Proceed to receipt if no warnings
           final tabIndex = await Navigator.push(
             context,
             MaterialPageRoute(
@@ -242,6 +277,7 @@ Widget build(BuildContext context) {
               ),
             ),
           );
+
           if (tabIndex != null && tabIndex is int) {
             Navigator.pop(context, tabIndex);
           }
@@ -257,11 +293,13 @@ Widget build(BuildContext context) {
         ),
         icon: const Icon(
           Icons.receipt,
-          color:  Color(0xFFFCFCFC)),
+          color: Color(0xFFFCFCFC),
+        ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-    );
-  }
+
+          );
+        }
 
 
   @override

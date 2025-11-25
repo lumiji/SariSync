@@ -4,6 +4,8 @@ import 'package:sarisync/services/process_sale.dart';
 import 'package:sarisync/views/home.dart';
 import 'package:sarisync/widgets/message_prompts.dart';
 import 'package:sarisync/services/history_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ReceiptMessagePrompts {
   static Future<void> confirm(
@@ -351,50 +353,81 @@ class _ReceiptPageState extends State<ReceiptPage> {
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () async {
-                          final now = DateTime.now();
-                          final tid = transactionId; // Reference for Receipt ID
 
-                          final itemsWithTimestamp = widget.scannedItems.map((item) => ReceiptItem(
-                            id: item.id,
-                            name: item.name,
-                            price: item.price,
-                            quantity: item.quantity,
-                          )).toList();
+                          DialogHelper.showLoading(context,message: "Saving transaction. Please wait.");
 
-                          // Calculate change (cash)
-                          final paidAmount = paymentMethod == 'cash' ? totalPaid : 0.0;
-                          final changeAmount = paymentMethod == 'cash' ? paidAmount - totalAmount : 0.0;
-                          final status = paymentMethod == 'cash' ? 'paid' : 'credit';
+                          try{ 
 
-                          // Call processSale
-                          await processSale(
-                            items: itemsWithTimestamp,
-                            paymentMethod: paymentMethod,
-                            name: paymentMethod == 'credit' ? nameController.text : null,
-                            totalAmount: totalAmount,
-                            totalPaid: paidAmount,
-                            change: changeAmount,
-                            status: status,
-                            receivedBy: ' ', // ledger field
-                            createdAt: now,
-                          );
+                            final combinedItems = combineDuplicates(widget.scannedItems);
 
-                          // Save to History  for CASH/CREDIT transactions
-                          if (paymentMethod == 'cash') {
-                            await HistoryService.recordSalesEvent(
-                              totalAmount: totalAmount,
-                              //transactionId: tid,
+
+                            for (var item in combinedItems){
+                              
+
+                              final uid = FirebaseAuth.instance.currentUser!.uid;
+
+                              final docSnapshot = await FirebaseFirestore.instance
+                                .collection('users')
+                                .doc(uid)
+                                .collection('inventory')
+                                .doc(item.id)
+                                .get();
+
+                              final currentStock = docSnapshot.exists ? (docSnapshot['quantity'] as int) : 0;
+
+                              if(item.quantity > currentStock) {
+                                await DialogHelper.warning(
+                                  context,
+                                  '${item.name} has only $currentStock in stock.');
+                                return;
+                              }
+                            }
+
+                            final now = DateTime.now();
+                            final tid = transactionId; // Reference for Receipt ID
+
+                            // Calculate change (cash)
+                            final paidAmount = paymentMethod == 'cash' ? totalPaid : 0.0;
+                            final changeAmount = paymentMethod == 'cash' ? paidAmount - totalAmount : 0.0;
+                            final status = paymentMethod == 'cash' ? 'paid' : 'credit';
+
+                            if (paymentMethod == 'cash' && totalPaid < totalAmount) {
+                              await DialogHelper.warning(
+                                context,
+                                'Total paid cannot be 0.00 for cash transactions.',
                               );
-                          } else if 
-                          (paymentMethod == 'credit') {
-                            await HistoryService.recordCreditEvent(
-                              totalAmount: totalAmount,
-                              customerName: nameController.text, 
-                             // transactionId: tid,
-                            );
-                          }
+                              return;
+                            }
 
-                          DialogHelper.success(
+                            // Call processSale
+                            await processSale(
+                              items: combinedItems,
+                              paymentMethod: paymentMethod,
+                              name: paymentMethod == 'credit' ? nameController.text : null,
+                              totalAmount: totalAmount,
+                              totalPaid: paidAmount,
+                              change: changeAmount,
+                              status: status,
+                              receivedBy: ' ', // ledger field
+                              createdAt: now,
+                            );
+
+                            // Save to History  for CASH/CREDIT transactions
+                            if (paymentMethod == 'cash') {
+                              await HistoryService.recordSalesEvent(
+                                totalAmount: totalAmount,
+                                //transactionId: tid,
+                                );
+                            } else if 
+                            (paymentMethod == 'credit') {
+                              await HistoryService.recordCreditEvent(
+                                totalAmount: totalAmount,
+                                customerName: nameController.text, 
+                              // transactionId: tid,
+                              );
+                            }
+                          } finally {
+                            DialogHelper.success(
                             context,
                             "Transaction saved successfully.",
                             onOk: () {
@@ -411,6 +444,7 @@ class _ReceiptPageState extends State<ReceiptPage> {
                               }
                             },
                           );
+                          }
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Color(0xFF4CAF50),
