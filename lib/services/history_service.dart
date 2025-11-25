@@ -10,7 +10,9 @@ class HistoryService {
     String? transactionId,
 
   }) async {
-    await FirebaseFirestore.instance.collection("History").add({
+    await FirebaseFirestore.instance
+    .collection("History")
+    .add({
       "title": title,
       "description": description,
       "category": category,
@@ -44,7 +46,6 @@ static Future<void> recordCreditEvent({
 }) async {
   await addHistory(
     title: "Credit – Php ${totalAmount.toStringAsFixed(2)}",
-    //description: "Customer: $customerName",
     description: "$customerName added to credit",
     category: "Credit",
     amount: totalAmount,
@@ -87,6 +88,26 @@ static Future<void> recordLedgerCreditEvent({
     amount: amount,
     transactionId: transactionId,
   );
+}
+
+//Credit - Update
+static Future<void> updateLedgerCreditEvent({
+  required String transactionId,
+  required double amountPaid,
+  required double change,
+  required String cashier,
+  required String status,
+}) async {
+  await FirebaseFirestore.instance
+    .collection('receipts')
+    .doc(transactionId)
+    .update({
+    'totalPaid': amountPaid,
+    'change': change,
+    'cashier': cashier,
+    'status': status,
+    'updatedAt': FieldValue.serverTimestamp(),
+  });
 }
 
 // STOCKS 

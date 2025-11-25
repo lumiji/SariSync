@@ -37,7 +37,7 @@ class ReceiptItem {
     );
   }
 
-    // 💡 Cleaner computed property
+    // Cleaner computed property
   double get totalPrice => price * quantity;
 
 }

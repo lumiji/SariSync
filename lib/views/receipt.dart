@@ -13,7 +13,7 @@ import 'package:sarisync/services/receipt_service.dart';
 
 
 //  Local message prompts for Receipt page only
-// 🔔 Message Prompts UI copied from global version for Receipt page
+// Message Prompts UI copied from global version for Receipt page
 class ReceiptMessagePrompts {
   static Future<void> confirm(
     BuildContext context, {
@@ -314,6 +314,8 @@ class _ReceiptPageState extends State<ReceiptPage> {
                             name: item.name,
                             price: item.price,
                             quantity: item.quantity,
+                           // description: item.add_info,   
+                            //weight: item.weight, 
                           )).toList();
 
                           // Calculate change (cash)
@@ -329,8 +331,8 @@ class _ReceiptPageState extends State<ReceiptPage> {
                             totalAmount: totalAmount,
                             totalPaid: paidAmount,
                             change: changeAmount,
-                            status: status,
-                            transactionId: transactionId, // 🔥 pass SAME ID
+                            status: status,         
+                            transactionId: transactionId, // pass SAME ID to connect with History
                             receivedBy: ' ', // ledger field
                             createdAt: now,
                           );
