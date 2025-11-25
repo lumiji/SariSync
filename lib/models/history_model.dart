@@ -1,6 +1,5 @@
-//import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-// MODEL
 class HistoryItem {
   final String id;
   final String title;
@@ -28,14 +27,37 @@ class HistoryItem {
     };
   }
 
+  
   static HistoryItem fromMap(String id, Map<String, dynamic> map) {
+  
+    final title = (map["title"] ?? '') as String;
+    final description = (map["description"] ?? '') as String;
+    final category = (map["category"] ?? 'Unknown') as String;
+    final amount = (map["amount"] != null)
+        ? (map["amount"] is num ? (map["amount"] as num).toDouble() : double.tryParse(map["amount"].toString()))
+        : null;
+
+   
+    DateTime parsedDate;
+    final rawDate = map["date"];
+    if (rawDate is Timestamp) {
+      parsedDate = rawDate.toDate();
+    } else if (rawDate is DateTime) {
+      parsedDate = rawDate;
+    } else if (rawDate is String) {
+      parsedDate = DateTime.tryParse(rawDate) ?? DateTime.now();
+    } else {
+  
+      parsedDate = DateTime.now();
+    }
+
     return HistoryItem(
       id: id,
-      title: map["title"],
-      description: map["description"],
-      category: map["category"],
-      amount: (map["amount"] != null) ? map["amount"]!.toDouble() : null,
-      date: DateTime.parse(map["date"]),
+      title: title,
+      description: description,
+      date: parsedDate,
+      category: category,
+      amount: amount,
     );
   }
 }

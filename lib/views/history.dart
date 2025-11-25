@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:sarisync/widgets/message_prompts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:sarisync/models/history_model.dart';
 
 class HistoryPage extends StatefulWidget {
   const HistoryPage({super.key});
@@ -15,15 +16,26 @@ class _HistoryPageState extends State<HistoryPage> {
   String selectedCategory = "All";
   final uid = FirebaseAuth.instance.currentUser!.uid;
 
+  IconData getCategoryIcon(String category) {
+    switch (category) {
+      case "Sales":
+        return Icons.shopping_cart_outlined;
+      case "Credit":
+        return Icons.account_balance_wallet_outlined;
+      case "Stocks":
+        return Icons.inventory_2_outlined;
+      default:
+        return Icons.receipt_long;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Stack(
         children: [
           // BACKGROUND
-          Positioned.fill(
-            child: Image.asset("assets/images/gradient.png", fit: BoxFit.cover),
-          ),
+          Container(color: const Color(0xFFF7FBFF)),
 
           SafeArea(
             child: Padding(
@@ -33,36 +45,10 @@ class _HistoryPageState extends State<HistoryPage> {
                 children: [
                   const SizedBox(height: 16),
 
-                  // Search + Settings
+                  // SETTINGS BUTTON (RIGHT)
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
-                                blurRadius: 10,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: TextField(
-                            decoration: InputDecoration(
-                              hintText: "Search",
-                              border: InputBorder.none,
-                              hintStyle: GoogleFonts.inter(
-                                fontSize: 14,
-                                color: const Color(0xFF757575),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
                       IconButton(
                         icon: const Icon(Icons.settings_outlined, size: 24),
                         onPressed: () {},
@@ -70,35 +56,36 @@ class _HistoryPageState extends State<HistoryPage> {
                     ],
                   ),
 
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 20),
 
-                  // CATEGORY BAR
+                  // CATEGORY FILTER BAR
                   Container(
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: const Color(0xFFFEFEFE),
                       borderRadius: BorderRadius.circular(14),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.08),
-                          blurRadius: 6,
-                          offset: const Offset(0, 3),
+                          color: Colors.black.withOpacity(0.10),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
                         ),
                       ],
                     ),
                     child: Row(
-                      children: ["All", "Sales", "Credit", "Stocks"].map((cat) {
-                        final bool selected = selectedCategory == cat;
+                      children: ["All", "Sales", "Credit", "Stocks"]
+                          .map((cat) {
+                        final selected = selectedCategory == cat;
                         return Expanded(
                           child: GestureDetector(
                             onTap: () => setState(() => selectedCategory = cat),
                             child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 220),
+                              duration: const Duration(milliseconds: 200),
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               decoration: BoxDecoration(
                                 color: selected
-                                    ? const Color(0xFFB9D8FF)
-                                    : Colors.white,
+                                    ? const Color(0xFFB4D7FF)
+                                    : const Color(0xFFFEFEFE),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Center(
@@ -108,8 +95,8 @@ class _HistoryPageState extends State<HistoryPage> {
                                     fontSize: 16,
                                     fontWeight: FontWeight.w500,
                                     color: selected
-                                        ? Colors.black
-                                        : Colors.black87,
+                                        ? Colors.black87
+                                        : const Color(0xFF212121),
                                   ),
                                 ),
                               ),
@@ -137,147 +124,134 @@ class _HistoryPageState extends State<HistoryPage> {
                             child: CircularProgressIndicator(),
                           );
                         }
-                        final docs = snapshot.data!.docs.where((e) {
-                        final cat = e.data().toString().contains('category') ? e['category'] : "Unknown";
-                        return selectedCategory == "All" ||
-                              cat == selectedCategory;
+
+                        // Convert Firestore docs → history model
+                        final items = snapshot.data!.docs.map((doc) {
+                          final data = doc.data() as Map<String, dynamic>;
+                          return HistoryItem.fromMap(doc.id, data);
+                        }).where((item) {
+                          return selectedCategory == "All" ||
+                              item.category == selectedCategory;
                         }).toList();
 
-                        if (docs.isEmpty) {
+                        if (items.isEmpty) {
                           return Center(
                             child: Text(
                               "No records found",
                               style: GoogleFonts.inter(
-                                fontSize: 14,
-                                color: Colors.grey,
+                                fontSize: 16,
+                                color: Colors.grey.shade600,
                               ),
                             ),
                           );
                         }
 
                         return ListView.separated(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          separatorBuilder: (_, __) => Divider(
-                            color: Colors.grey.shade300,
-                            thickness: 1,
-                          ),
-                          itemCount: docs.length,
-
+                          itemCount: items.length,
+                          separatorBuilder: (_, _) =>
+                              Divider(color: Colors.grey.shade300),
                           itemBuilder: (context, index) {
-                            final d = docs[index];
-                            //final timestamp = (d['date'] as Timestamp).toDate();
-                            final data = d.data() as Map<String, dynamic>;
-                            final title = data.containsKey('title') ? data['title'] : "Untitled";
-                            final description = data.containsKey('description') ? data['description'] : "";
-                            final amount = data.containsKey('amount') ? data['amount'] : null;
-                            final timestamp = data.containsKey('date')
-                                ? (data['date'] as Timestamp).toDate()
-                                : DateTime.now();
-                            final formattedDate =
-                                "${timestamp.month}-${timestamp.day}-${timestamp.year} "
-                                "${timestamp.hour == 0 ? 12 : (timestamp.hour > 12 ? timestamp.hour - 12 : timestamp.hour)}:"
-                                "${timestamp.minute.toString().padLeft(2, '0')} "
-                                "${timestamp.hour >= 12 ? "PM" : "AM"}";
+                            final item = items[index];
 
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 6),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        // Title + Amount
-                                        Text(
-                                          title,
-                                          style: GoogleFonts.inter(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.w700,
-                                            color: Colors.black87,
-                                          ),
+                            return Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // CATEGORY ICON
+                                Icon(
+                                  getCategoryIcon(item.category),
+                                  size: 24,
+                                  color: Color(0xFF1565C0),
+                                ),
+                                const SizedBox(width: 12),
+
+                                // TEXT DETAILS
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      // TITLE
+                                      Text(
+                                        item.title,
+                                        style: GoogleFonts.inter(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w700,
+                                          color: const Color(0xFF212121),
                                         ),
+                                      ),
 
-                                        // Description
-                                        if (description.isNotEmpty) ...[
+                                      // DESCRIPTION
+                                      if (item.description.isNotEmpty) ...[
                                         const SizedBox(height: 2),
                                         Text(
-                                          description,
-                                          style: GoogleFonts.inter(
-                                            fontSize: 15,
-                                            color: Colors.grey.shade700,
-                                          ),
-                                        ),
-                                        ],
-
-                                        // Date
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          formattedDate,
+                                          item.description,
                                           style: GoogleFonts.inter(
                                             fontSize: 14,
-                                            color: Colors.grey,
+                                            color: const Color(0xFF757575),
                                           ),
                                         ),
                                       ],
-                                    ),
-                                  ),
 
-                                  PopupMenuButton(
-                                    icon: const Icon(
-                                      Icons.more_horiz,
-                                      size: 22,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    itemBuilder: (context) => [
-                                      const PopupMenuItem(
-                                        value: "view",
-                                        child: Text("View Transaction"),
-                                      ),
-                                      const PopupMenuItem(
-                                        value: "delete",
-                                        child: Text("Delete"),
+                                      const SizedBox(height: 3),
+
+                                      // DATE FORMAT
+                                      Text(
+                                        "${item.date.month}-${item.date.day}-${item.date.year} "
+                                        "${item.date.hour == 0 ? 12 : (item.date.hour > 12 ? item.date.hour - 12 : item.date.hour)}:"
+                                        "${item.date.minute.toString().padLeft(2, '0')} "
+                                        "${item.date.hour >= 12 ? "PM" : "AM"}",
+                                        style: GoogleFonts.inter(
+                                          fontSize: 13,
+                                          color: Colors.grey.shade500,
+                                        ),
                                       ),
                                     ],
-                                      onSelected: (value) {
-                                      if (value == "delete") {
-                                        DialogHelper.confirmDelete(
-                                          context,
-                                          () async {
-                                            await FirebaseFirestore.instance
-                                                .collection('users')
-                                                .doc(uid)
-                                                .collection("History")
-                                                .doc(d.id)
-                                                .delete();
-
-                                            DialogHelper.success(
-                                              context,
-                                              "Record deleted successfully.",
-                                              onOk: () {
-                                                // No need to navigate — StreamBuilder updates the list automatically
-                                                // setState(() {}); <-- optional, but not required
-                                              },
-                                            );
-                                          },
-                                          title: "Delete from History?",
-                                          yesText: "Yes",
-                                          noText: "No",
-                                        );
-                                      }
-
-                                      if (value == "view") {
-                                        // open transaction page here
-                                      }
-                                    }
-
-      
                                   ),
-                                ],
-                              ),
+                                ),
+
+                                // MENU BUTTON
+                                PopupMenuButton(
+                                  icon: const Icon(
+                                    Icons.more_horiz, 
+                                    size: 32),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  itemBuilder: (context) => const [
+                                    PopupMenuItem(
+                                      value: "view",
+                                      child: Text("View Transaction"),
+                                    ),
+                                    PopupMenuItem(
+                                      value: "delete",
+                                      child: Text("Delete"),
+                                    ),
+                                  ],
+                                  onSelected: (value) {
+                                    if (value == "delete") {
+                                      DialogHelper.confirmDelete(
+                                        context,
+                                        () async {
+                                          await FirebaseFirestore.instance
+                                              .collection('users')
+                                              .doc(uid)
+                                              .collection("History")
+                                              .doc(item.id)
+                                              .delete();
+
+                                          DialogHelper.success(
+                                            context,
+                                            "Record deleted successfully.",
+                                          );
+                                        },
+                                        title: "Delete this record?",
+                                        yesText: "Yes",
+                                        noText: "No",
+                                      );
+                                    }
+                                  },
+                                ),
+                              ],
                             );
                           },
                         );
