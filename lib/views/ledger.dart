@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:sarisync/widgets/message_prompts.dart';
 import 'ledger_add_page.dart';
 import '../models/ledger_item.dart';
@@ -18,9 +19,12 @@ class _LedgerPageState extends State<LedgerPage> {
   List<LedgerItem> ledgerList = [];
   List<LedgerItem> filteredLedger = [];
   final TextEditingController _searchController = TextEditingController();
+  final uid = FirebaseAuth.instance.currentUser!.uid;
 
   Stream<List<LedgerItem>> getLedgerItems() {
     return FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
         .collection('ledger')
         .orderBy('updatedAt', descending: true)
         .snapshots()
@@ -166,6 +170,8 @@ class _LedgerPageState extends State<LedgerPage> {
                               item: item,
                               onEdit: () async {
                                 await FirebaseFirestore.instance
+                                    .collection('users')
+                                    .doc(uid)
                                     .collection("ledger")
                                     .doc(item.customerID)
                                     .update({
@@ -191,6 +197,8 @@ class _LedgerPageState extends State<LedgerPage> {
                                   context,
                                   () async {
                                     await FirebaseFirestore.instance
+                                        .collection('users')
+                                        .doc(uid)
                                         .collection('ledger')
                                         .doc(item.customerID)
                                         .delete();

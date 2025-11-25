@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 // firebase dependencies
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 // widgets & pages
 import 'package:sarisync/widgets/inv-category_card.dart';
@@ -39,6 +40,7 @@ class _InventoryPageState extends State<InventoryPage> {
   List<InventoryItem> inventoryList = [];
   List<InventoryItem> filteredInventory = [];
   final TextEditingController _searchController = TextEditingController();
+  final uid = FirebaseAuth.instance.currentUser!.uid;
 
   @override
   void initState(){
@@ -62,6 +64,8 @@ class _InventoryPageState extends State<InventoryPage> {
 
   Stream<List<InventoryItem>> getInventoryItems() {
     return FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
         .collection('inventory')
         .orderBy('createdAt', descending: true)
         .snapshots()
@@ -269,6 +273,8 @@ class _InventoryPageState extends State<InventoryPage> {
                                           context,
                                           () async {
                                             await FirebaseFirestore.instance
+                                                .collection('users')
+                                                .doc(uid)
                                                 .collection('inventory')
                                                 .doc(item.id)
                                                 .delete();

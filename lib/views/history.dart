@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:sarisync/widgets/message_prompts.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class HistoryPage extends StatefulWidget {
   const HistoryPage({super.key});
@@ -12,6 +13,7 @@ class HistoryPage extends StatefulWidget {
 
 class _HistoryPageState extends State<HistoryPage> {
   String selectedCategory = "All";
+  final uid = FirebaseAuth.instance.currentUser!.uid;
 
   @override
   Widget build(BuildContext context) {
@@ -124,6 +126,8 @@ class _HistoryPageState extends State<HistoryPage> {
                   Expanded(
                     child: StreamBuilder<QuerySnapshot>(
                       stream: FirebaseFirestore.instance
+                          .collection('users')
+                          .doc(uid)
                           .collection("History")
                           .orderBy("date", descending: true)
                           .snapshots(),
@@ -244,6 +248,8 @@ class _HistoryPageState extends State<HistoryPage> {
                                           context,
                                           () async {
                                             await FirebaseFirestore.instance
+                                                .collection('users')
+                                                .doc(uid)
                                                 .collection("History")
                                                 .doc(d.id)
                                                 .delete();

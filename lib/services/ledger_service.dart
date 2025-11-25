@@ -5,13 +5,19 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:intl/intl.dart';
 import 'package:sarisync/models/ledger_item.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 
 class LedgerService {
   //initialization
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
-  final ledger = FirebaseFirestore.instance.collection('ledger');
+
+
+  String get uid => FirebaseAuth.instance.currentUser!.uid;
+
+  CollectionReference get ledger =>
+      _firestore.collection('users').doc(uid).collection('ledger');
 
   //checks if customer is in ledger
   Future<QueryDocumentSnapshot?> findCustomerByName(String name) async {
@@ -85,7 +91,12 @@ class LedgerService {
   }) async {
     try {
 
-      final docRef = _firestore.collection('ledger').doc(customerID);
+      final docRef = _firestore
+        .collection('users')
+        .doc(uid)
+        .collection('ledger')
+        .doc(customerID);
+
       await docRef.set({
         'name': name,
         'customerID': customerID,
@@ -115,9 +126,10 @@ class LedgerService {
   }
   }
 
-  // Retrieve items from Firestore as a stream
   Stream<List<LedgerItem>> getLedgerItems() {
     return _firestore
+        .collection('users')
+        .doc(uid)
         .collection('ledger')
         .orderBy('createdAt', descending: true)
         .snapshots()
@@ -152,6 +164,8 @@ class LedgerService {
   Future<void> updateLedgerItem(String customerID, Map<String, dynamic> data) async {
     try{
       await _firestore
+        .collection('users')
+        .doc(uid)
         .collection('ledger')
         .doc(customerID)
         .update(data);
@@ -164,6 +178,8 @@ class LedgerService {
   Future<void> deleteLedgerItem(String customerID) async {
     try {
       await _firestore
+        .collection('users')
+        .doc(uid)
         .collection('ledger')
         .doc(customerID)
         .delete();
@@ -175,6 +191,8 @@ class LedgerService {
 
   Stream<double> totalDebtStream() {
     return FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
         .collection('ledger')
         .where('payStatus', isNotEqualTo: 'Paid')
         .snapshots()
@@ -191,27 +209,29 @@ class LedgerService {
     }
 
   Future<String> generateCustomerId() async {
-    // Current year
     String year = DateFormat('yyyy').format(DateTime.now());
 
-    // Get last customer ID in Firestore
     final snapshot = await ledger
         .orderBy('customerID', descending: true)
         .limit(1)
         .get();
 
     int lastNumber = 0;
+
     if (snapshot.docs.isNotEmpty) {
-      final lastId = snapshot.docs.first.data()['customerID'] as String;
-      // Assume format YYYY###, e.g., 2025001
-      lastNumber = int.tryParse(lastId.substring(4)) ?? 0;
+      final data = snapshot.docs.first.data() as Map<String, dynamic>?; // cast to map
+      final lastId = data?['customerID'] as String? ?? '';
+      if (lastId.length > 4) {
+        lastNumber = int.tryParse(lastId.substring(4)) ?? 0;
+      }
     }
 
     int nextNumber = lastNumber + 1;
     String nextNumberStr = nextNumber.toString().padLeft(3, '0');
 
-    return '$year$nextNumberStr'; // e.g., 2025001
+    return '$year$nextNumberStr';
   }
+
 
 }
 

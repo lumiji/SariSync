@@ -1,4 +1,5 @@
 // flutter dependencies
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:sarisync/services/sales_card_service.dart';
 import 'package:sarisync/views/new_sales.dart';
@@ -41,6 +42,7 @@ class _HomePageState extends State<HomePage> {
   late final Stream<Map<String, dynamic>> todaySalesStream;
   late final Stream<double> totalDebtStream;
   late final Stream<List<TransactionItem>> _recentTransactions;
+  final uid = FirebaseAuth.instance.currentUser!.uid;
   String? _selectedCategory;
       
   @override
@@ -50,6 +52,8 @@ class _HomePageState extends State<HomePage> {
     todaySalesStream = salesService.todaySalesStream();
     totalDebtStream = debtService.totalDebtStream();
     _recentTransactions = FirebaseFirestore.instance
+    .collection('users')
+    .doc(uid)
     .collection('receipts')
     .orderBy('createdAt', descending: true)
     .limit(5)
@@ -96,6 +100,8 @@ class _HomePageState extends State<HomePage> {
 
   Stream<List<InventoryItem>> getInventoryItems() {
   return FirebaseFirestore.instance
+      .collection('users')
+      .doc(uid)
       .collection('inventory') 
       .orderBy('createdAt', descending: true)
       .snapshots()         

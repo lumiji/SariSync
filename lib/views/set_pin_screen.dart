@@ -5,10 +5,11 @@ import 'package:sarisync/views/home.dart';
 import 'package:sarisync/services/local_storage_service.dart';
 import 'pin_screen.dart';
 
-
-
 class SetPinScreen extends StatefulWidget {
-  const SetPinScreen({super.key});
+  final String? accountIdentifier; // Can be phone, email, or any account identifier
+  final String? accountType; // 'phone', 'google', 'facebook', etc.
+  
+  const SetPinScreen({super.key, this.accountIdentifier, this.accountType});
 
   @override
   State<SetPinScreen> createState() => _SetPinScreenState();
@@ -17,8 +18,38 @@ class SetPinScreen extends StatefulWidget {
 class _SetPinScreenState extends State<SetPinScreen> {
   String _enteredPin = '';
   String _errorMessage = '';
-  // List<String> _input = [];
   String? _pressedKey;
+  String? _displayAccount;
+  String? _accountType;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAccountInfo();
+  }
+
+  Future<void> _loadAccountInfo() async {
+    // Try to get account info from widget parameters first, then from storage
+    String? account = widget.accountIdentifier ?? await LocalStorageService.getAccountIdentifier();
+    String? type = widget.accountType ?? await LocalStorageService.getAccountType();
+    
+    setState(() {
+      _displayAccount = account;
+      _accountType = type;
+    });
+  }
+
+  IconData _getAccountIcon() {
+    switch (_accountType?.toLowerCase()) {
+      case 'google':
+        return Icons.email_outlined;
+      case 'facebook':
+        return Icons.facebook;
+      case 'phone':
+      default:
+        return Icons.phone_outlined;
+    }
+  }
 
   void _onNumberTap(String number) {
     if (_enteredPin.length < 4) {
@@ -44,33 +75,29 @@ class _SetPinScreenState extends State<SetPinScreen> {
     }
   }
 
-     void _onSubmit() async {
-  if (_enteredPin.length == 4) {
-    setState(() {
-      _errorMessage = '';
-    });
+  void _onSubmit() async {
+    if (_enteredPin.length == 4) {
+      setState(() {
+        _errorMessage = '';
+      });
 
-    // Save PIN locally
-    await LocalStorageService.savePin(_enteredPin);
+      // Save PIN locally
+      await LocalStorageService.savePin(_enteredPin);
 
-    // Mark user as logged in (first-time sign-in complete)
-    await LocalStorageService.saveLoggedIn();
+      // Mark user as logged in (first-time sign-in complete)
+      await LocalStorageService.saveLoggedIn();
 
-    // Redirect to enter PIN screen
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => PinScreen()),
-    );
-  } else {
-    setState(() {
-      _errorMessage = 'Enter 4 digits';
-    });
+      // Redirect to enter PIN screen
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => PinScreen()),
+      );
+    } else {
+      setState(() {
+        _errorMessage = 'Enter 4 digits';
+      });
+    }
   }
-}
-
-
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -95,9 +122,7 @@ class _SetPinScreenState extends State<SetPinScreen> {
               Align(
                 alignment: Alignment.topCenter,
                 child: Padding(
-                  padding: const EdgeInsets.only(
-                    top: 10,
-                  ),
+                  padding: const EdgeInsets.only(top: 10),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -120,8 +145,63 @@ class _SetPinScreenState extends State<SetPinScreen> {
                 ),
               ),
 
-              const SizedBox(height: 75),
+              const SizedBox(height: 20),
 
+              // Tagline
+              Text(
+                "Your Store. Smarter than ever.",
+                style: GoogleFonts.inter(
+                  fontSize: 16,
+                  color: Colors.white.withOpacity(0.9),
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+
+              const SizedBox(height: 30),
+
+              // Account display (phone, email, or social media account)
+              if (_displayAccount != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  margin: const EdgeInsets.symmetric(horizontal: 40),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.95),
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        _getAccountIcon(),
+                        color: const Color(0xFF1E88E5),
+                        size: 20,
+                      ),
+                      const SizedBox(width: 10),
+                      Flexible(
+                        child: Text(
+                          _displayAccount!,
+                          style: GoogleFonts.inter(
+                            fontSize: 16,
+                            color: const Color(0xFF1E88E5),
+                            fontWeight: FontWeight.w600,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Icon(
+                        Icons.swap_horiz,
+                        color: const Color(0xFF1E88E5),
+                        size: 24,
+                      ),
+                    ],
+                  ),
+                ),
+
+              const SizedBox(height: 40),
+
+              // Set PIN text
               Text(
                 "Set PIN",
                 style: GoogleFonts.inter(
@@ -156,7 +236,7 @@ class _SetPinScreenState extends State<SetPinScreen> {
                   child: Text(
                     _errorMessage,
                     style: GoogleFonts.inter(
-                      color: Color.fromARGB(255, 209, 22, 22),
+                      color: const Color.fromARGB(255, 209, 22, 22),
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
                     ),
@@ -236,7 +316,7 @@ class _SetPinScreenState extends State<SetPinScreen> {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: _pressedKey == key
-              ? Colors.white.withOpacity(0.1) 
+              ? Colors.white.withOpacity(0.1)
               : Colors.transparent,
           boxShadow: _pressedKey == key
               ? [
@@ -256,7 +336,7 @@ class _SetPinScreenState extends State<SetPinScreen> {
                   style: GoogleFonts.inter(
                     fontSize: 26,
                     color: Colors.white,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
         ),

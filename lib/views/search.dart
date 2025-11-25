@@ -5,7 +5,8 @@ import 'package:flutter/material.dart';
 import '../models/inventory_item.dart';
 
 //firebase dependencies
-import 'package:cloud_firestore/cloud_firestore.dart'; // Firestore
+import 'package:cloud_firestore/cloud_firestore.dart'; 
+import 'package:firebase_auth/firebase_auth.dart';
 
 //models, widgets & services
 import '../services/inventory_service.dart';
@@ -23,6 +24,7 @@ class SearchPage extends StatefulWidget {
 class _SearchPageState extends State<SearchPage> {
   final _inventoryService = InventoryService();
   final SearchController _searchController = SearchController();
+  final uid = FirebaseAuth.instance.currentUser!.uid;
 
   List<InventoryItem> allInventoryItems = [];
 
@@ -31,6 +33,8 @@ class _SearchPageState extends State<SearchPage> {
     super.initState();
     // Load all items from Firestore
     FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
         .collection('inventory')
         .snapshots()
         .listen((snapshot) {
