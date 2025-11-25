@@ -291,7 +291,7 @@ class HomeContent extends StatelessWidget {
     return Stack(
       children: [
         Container(
-          color: Color(0xFFFEFEFE),
+          color: Color(0xFFF7FBFF),
         ),
         SafeArea(
           child: SingleChildScrollView(
@@ -390,7 +390,7 @@ class HomeContent extends StatelessWidget {
                     const Text(
                       'Browse Categories',
                       style: TextStyle(
-                        color: Color(0xFF1565C0),
+                        color: Color(0xFF212121),
                         fontFamily: 'Inter',
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
@@ -403,7 +403,7 @@ class HomeContent extends StatelessWidget {
                         style: TextStyle(
                           fontFamily: 'Inter',
                           fontSize: 16,
-                          color: Color(0xFF1565C0),
+                          color: Color(0xFF212121),
                           decoration: TextDecoration.underline,
                           decorationThickness: 0.8,
                           decorationColor: Color(0xFF1565C0),
@@ -471,7 +471,7 @@ class HomeContent extends StatelessWidget {
                     fontFamily: 'Inter',
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF1565C0),
+                    color: Color(0xFF212121),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -499,7 +499,7 @@ class HomeContent extends StatelessWidget {
                               style: TextStyle(
                                 fontFamily: 'Inter',
                                 fontSize: 14,
-                                color: Colors.grey,
+                                color:Color(0xFF757575),
                               ),
                             ),
                           ),

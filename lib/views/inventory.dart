@@ -95,7 +95,7 @@ class _InventoryPageState extends State<InventoryPage> {
       .whereType<String>()
       .where((url) => !_prefetchedUrls.contains(url))
       .toList();
-      
+
     if (urls.isNotEmpty) {
       ImageHelper.prefetchImages(context: context, urls: urls, limit: 8);
       _prefetchedUrls.addAll(urls);
@@ -108,9 +108,8 @@ class _InventoryPageState extends State<InventoryPage> {
     return Scaffold(
       body: Stack(
         children: [
-          Positioned.fill(
-            child:
-                Image.asset('assets/images/gradient.png', fit: BoxFit.cover),
+          Container(
+            color: Color(0xFFF7FBFF),
           ),
           SafeArea(
             child: StreamBuilder<List<InventoryItem>>(
@@ -173,7 +172,7 @@ class _InventoryPageState extends State<InventoryPage> {
                                         contentPadding: const EdgeInsets.symmetric(vertical: 10),
                                         border: OutlineInputBorder(
                                           borderRadius: BorderRadius.circular(10),
-                                          borderSide: BorderSide.none,
+                                          borderSide: BorderSide(color: Colors.grey.shade400),
                                         ),
                                         focusedBorder: OutlineInputBorder(
                                           borderRadius: BorderRadius.circular(10),
@@ -188,6 +187,7 @@ class _InventoryPageState extends State<InventoryPage> {
                                 const SizedBox(width: 12),
                                 IconButton(
                                   icon: const Icon(Icons.settings_outlined),
+                                  color: Color(0xFF1565C0),
                                   iconSize: 24,
                                   onPressed: () {},
                                 ),
