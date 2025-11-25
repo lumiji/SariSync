@@ -98,7 +98,7 @@ class _LedgerAddPageState extends State<LedgerAddPage> {
     if (widget.item != null) {
       final item = widget.item!;
       _nameController.text = item.name;
-      _contactController.text = item.contact;
+      _contactController.text = item.contact.toString();
       _paymentStatus = item.payStatus;
       _creditController.text = item.credit.toString();
       _partialController.text = '';
@@ -134,9 +134,12 @@ class _LedgerAddPageState extends State<LedgerAddPage> {
     try {
       if (widget.item == null) {
         // ADD NEW CUSTOMER
+
+        final customerID = await _ledgerService.generateCustomerId();
+
         await _ledgerService.addLedgerItem(
           name: _nameController.text.trim(),
-          customerID: DateTime.now().millisecondsSinceEpoch.toString(),
+          customerID: customerID,
           contact: _contactController.text.trim(),
           payStatus: _paymentStatus,
           credit: credit,
@@ -151,19 +154,19 @@ class _LedgerAddPageState extends State<LedgerAddPage> {
         // UPDATE EXISTING CUSTOMER
         final docId = widget.item!.id;
         final enteredPartial = double.tryParse(_partialController.text) ?? 0.0;
-        double newPartial;
-        final updatedCredit = credit; 
-        double remaining;
-        String updatedStatus;
+        double newPartial = (widget.item!.partialPay ?? 0) + enteredPartial;
+        final updatedCredit = credit;
+
+        double remaining = (updatedCredit - newPartial).clamp(0.0, updatedCredit);
+        
+        String updatedStatus = _paymentStatus;
 
         if (_paymentStatus == 'Paid') {
           updatedStatus = 'Paid';
-          newPartial = updatedCredit;
-          remaining = 0.0; 
+          newPartial = credit;
+          remaining = 0.0;
         } else if (_paymentStatus == 'Partial') {
           updatedStatus = 'Partial';
-          newPartial = (widget.item!.partialPay ?? 0) + enteredPartial;
-          remaining = (updatedCredit - newPartial).clamp(0.0, updatedCredit);
         } else {
           updatedStatus = 'Unpaid';
           newPartial = 0.0;
@@ -228,15 +231,19 @@ class _LedgerAddPageState extends State<LedgerAddPage> {
         backgroundColor: const Color(0xFFFEFEFE),
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: const Icon(
+            Icons.arrow_back_rounded, 
+            color: Colors.black,
+            size: 24),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           widget.item == null ? 'Add' : 'Edit',
           style: TextStyle(
             color: Colors.black,
+            fontFamily: 'Inter',
             fontSize: 16,
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.bold,
           ),
         ),
       ),
@@ -254,33 +261,44 @@ class _LedgerAddPageState extends State<LedgerAddPage> {
                   child: Stack(
                     children: [
                       Container(
-                        width: 130,
-                        height: 130,
+                        width: 160,
+                        height: 160,
                         decoration: BoxDecoration(
                           color: const Color(0xFFD9D9D9),
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(8),
                         ),
                         child: _selectedImage != null
                             ? ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(8),
                                 child: Image.file(
                                   _selectedImage!,
                                    fit: BoxFit.cover),
                               )
                             : const Icon(Icons.image_outlined,
-                                size: 60, color: Color(0xFFFEFEFE)),
+                                size: 64, color: Color(0xFFFEFEFE)),
                       ),
                       Positioned(
                         bottom: 4,
                         right: 4,
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFFEFEFE),
-                            shape: BoxShape.circle,
+                        child: SizedBox(
+                          width: 48,
+                          height: 48,
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Color(0xFFFEFEFE),
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.15),
+                                  blurRadius: 2,
+                                  offset: const Offset(0,2),
+                                ),
+                              ],
+                            ),
+                            child: const Icon(Icons.camera_alt,
+                                size: 24, color: Color(0xFF1565C0)),
                           ),
-                          child: const Icon(Icons.camera_alt,
-                              size: 24, color: Color(0xFF1565C0)),
                         ),
                       ),
                     ],
@@ -309,8 +327,6 @@ class _LedgerAddPageState extends State<LedgerAddPage> {
                 decoration:
                   _inputDecoration(
                     hintText:  'Enter contact number (Optional)'),
-                validator: (v) =>
-                  v == null || v.isEmpty ? 'Please enter contact number': null,
               ),
 
               const SizedBox(height: 16),
@@ -322,13 +338,17 @@ class _LedgerAddPageState extends State<LedgerAddPage> {
                 children: ['Unpaid', 'Paid', 'Partial'].map((status) {
                   return Row(
                     children: [
-                      Radio<String>(
+                      Transform.scale( 
+                        scale: 1.5,
+                        child: Radio<String>(
                         value: status,
                         groupValue: _paymentStatus,
                         onChanged: (v) => setState(() => _paymentStatus = v!),
+                        activeColor: Color(0xFF1565C0),
                       ),
+                    ),
                       Text(status, style: GoogleFonts.inter()),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 24),
                     ],
                   );
                 }).toList(),
@@ -354,13 +374,43 @@ class _LedgerAddPageState extends State<LedgerAddPage> {
               TextFormField(
                 controller: _partialController,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: 
-                  _inputDecoration(hintText: '0.00'),
                 enabled: _paymentStatus == 'Partial',
+
+                style: TextStyle(
+                  color: _paymentStatus == 'Partial'
+                      ? Colors.black
+                      : Colors.grey,  // Text color when disabled
+                ),
+
+                decoration: InputDecoration(
+                  hintText: '0.00',
+                  filled: true,
+                  fillColor: _paymentStatus == 'Partial'
+                      ? Color(0xFFF0F8FF)
+                      : Colors.grey.shade200, // Background when disabled
+
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Color(0xFFB4D7FF)),
+                  ),
+
+                  disabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide.none, // Border when disabled
+                  ),
+
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Color(0xFFB4D7FF), width: 1),
+                  ),
+
+                  errorBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Colors.red),
+                  ),
+                ),
+
                 validator: _paymentStatus == 'Partial'
                     ? (v) => v == null || v.isEmpty ? 'Enter partial payment' : null
                     : null,
               ),
+
 
               const SizedBox(height: 16),
 
@@ -410,7 +460,14 @@ class _LedgerAddPageState extends State<LedgerAddPage> {
     return InputDecoration(
       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide.none,
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide(
+          color: Color(0xFFB4D7FF),
+        )
       ),
       hintText: hintText,
       suffixIcon: suffixIcon,

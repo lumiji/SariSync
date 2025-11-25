@@ -13,24 +13,43 @@ import 'package:sarisync/widgets/inv-item_card.dart';
 import 'inventory_add_page.dart';
 import 'package:sarisync/widgets/image_helper.dart';
 import 'package:sarisync/widgets/message_prompts.dart';
+import 'settings.dart';
 
-// models
+// models & services
 import '../models/inventory_item.dart';
 
 
 class InventoryPage extends StatefulWidget {
-  const InventoryPage({Key? key}) : super(key: key);
+  final void Function(String type, String id)? onSearchSelected;
+  final String? selectedCategory;
+  const InventoryPage({
+    Key? key, 
+    this.onSearchSelected,
+    this.selectedCategory
+    }) : super(key: key);
 
   @override
   State<InventoryPage> createState() => _InventoryPageState();
 }
 
 class _InventoryPageState extends State<InventoryPage> {
-  int _selectedIndex = 1;
-  String _selectedCategory = 'All';
+  // final int _selectedIndex = 1;
+
+  //default selected category when pressing inventory page icon
+  late String _selectedCategory;
+  List<InventoryItem> inventoryList = [];
+  List<InventoryItem> filteredInventory = [];
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void initState(){
+    super.initState();
+    _selectedCategory = widget.selectedCategory ?? 'All';
+  }
+  
 
   // small optimization: only prefetch when items change
-  int _lastPrefetchedCount = 0;
+  // int _lastPrefetchedCount = 0;
 
   final List<Map<String, String>> _categories = [
     {'name': 'All', 'imagePath': 'assets/images/ALL.png'},
@@ -77,13 +96,19 @@ class _InventoryPageState extends State<InventoryPage> {
 
                 final items = snapshot.data!;
 
-                // do filtering once here (outside the Sliver builder)
-                final List<InventoryItem> filteredItems =
-                    _selectedCategory == 'All'
-                        ? items
-                        : items
-                            .where((item) => item.category == _selectedCategory)
-                            .toList();
+                //filtering items
+                final query = _searchController.text.toLowerCase();
+
+                final List<InventoryItem> filteredItems = items.where((item) {
+                  final matchesCategory = _selectedCategory == 'All'
+                      ? true
+                      : item.category == _selectedCategory;
+
+                  final matchesSearch = item.name.toLowerCase().contains(query);
+
+                  return matchesCategory && matchesSearch;
+                }).toList();
+
 
                 // prefetch a handful of images to reduce the perceived load time
                 WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -104,29 +129,32 @@ class _InventoryPageState extends State<InventoryPage> {
                             Row(
                               children: [
                                 Expanded(
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 16),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(12),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withOpacity(0.05),
-                                          blurRadius: 10,
-                                          offset: const Offset(0, 2),
-                                        ),
-                                      ],
-                                    ),
-                                    child: const TextField(
+                                  child: SizedBox ( 
+                                    height: 45, 
+                                    child: TextField(
+                                      controller: _searchController,
+                                      onChanged: (value) {
+                                        setState(() {});
+                                      }, 
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontFamily: 'Inter',
+                                        color: Color(0xFF212121),
+                                      ),
                                       decoration: InputDecoration(
                                         hintText: 'Search',
-                                        border: InputBorder.none,
-                                        hintStyle: TextStyle(
-                                          fontFamily: 'Inter',
-                                          fontSize: 14,
-                                          color: Color(0xFF757575),
+                                        prefixIcon: const Icon(Icons.search),
+                                        contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(10),
+                                          borderSide: BorderSide.none,
                                         ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(10),
+                                          borderSide: const BorderSide(color: Color(0xFF327CD1)),
+                                        ),
+                                        filled: true,
+                                        fillColor: Colors.white,
                                       ),
                                     ),
                                   ),
@@ -134,8 +162,13 @@ class _InventoryPageState extends State<InventoryPage> {
                                 const SizedBox(width: 12),
                                 IconButton(
                                   icon: const Icon(Icons.settings_outlined),
-                                  onPressed: () {},
                                   iconSize: 24,
+                                  onPressed: () {
+                                     Navigator.push(
+                                     context,
+                                     MaterialPageRoute(builder: (context) => SettingsPage()),
+                                    );
+                                  },
                                 ),
                               ],
                             ),
@@ -147,7 +180,7 @@ class _InventoryPageState extends State<InventoryPage> {
                               style: GoogleFonts.inter(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w700,
-                              ),
+                                color: Color(0xFF212121)),
                             ),
                             const SizedBox(height: 12),
 
@@ -179,17 +212,17 @@ class _InventoryPageState extends State<InventoryPage> {
                                 },
                               ),
                             ),
-                            const SizedBox(height: 24),
+                            const SizedBox(height: 20),
 
                             // Items header
                             Text(
                               'Items',
-                              style: GoogleFonts.inter(
+                             style: GoogleFonts.inter(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w700,
-                              ),
+                                color: Color(0xFF212121)),
                             ),
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 8),
                           ],
                         ),
                       ),
@@ -206,9 +239,10 @@ class _InventoryPageState extends State<InventoryPage> {
                                   child: Text(
                                     "No items found",
                                     style: TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w500,
-                                      color: Colors.grey,
+                                      fontFamily: 'Inter',
+                                      color: Color(0xFF757575),
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 16,
                                     ),
                                   ),
                                 ),
@@ -219,7 +253,7 @@ class _InventoryPageState extends State<InventoryPage> {
                                 (context, index) {
                                   final item = filteredItems[index];
                                   return Padding(
-                                    padding: const EdgeInsets.only(bottom: 12),
+                                    padding: const EdgeInsets.only(bottom: 8),
                                     child: InvItemCard(
                                       item: item,
                                       onEdit: () async {
@@ -241,7 +275,7 @@ class _InventoryPageState extends State<InventoryPage> {
                                           context,
                                           () async {
                                             await FirebaseFirestore.instance
-                                                .collection('ledger')
+                                                .collection('inventory')
                                                 .doc(item.id)
                                                 .delete();
 
@@ -273,21 +307,26 @@ class _InventoryPageState extends State<InventoryPage> {
           Positioned(
             bottom: 20,
             right: 20,
-            child: FloatingActionButton(
-              onPressed: () async {
-                final result = await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const InventoryAddPage(),
-                  ),
-                );
+            child: SizedBox(
+              width: 64,
+              height: 64,
+              child:  FloatingActionButton(
+                onPressed: () async {
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const InventoryAddPage(),
+                    ),
+                  );
 
-                if (result == "added") {
-                  DialogHelper.success(context, "Item successfully added.");
-                }
-              },
-              backgroundColor: const Color(0xFF1565C0),
-              child: const Icon(Icons.add, color: Colors.white, size: 28),
+                  if (result == "added") {
+                    DialogHelper.success(context, "Item successfully added.");
+                  }
+                },
+                backgroundColor: const Color(0xFF1565C0),
+                shape: const CircleBorder(),
+                child: const Icon(Icons.add, color: Colors.white, size: 24),
+              ),
             ),
           ),
         ],

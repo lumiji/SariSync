@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:sarisync/models/transaction_model.dart';
+import 'package:intl/intl.dart';
 
 class TrnscItemCard extends StatelessWidget {
   final TransactionItem transaction;
@@ -7,7 +9,7 @@ class TrnscItemCard extends StatelessWidget {
   const TrnscItemCard({
     super.key, 
     required this.transaction,
-    });
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -36,15 +38,64 @@ class TrnscItemCard extends StatelessWidget {
                 child: Icon(Icons.shopping_cart, color: Colors.white, size: 16),
               ),
               const SizedBox(width: 12),
-              Text(
-                transaction.amount,
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+
+              // Left Column
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  
+                  Text(
+                    transaction.paymentMethod,
+                    style: GoogleFonts.inter(
+                      fontSize: 15,
+                      color: Colors.black,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    transaction.transactionId,
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-          Text(
-            transaction.date,
-            style: const TextStyle(fontSize: 12, color: Color(0xFF757575)),
+
+          // Right Column
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Row(
+                children: [
+                  Text (
+                    transaction.totalAmount.toString(),
+                    style: GoogleFonts.inter(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    'PHP',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ],
+              ),              
+              const SizedBox(height: 2),
+              Text(
+                DateFormat('MMM d, yyyy – h:mm a').format(transaction.createdAt.toLocal()),
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: Colors.grey.shade700,
+                ),
+              ),
+            ],
           ),
         ],
       ),

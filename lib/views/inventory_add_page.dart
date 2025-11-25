@@ -5,12 +5,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-import '../models/inventory_item.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
-
 
 //firebase dependencies
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 
 //pages
 import 'sku_scanner.dart';
@@ -19,7 +17,7 @@ import 'package:sarisync/services/history_service.dart';
 //models, widgets & services
 import '../services/inventory_service.dart';
 import 'package:sarisync/widgets/inv_add-label.dart';
-import 'package:sarisync/services/history_service.dart';
+import '../models/inventory_item.dart';
 
 class InventoryAddPage extends StatefulWidget {
  
@@ -184,20 +182,36 @@ void _saveItem() async {
 
   setState(() {});
 
+  final name = _nameController.text.trim();
+  final quantity = int.parse(_quantityController.text);
+  final price = double.parse(_priceController.text);
+  final category = _selectedCategory ?? '';
+  final barcode = _barcodeController.text;
+  final unit = '${_unitAmountController.text} ${_unitDropdownValue ?? ''}';
+  final info = _infoController.text;
+  final expiration = _expirationController.text;
+
+  String? uploadedImageUrl = imageUrl;
+
+  // Upload image if selected
+  if (_selectedImage != null) {
+    uploadedImageUrl = await _inventoryService.uploadImage(_selectedImage!);
+  }
+
   if (widget.item == null) {
     // ADD
-    final docRef = await FirebaseFirestore.instance.collection('inventory').add({
-      "name": _nameController.text.trim(),
-      "quantity": int.parse(_quantityController.text),
-      "price": double.parse(_priceController.text),
-      "category": _selectedCategory ?? '',
-      "barcode": _barcodeController.text,
-      "unit": '${_unitAmountController.text} ${_unitDropdownValue ?? ''}',
-      "add_info": _infoController.text,
-      "expiration": _expirationController.text,
-      "imageUrl": null,
-      "createdAt": FieldValue.serverTimestamp(),
-    });
+    await _inventoryService.addItem(
+      name: name,
+      quantity: quantity,
+      price: price,
+      category: category,
+      barcode: barcode,
+      unit: unit,
+      info: info,
+      expirationDate: expiration,
+      imageUrl: uploadedImageUrl,
+    );
+
 
     //AUTO HISTORY 
     //(Out or Low stock / Added)
@@ -212,35 +226,24 @@ void _saveItem() async {
       expirationDate: _expirationController.text,
     );
 
-    // upload image
-    if (_selectedImage != null) {
-      FirebaseStorage.instance
-          .ref()
-          .child('inventory_images/${docRef.id}.jpg')
-          .putFile(_selectedImage!)
-          .then((task) async {
-        final url = await task.ref.getDownloadURL();
-        await docRef.update({"imageUrl": url});
-      });
-    }
-
-    Navigator.pop(context, "added");
+     Navigator.pop(context, "added");
   } else {
     // EDIT
-    final docRef = FirebaseFirestore.instance
-        .collection('inventory')
-        .doc(widget.item!.id);
+    final updatedItem = InventoryItem(
+      id: widget.item!.id,
+      name: name,
+      quantity: quantity,
+      price: price,
+      category: category,
+      barcode: barcode,
+      unit: unit,
+      add_info: info,
+      expiration: expiration,
+      imageUrl: uploadedImageUrl,
+      createdAt: widget.item!.createdAt,
+    );
 
-    await docRef.update({
-      "name": _nameController.text.trim(),
-      "quantity": int.parse(_quantityController.text),
-      "price": double.parse(_priceController.text),
-      "category": _selectedCategory ?? '',
-      "barcode": _barcodeController.text,
-      "unit": '${_unitAmountController.text} ${_unitDropdownValue ?? ''}',
-      "add_info": _infoController.text,
-      "expiration": _expirationController.text,
-    });
+    await _inventoryService.updateItem(updatedItem);
 
     // AUTO HISTORY 
     //(Out or Low stock / Updated)
@@ -254,18 +257,6 @@ void _saveItem() async {
       itemName: _nameController.text.trim(),
       expirationDate: _expirationController.text,
     );
-
-    // upload new image if changed
-    if (_selectedImage != null) {
-      FirebaseStorage.instance
-          .ref()
-          .child('inventory_images/${widget.item!.id}.jpg')
-          .putFile(_selectedImage!)
-          .then((task) async {
-        final url = await task.ref.getDownloadURL();
-        await docRef.update({"imageUrl": url});
-      });
-    }
 
     Navigator.pop(context, "updated");
   }
@@ -313,15 +304,19 @@ void _saveItem() async {
         backgroundColor: Color(0xFFFEFEFE),
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: const Icon(
+            Icons.arrow_back_rounded, 
+            color: Colors.black,
+            size: 24),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           widget.item == null ? 'Add' : 'Edit',
           style: const TextStyle(
             color: Colors.black,
+            fontFamily: 'Inter',
             fontSize: 16,
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.bold,
           ),
         ),
       ),
@@ -339,15 +334,15 @@ void _saveItem() async {
                   child: Stack(
                     children: [
                       Container(
-                        width: 130,
-                        height: 130,
+                        width: 160,
+                        height: 160,
                         decoration: BoxDecoration(
                           color: const Color(0xFFD9D9D9),
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(8),
                         ),
                         child: _selectedImage != null
                             ? ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(8),
                                 child: Image.file(
                                   _selectedImage!,
                                   fit: BoxFit.cover,
@@ -355,23 +350,31 @@ void _saveItem() async {
                               )
                             : const Icon(
                                 Icons.image_outlined,
-                                size: 60,
+                                size: 64,
                                 color: Color(0xFFFEFEFE),
                               ),
                       ),
                       Positioned(
                         bottom: 4,
                         right: 4,
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFFEFEFE),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.camera_alt,
-                            size: 24,
-                            color: Color(0xFF1565C0),
+                        child: SizedBox(
+                          width: 48,
+                          height: 48,
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Color(0xFFFEFEFE),
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.15),
+                                  blurRadius: 2,
+                                  offset: const Offset(0,2),
+                                ),
+                              ],
+                            ),
+                            child: const Icon(Icons.camera_alt,
+                                size: 24, color: Color(0xFF1565C0)),
                           ),
                         ),
                       ),
@@ -383,22 +386,27 @@ void _saveItem() async {
 
               // for category
               InvAddLabel(text: 'Category'),
-              DropdownButtonFormField<String>(
-                value: _selectedCategory,
-                decoration: _inputDecoration(
-                  fillColor: const Color(0xFFF0F8FF),
-                ), // light grey background
-                hint: const Text(
-                  'Select category',
-                  style: TextStyle(color: Color(0xFF9E9E9E)),
+                DropdownButtonFormField<String>(
+                  value: _selectedCategory,
+                  decoration: _inputDecoration(
+                    fillColor: const Color(0xFFF0F8FF),
+                  ), // light grey background
+                  hint: const Text(
+                    'Select category',
+                    style: TextStyle(color: Color(0xFF9E9E9E)),
+                  ),
+                  icon: const Icon(
+                    Icons.arrow_drop_down,
+                    size: 32, 
+                    color: Color(0xFF757575), 
+                  ),
+                  items: _categories
+                      .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                      .toList(),
+                  onChanged: (v) => setState(() => _selectedCategory = v),
+                  validator: (v) =>
+                      v == null || v.isEmpty ? 'Please select a category' : null,
                 ),
-                items: _categories
-                    .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                    .toList(),
-                onChanged: (v) => setState(() => _selectedCategory = v),
-                validator: (v) =>
-                    v == null || v.isEmpty ? 'Please select a category' : null,
-              ),
               const SizedBox(height: 16),
 
               // Name
@@ -441,8 +449,9 @@ void _saveItem() async {
                         height: 24,
                         child: IconButton(
                           padding: EdgeInsets.zero,
-                          iconSize: 28,
+                          iconSize: 32,
                           icon: const Icon(Icons.arrow_drop_up),
+                          color: Color(0xFF757575),
                           onPressed: _incrementQuantity,
                         ),
                       ),
@@ -450,8 +459,9 @@ void _saveItem() async {
                         height: 24,
                         child: IconButton(
                           padding: EdgeInsets.zero,
-                          iconSize: 28,
+                          iconSize: 32,
                           icon: const Icon(Icons.arrow_drop_down),
+                          color: Color(0xFF757575),
                           onPressed: _decrementQuantity,
                         ),
                       ),
@@ -468,7 +478,7 @@ void _saveItem() async {
                   Expanded(
                     flex: 2,
                     child: TextFormField(
-                      controller: _unitAmountController, // e.g., 24
+                      controller: _unitAmountController, 
                       keyboardType: TextInputType.numberWithOptions(
                         decimal: true,
                       ),
@@ -488,6 +498,11 @@ void _saveItem() async {
                     child: DropdownButtonFormField<String>(
                       value: _unitDropdownValue,
                       decoration: _inputDecoration(),
+                      icon: const Icon(
+                        Icons.arrow_drop_down,
+                        size: 32, 
+                        color: Color(0xFF757575), 
+                      ),
                       items: _units.map((unit) {
                         return DropdownMenuItem(value: unit, child: Text(unit));
                       }).toList(),
@@ -599,41 +614,24 @@ void _saveItem() async {
     );
   }
 
-  InputDecoration _inputDecoration({
-    String? hintText,
-    Widget? suffixIcon,
-    Color? fillColor,
-  }) {
+  InputDecoration _inputDecoration({String? hintText, Widget? suffixIcon, Color? fillColor}) {
     return InputDecoration(
       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide.none,
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide(
+          color: Color(0xFFB4D7FF),
+        )
+      ),
       hintText: hintText,
       suffixIcon: suffixIcon,
       hintStyle: const TextStyle(color: Color(0xFF9E9E9E)),
-      filled: true,
-      fillColor: fillColor ?? Color(0xFFF0F8FF),
+      filled: true,           
+      fillColor: fillColor ?? Color(0xFFF0F8FF), 
     );
   }
-
-  // for quantity buttons
-  Widget _buildQuantityButtons() => Container(
-    height: 48,
-    decoration: BoxDecoration(
-      border: Border.all(color: const Color(0xFFE0E0E0)),
-      borderRadius: BorderRadius.circular(6),
-    ),
-    child: Row(
-      children: [
-        IconButton(
-          onPressed: _decrementQuantity,
-          icon: const Icon(Icons.remove, size: 18),
-        ),
-        const VerticalDivider(width: 1),
-        IconButton(
-          onPressed: _incrementQuantity,
-          icon: const Icon(Icons.add, size: 18),
-        ),
-      ],
-    ),
-  );
 }

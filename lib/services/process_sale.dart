@@ -31,7 +31,12 @@ Future<void> processSale({
     if (existingCustomer != null) {
       customerID = existingCustomer['customerID'];
       try{
-      await ledgerService.updateCustomerCredit(customerID!, totalAmount);
+      await ledgerService.addCustomerDebt(
+        customerID: customerID!,
+        name: name,
+        credit: totalAmount,
+        receivedBy: receivedBy,
+      );
       print("EXISTING CUSTOMER: $existingCustomer");
       } catch (e) {
         print("error updating credit: $e");
@@ -44,9 +49,6 @@ Future<void> processSale({
       );
     }
   }
-
-  // Default status
-  final paymentStatus = status ?? (paymentMethod == 'cash' ? 'paid' : 'credit');
 
   // Default totalPaid & change
   final paidAmount = totalPaid ?? totalAmount;
@@ -62,8 +64,23 @@ Future<void> processSale({
     customerID: customerID,
     name: paymentMethod == 'credit' ? name : null,
     paymentMethod: paymentMethod,
-    status: paymentStatus,     //status: 'credit',
+    //status: paymentStatus, 
+    status: 'credit',    //status: 'credit',
     createdAt: createdAt,
     
   );
+
+  // update daily summary for cash sales
+  if (paymentMethod == 'cash') {
+    final now = DateTime.now();
+    final docId = '${now.year}-${now.month}-${now.day}';
+    final dailyRef = FirebaseFirestore.instance.collection('dailySales').doc(docId);
+
+    await dailyRef.set({
+      'totalSales': FieldValue.increment(totalAmount),
+      'totalItemsSold': FieldValue.increment(
+        items.fold<int>(0, (sum, item) => sum + (item.quantity)),
+      ),
+    }, SetOptions(merge: true));
+  }
 }

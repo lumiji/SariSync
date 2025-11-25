@@ -1,7 +1,9 @@
 // flutter dependencies
 import 'package:flutter/material.dart';
+import 'package:sarisync/services/sales_card_service.dart';
 import 'package:sarisync/views/new_sales.dart';
 import 'package:sarisync/widgets/bottom_nav_item.dart';
+import 'package:async/async.dart';
 
 //firebase dependencies
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -10,6 +12,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:sarisync/views/inventory.dart';
 import 'package:sarisync/views/ledger.dart';
 import 'package:sarisync/views/history.dart';
+import 'settings.dart';
 
 // models, services, and widgets
 import 'package:sarisync/models/transaction_model.dart';
@@ -18,11 +21,14 @@ import 'package:sarisync/widgets/home-pdf_btn.dart';
 import 'package:sarisync/widgets/home-category_card.dart';
 import 'package:sarisync/widgets/home-transaction_item.dart';
 import 'package:sarisync/models/inventory_item.dart';
+import 'package:sarisync/widgets/search_bar.dart';
+import 'package:sarisync/services/search_service.dart';
+import 'package:sarisync/services/ledger_service.dart';
 
 
 class HomePage extends StatefulWidget {
   final int initialIndex;
-  const HomePage({Key? key, this.initialIndex = 0});
+  const HomePage({Key? key, this.initialIndex = 0}) : super(key: key);
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -30,18 +36,43 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   late int _selectedIndex;
-
-  final List<Widget> _pages = [
-    HomeContent(), 
-    InventoryPage(),
-    LedgerPage(),
-    HistoryPage(),
-  ];
-
+  // late final List<Widget> _pages; 
+  final SalesService salesService = SalesService();
+  final LedgerService debtService = LedgerService();
+  late final Stream<Map<String, dynamic>> todaySalesStream;
+  late final Stream<double> totalDebtStream;
+  late final Stream<List<TransactionItem>> _recentTransactions;
+  String? _selectedCategory;
+      
   @override
   void initState() {
     super.initState();
     _selectedIndex = widget.initialIndex;
+    todaySalesStream = salesService.todaySalesStream();
+    totalDebtStream = debtService.totalDebtStream();
+    _recentTransactions = FirebaseFirestore.instance
+    .collection('receipts')
+    .orderBy('createdAt', descending: true)
+    .limit(5)
+    .snapshots()
+    .map((snapshot) => snapshot.docs.map((doc) {
+      final data = doc.data();
+      return TransactionItem.fromJson({
+        'totalAmount': data['totalAmount']?.toString() ?? '0.00',
+        'createdAt': data['createdAt'],
+        'transactionId': data['transactionId'] ?? '',
+        'paymentMethod': data['paymentMethod'] ?? '',
+      });
+    }).toList())
+    .asBroadcastStream();
+
+    // _pages = [
+    //   InventoryPage(
+    //     onSearchSelected: switchToPage,
+    //     selectedCategory: _selectedCategory ?? 'All'),
+    //   LedgerPage(),
+    //   HistoryPage(),
+    // ];
   }
 
   void _onItemTapped(int index) {
@@ -49,6 +80,20 @@ class _HomePageState extends State<HomePage> {
       _selectedIndex = index;
     });
   }
+
+  void switchToPage(String type, String id) {
+  if (type == 'inventory') {
+    setState(() {
+      _selectedIndex = 1; // inventory tab
+    });
+    // pass the id to InventoryPage if needed (via a controller or provider)
+  } else if (type == 'ledger') {
+    setState(() {
+      _selectedIndex = 2; // ledger tab
+    });
+    // pass the id to LedgerPage if needed
+  }
+}
 
   Stream<List<InventoryItem>> getInventoryItems() {
   return FirebaseFirestore.instance
@@ -58,12 +103,55 @@ class _HomePageState extends State<HomePage> {
       .map((snapshot) => snapshot.docs
           .map((doc) => InventoryItem.fromMap(doc.data(), doc.id))
           .toList());
-}
+  }
+
 
   @override
   Widget build(BuildContext context) {
+
+    final List<Widget> pages = [
+      InventoryPage(
+        selectedCategory: _selectedCategory ?? 'All',
+        onSearchSelected: switchToPage,
+      ),
+      LedgerPage(),
+      HistoryPage(),
+    ];
+
     return Scaffold(
-      body: _pages[_selectedIndex],
+      body: _selectedIndex == 0
+        ? StreamBuilder<List<dynamic>>(
+            stream: StreamZip([
+              salesService.todaySalesStream(),  // Stream<Map<String,dynamic>>
+              debtService.totalDebtStream(),    // Stream<double>
+            ]),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              final totalSalesData = snapshot.data?[0] as Map<String,dynamic>? ?? {};
+              final totalSales = totalSalesData['totalSales'] ?? 0;
+              final totalItems = totalSalesData['totalItemsSold'] ?? 0;
+
+              final totalDebt = snapshot.data?[1] as double? ?? 0.0;
+
+              return HomeContent(
+                onSearchSelected: switchToPage,
+                totalSales: totalSales,
+                totalItemsSold: totalItems,
+                totalDebt: totalDebt,
+                setCategory: (cat) {
+                  setState(() {
+                    _selectedCategory = cat;
+                    _selectedIndex = 1;
+                  });
+                },
+                recentTransactions: _recentTransactions,
+              );
+            },
+          )
+        : pages[_selectedIndex - 1],
 
       // Floating Action Button
       floatingActionButton: SizedBox(
@@ -176,14 +264,24 @@ class _HomePageState extends State<HomePage> {
 
 // Separate widget for Home content
 class HomeContent extends StatelessWidget {
-  HomeContent({Key? key}) : super(key: key);
+  final Function(String type, String id) onSearchSelected;
+  final Function(String category) setCategory;
+  final double totalSales;
+  final int totalItemsSold;
+  final double totalDebt;
+  final Stream<List<TransactionItem>> recentTransactions;
 
-  final List<TransactionItem> recentTransactions = [
-    TransactionItem(amount: 'Php 50.00', date: '20251105'),
-    TransactionItem(amount: 'Php 150.00', date: '20251106'),
-    TransactionItem(amount: 'Php 15.00', date: '20251107'),
-  ];
+  HomeContent({
+    Key? key, 
+    required this.onSearchSelected,
+    required this.totalSales,
+    required this.totalItemsSold,
+    required this.totalDebt,
+    required this.setCategory,
+    required this.recentTransactions,
 
+  }) : super(key: key);
+  
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -202,51 +300,48 @@ class HomeContent extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
-                              blurRadius: 10,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: TextField(
-                          decoration: const InputDecoration(
-                            hintText: 'Search',
-                            border: InputBorder.none,
-                          ),
+                        padding: const EdgeInsets.symmetric(horizontal: 0),
+                        child: SearchBarApp(
+                          items: GlobalSearchService.globalSearchList,
+                          onSearchSelected: (result) {
+                            final type = result["type"];
+                            final id = result["id"];
+                            onSearchSelected(type, id);
+                          },
                         ),
                       ),
                     ),
                     const SizedBox(width: 12),
                     IconButton(
                       icon: const Icon(Icons.settings_outlined),
-                      onPressed: () {},
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => SettingsPage()),
+                        );
+                      },
                     ),
                   ],
                 ),
+
                 const SizedBox(height: 20),
 
                 // Sales Card
                 InfoCard(
-                  title: "Today's Total Sales",
-                  subtitle: 'No. of items sold: 00',
-                  amount: 'Php 00.00',
-                  imagePath: 'assets/images/SALES.png',
-                  gradientColors: const [Color(0xFF6DE96D), Color(0xFF7FE3B5)],
-                ),
-
+                      title: "Today's Total Sales",
+                      subtitle: "No. of items sold: $totalItemsSold",
+                      amount: "Php ${totalSales.toStringAsFixed(2)}",
+                      imagePath: 'assets/images/SALES.png',
+                      gradientColors: const [Color(0xFF6DE96D), Color(0xFF7FE3B5)],
+                    ),
+                  
                 const SizedBox(height: 16),
 
                 // Debt Card
                 InfoCard(
                   title: 'Outstanding Debt',
                   subtitle: '(total amount to be collected)',
-                  amount: 'Php 00.00',
+                  amount: 'Php ${totalDebt.toStringAsFixed(2)}',
                   imagePath: 'assets/images/CREDITS.png',
                   gradientColors: const [Color(0xFF4393EE), Color(0xFF7BB3FF)],
                 ),
@@ -271,7 +366,7 @@ class HomeContent extends StatelessWidget {
                       ),
                     ),
                     TextButton(
-                      onPressed: () {},
+                      onPressed: () => setCategory('All'),
                       child: const Text(
                         'View All',
                         style: TextStyle(
@@ -298,28 +393,40 @@ class HomeContent extends StatelessWidget {
                   children: [
                     CategoryCard(
                       label: 'Snacks',
-                      imagePath:  'assets/images/SNACKS.png',
-                      color:  Colors.teal),
+                      imagePath: 'assets/images/SNACKS.png',
+                      color: Colors.teal,
+                      onTap: () => setCategory('Snacks'),
+                    ),
                     CategoryCard(
                       label: 'Drinks',
-                      imagePath:  'assets/images/DRINKS.png',
-                      color: Colors.blue),
+                      imagePath: 'assets/images/DRINKS.png',
+                      color: Colors.blue,
+                      onTap: () => setCategory('Drinks'),
+                    ),
                     CategoryCard(
                       label: 'Cans & Packs',
-                      imagePath:  'assets/images/CANS&PACKS.png',
-                      color:  Colors.green),
+                      imagePath: 'assets/images/CANS&PACKS.png',
+                      color: Colors.green,
+                      onTap: () => setCategory('Cans & Packs'),
+                    ),
                     CategoryCard(
                       label: 'Toiletries',
-                      imagePath:  'assets/images/TOILETRIES.png',
-                      color:  Colors.purple),
+                      imagePath: 'assets/images/TOILETRIES.png',
+                      color: Colors.purple,
+                      onTap: () => setCategory('Toiletries'),
+                    ),
                     CategoryCard(
                       label: 'Condiments',
-                      imagePath:  'assets/images/CONDIMENTS.png',
-                      color:  Colors.orange),
+                      imagePath: 'assets/images/CONDIMENTS.png',
+                      color: Colors.orange,
+                      onTap: () => setCategory('Condiments'),
+                    ),
                     CategoryCard(
                       label: 'Others',
-                      imagePath:  'assets/images/OTHERS.png',
-                      color:  Colors.pink),
+                      imagePath: 'assets/images/OTHERS.png',
+                      color: Colors.pink,
+                      onTap: () => setCategory('Others'),
+                    ),
                   ],
                 ),
 
@@ -336,11 +443,32 @@ class HomeContent extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
 
-                Column(
-                  children: recentTransactions
-                      .map((transaction) => TrnscItemCard(
-                          transaction: transaction,))
-                      .toList(),
+                // For recent transactions
+                 StreamBuilder<List<TransactionItem>>(
+                  stream: recentTransactions,
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+
+                    if (snapshot.hasError) {
+                      return Center(child: Text('Error loading transactions'));
+                    }
+                    if (!snapshot.hasData) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+
+                    final recentTransactions = snapshot.data!;
+
+                    return ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: recentTransactions.length,
+                      itemBuilder: (context, index) {
+                        return TrnscItemCard(transaction: recentTransactions[index]);
+                      },
+                    );
+                  },
                 ),
               ],
             ),

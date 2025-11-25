@@ -5,13 +5,15 @@ class CategoryCard extends StatelessWidget {
   final String label;
   final String imagePath;
   final Color color;
+  final VoidCallback? onTap;
 
   const CategoryCard({
     super.key, 
     // this.onTap,
     required this.label,
     required this.imagePath,
-    required this.color
+    required this.color,
+    this.onTap,
     });
 
   @override
@@ -26,7 +28,7 @@ class CategoryCard extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
-          onTap: () {},
+          onTap: onTap,
           child: Padding(
             padding: const EdgeInsets.all(12.0),
             child: Column(

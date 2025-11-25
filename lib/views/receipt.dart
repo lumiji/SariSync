@@ -1,15 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:sarisync/services/ledger_service.dart';
-import 'package:sarisync/services/receipt_service.dart';
 import 'package:sarisync/models/receipt_item.dart';
 import 'package:sarisync/services/process_sale.dart';
-import 'package:sarisync/views/ledger.dart';
-import 'package:sarisync/views/new_sales.dart';
 import 'package:sarisync/views/home.dart';
 import 'package:sarisync/widgets/message_prompts.dart';
 import 'package:sarisync/services/history_service.dart';
-import 'package:sarisync/services/process_sale.dart';
-import 'package:sarisync/services/receipt_service.dart';
 
 
 //  Local message prompts for Receipt page only

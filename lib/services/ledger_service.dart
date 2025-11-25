@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:intl/intl.dart';
 import 'package:sarisync/models/ledger_item.dart';
 
 
@@ -20,25 +21,26 @@ class LedgerService {
 
   //Create NEW customer ledger record
   Future<String> createCustomer({
-    required String name,
-    required double initialCredit,
-    required String receivedBy,
-  }) async {
-    final newId =  DateTime.now().millisecondsSinceEpoch.toString();
+  required String name,
+  required double initialCredit,
+  required String receivedBy,
+}) async {
+  final customerID = await generateCustomerId(); // generate new ID
 
-    await ledger.doc(newId).set({
-      'customerID': newId,
-      'name': name,
-      'credit': initialCredit,
-      'payStatus' : 'Unpaid',
-      'image': null,
-      'receivedBy': receivedBy,
-      'createdAt': Timestamp.now(),
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
+  await ledger.doc(customerID).set({
+    'customerID': customerID,   // save the same ID in the document
+    'name': name,
+    'credit': initialCredit,
+    'payStatus' : 'Unpaid',
+    'image': null,
+    'receivedBy': receivedBy,
+    'createdAt': Timestamp.now(),
+    'updatedAt': FieldValue.serverTimestamp(),
+  });
 
-     return newId;
-  }
+  return customerID;
+}
+
 
   // Add credit to existing customer
   Future<void> updateCustomerCredit(String customerID, double amount) async {
@@ -74,7 +76,7 @@ class LedgerService {
   Future<void> addLedgerItem({
     required String name,
     required String customerID,
-    required String contact,
+    String? contact,
     required String payStatus,
     required double credit,
     double? partialPay,
@@ -83,7 +85,7 @@ class LedgerService {
   }) async {
     try {
 
-      final docRef = _firestore.collection('ledger').doc();
+      final docRef = _firestore.collection('ledger').doc(customerID);
       await docRef.set({
         'name': name,
         'customerID': customerID,
@@ -124,11 +126,34 @@ class LedgerService {
             .toList());
   }
 
-  Future<void> updateLedgerItem(String docId, Map<String, dynamic> data) async {
+  Future<void> addCustomerDebt({
+    required String customerID,
+    required String name, 
+    required double credit, 
+    String? contact,
+    required String receivedBy
+  }) async {
+    final docRef = ledger.doc(customerID);
+
+    await docRef.set({
+      'customerID': customerID,
+      'name': name, 
+      'contact' : contact, 
+      'credit': credit,
+      'partialPay' : 0,
+      'payStatus': 'Unpaid',
+      'image': null,
+      'receivedBy' : receivedBy,
+      'createdAt' : Timestamp.now(),
+      'updatedAt' : FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> updateLedgerItem(String customerID, Map<String, dynamic> data) async {
     try{
       await _firestore
         .collection('ledger')
-        .doc(docId)
+        .doc(customerID)
         .update(data);
     } catch (e) {
       print("Error updating ledger item: $e");
@@ -136,16 +161,57 @@ class LedgerService {
     }
   }
 
-  Future<void> deleteLedgerItem(String docId) async {
+  Future<void> deleteLedgerItem(String customerID) async {
     try {
       await _firestore
         .collection('ledger')
-        .doc(docId)
+        .doc(customerID)
         .delete();
     } catch (e) {
       print("Error deleting ledger item: $e");
       rethrow;
     }
   }
+
+  Stream<double> totalDebtStream() {
+    return FirebaseFirestore.instance
+        .collection('ledger')
+        .where('payStatus', isNotEqualTo: 'Paid')
+        .snapshots()
+        .map((snapshot) {
+          double totalDebt = 0;
+          for (var doc in snapshot.docs) {
+            final data = doc.data();
+            final credit = (data['credit'] ?? 0).toDouble();
+            final partialPay = (data['partialPay'] ?? 0).toDouble();
+            totalDebt += (credit - partialPay);
+          }
+          return totalDebt;
+        });
+    }
+
+  Future<String> generateCustomerId() async {
+    // Current year
+    String year = DateFormat('yyyy').format(DateTime.now());
+
+    // Get last customer ID in Firestore
+    final snapshot = await ledger
+        .orderBy('customerID', descending: true)
+        .limit(1)
+        .get();
+
+    int lastNumber = 0;
+    if (snapshot.docs.isNotEmpty) {
+      final lastId = snapshot.docs.first.data()['customerID'] as String;
+      // Assume format YYYY###, e.g., 2025001
+      lastNumber = int.tryParse(lastId.substring(4)) ?? 0;
+    }
+
+    int nextNumber = lastNumber + 1;
+    String nextNumberStr = nextNumber.toString().padLeft(3, '0');
+
+    return '$year$nextNumberStr'; // e.g., 2025001
+  }
+
 }
 

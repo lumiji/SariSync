@@ -24,8 +24,7 @@ class LedItemCard extends StatelessWidget {
     final remaining = (item.credit - (item.partialPay ?? 0)).clamp(0.0, double.infinity);
     final DateTime dateToShow = item.updatedAt ?? item.createdAt;
     final String label = item.updatedAt != null ? "Updated" : "Created";
-    final String formattedDate =
-        "$label: ${DateFormat('MMM dd, yyyy • hh:mm a').format(dateToShow)}";
+    final String formattedDate = "$label: ${DateFormat('MM-dd-yyyy hh:mma').format(dateToShow)}";
 
     return Slidable( 
       key: ValueKey(item.id),
@@ -40,30 +39,39 @@ class LedItemCard extends StatelessWidget {
                 decoration: const BoxDecoration(
                   color:  Color(0xFFD9E8FF),
                   borderRadius: BorderRadius.only(
-                  topRight: Radius.circular(12),
-                  bottomRight: Radius.circular(12),
+                  topRight: Radius.circular(8),
+                  bottomRight: Radius.circular(8),
                   topLeft: Radius.circular(1),
                   bottomLeft: Radius.circular(1),
                   ),
                 ),
 
-                padding: const EdgeInsets.symmetric(horizontal: 18),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+
+                //Edit and Delete buttons
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     GestureDetector(
                       onTap: onEdit,
                       child: Container(
-                        width: 48,
-                        height: 48,
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
+                        width: 52,
+                        height: 52,
+                        decoration: BoxDecoration(
+                          color: Color(0xFFFEFEFE),
                           shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.15),
+                              blurRadius: 2,
+                              offset: const Offset(0, 2),
+                            ),
+                          ]
                         ),
                         child: const Icon(
                           Icons.edit,
-                          color: Color.fromARGB(255, 9, 115, 201),
-                          size: 25,
+                          color: Color(0xFF1565C0),
+                          size: 24,
                         ),
                       ),
                     ),
@@ -72,16 +80,23 @@ class LedItemCard extends StatelessWidget {
                     GestureDetector(
                       onTap: onDelete,
                       child: Container(
-                        width: 48,
-                        height: 48,
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
+                        width: 52,
+                        height: 52,
+                        decoration: BoxDecoration(
+                          color: Color(0xFFFEFEFE),
                           shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.15),
+                              blurRadius: 2,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
                         child: const Icon(
                           Icons.delete_forever,
                           color: Color(0xFFE53935),
-                          size: 25,
+                          size: 24,
                         ),
                       ),
                     ),
@@ -107,21 +122,22 @@ class LedItemCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Color(0xFFFEFEFE),
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 4,
+                color: Colors.black.withOpacity(0.15),
+                blurRadius: 2,
                 offset: const Offset(0,2),
               ),
             ],
           ),
           child: Row(
             children: [
+              // Image
               Container(
-                width: 80,
-                height: 80,
+                width: 90,
+                height: 90,
                 decoration: BoxDecoration(
                   color: Colors.grey.shade200,
                   borderRadius: BorderRadius.circular(8),
@@ -136,18 +152,18 @@ class LedItemCard extends StatelessWidget {
                           memCacheHeight: 300,
                           placeholder: (context, url) => Center(
                             child: SizedBox(
-                              width: 20,
-                              height: 20,
+                              width: 24,
+                              height: 24,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             ),
                           ),
                           errorWidget: (context, url, error) => const Icon(Icons.broken_image, color: Colors.grey),
                         ),
                       )
-                          : const Icon(Icons.person, size: 30, color: Colors.grey),
+                          : const Icon(Icons.person, size: 24, color: Colors.grey),
                     ),
 
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 10),
 
                     /// CUSTOMER INFO
                     Expanded(
@@ -159,40 +175,45 @@ class LedItemCard extends StatelessWidget {
                             item.name,
                             style: GoogleFonts.inter(
                               fontSize: 16,
-                              fontWeight: FontWeight.w600,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
 
                           const SizedBox(height: 2),
+
+                          Text(
+                            'Tel: ${item.contact!}',
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              color: Color(0xFF757575),
+                              fontWeight: FontWeight.normal,
+                            ),
+                          ),
 
                           // Date of utang
                           Text(
                             formattedDate,
-                            style: GoogleFonts.inter(
-                              fontSize: 11,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-
-                          const SizedBox(height: 2),
-
-                          // Customer ID
-                          Text(
-                            item.customerID,
                             style: GoogleFonts.inter(
                               fontSize: 12,
                               color: Colors.grey.shade500,
                             ),
                           ),
 
-                          const SizedBox(height: 2),
+                          // Customer ID
+                          Text(
+                            'ID: ${item.customerID}',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: Colors.grey.shade500,
+                            ),
+                          ),
 
                           // Received by
                           Text(
                             "Received by: ${item.received}",
                             style: GoogleFonts.inter(
                               fontSize: 12,
-                              color: Colors.grey.shade700,
+                              color: Color(0xFF757575),
                             ),
                           ),
                         ],
@@ -206,9 +227,10 @@ class LedItemCard extends StatelessWidget {
 
                         PaymentStatusBadge(
                           payStatus: item.payStatus,
-                          partialPay: item.partialPay, // Format: MM/DD/YYYY 
+                          partialPay: item.partialPay, 
                         ),
-                        const SizedBox(height: 4),
+
+                      
                         Text(
                           item.credit.toStringAsFixed(2),
                           style: GoogleFonts.inter(
@@ -220,18 +242,24 @@ class LedItemCard extends StatelessWidget {
                           "PHP",
                           style: GoogleFonts.inter(
                             fontSize: 12,
-                            color: Colors.grey,
+                            color: Color(0xFF757575),
                           ),
                         ),
 
                          if (item.payStatus == 'Partial')
                           Text(
                             "-${(item.partialPay ?? 0).toStringAsFixed(2)}",
-                            style: TextStyle(color: Colors.orange.shade700),
+                            style: TextStyle(
+                              color: Colors.orange.shade700, 
+                              fontFamily: 'Inter',
+                              fontSize: 12),
                           ),
                         Text(
                           "Bal: ${remaining.toStringAsFixed(2)}",
-                          style: TextStyle(color: Colors.blueGrey),
+                          style: TextStyle(
+                            color: Colors.blueGrey,
+                            fontFamily: 'Inter',
+                            fontSize: 12),
                         ),
                       ],
                     ),

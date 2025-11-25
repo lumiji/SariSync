@@ -11,6 +11,18 @@ class LocalStorageService {
     return prefs.getString("user_pin");
   }
 
+  // new: return whether PIN is enabled (default true)
+  static Future<bool> isPinEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool('enablePin') ?? true;
+  }
+
+  // optional: convenience setter if you don't already have one
+  static Future<void> setPinEnabled(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('enablePin', enabled);
+  }
+
   static Future<void> saveLoggedIn() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool("is_logged_in", true);

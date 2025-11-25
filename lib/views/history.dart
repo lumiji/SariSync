@@ -5,6 +5,7 @@ import 'package:sarisync/widgets/message_prompts.dart';
 import 'transaction_receipt.dart';
 import 'package:sarisync/models/receipt_model.dart';
 import 'transaction_receipt.dart';
+import 'settings.dart';
 
 class HistoryPage extends StatefulWidget {
   const HistoryPage({super.key});
@@ -66,7 +67,12 @@ class _HistoryPageState extends State<HistoryPage> {
                       const SizedBox(width: 12),
                       IconButton(
                         icon: const Icon(Icons.settings_outlined, size: 24),
-                        onPressed: () {},
+                        onPressed: () {
+                          Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => SettingsPage()),
+                        );
+                        },
                       ),
                     ],
                   ),
