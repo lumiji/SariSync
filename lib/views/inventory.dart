@@ -1,7 +1,8 @@
-// This is the main inventory page (Optimized)
+// This is the main inventory page (Optimized + Offline-friendly)
 
 // flutter dependencies
 import 'package:flutter/material.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 // firebase dependencies
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -33,25 +34,54 @@ class InventoryPage extends StatefulWidget {
 }
 
 class _InventoryPageState extends State<InventoryPage> {
-  // final int _selectedIndex = 1;
-
-  //default selected category when pressing inventory page icon
   late String _selectedCategory;
   List<InventoryItem> inventoryList = [];
   List<InventoryItem> filteredInventory = [];
   final Set<String> _prefetchedUrls = {};
   final TextEditingController _searchController = TextEditingController();
-  final uid = FirebaseAuth.instance.currentUser!.uid;
+  String? uid;
+  bool _isOnline = true;
+  bool _hasOfflineChanges = false;
 
   @override
   void initState(){
     super.initState();
     _selectedCategory = widget.selectedCategory ?? 'All';
+    
+    // Safely get UID
+    final currentUser = FirebaseAuth.instance.currentUser;
+    uid = currentUser?.uid;
+    
+    // Check connectivity
+    _checkConnectivity();
   }
-  
 
-  // small optimization: only prefetch when items change
-  // int _lastPrefetchedCount = 0;
+  Future<void> _checkConnectivity() async {
+    final connectivityResult = await Connectivity().checkConnectivity();
+    setState(() {
+      _isOnline = connectivityResult.first != ConnectivityResult.none;
+    });
+    
+    // Listen for connectivity changes
+    Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> result) {
+      if (mounted) {
+        final nowOnline = result.first != ConnectivityResult.none;
+        setState(() {
+          _isOnline = nowOnline;
+          // Clear offline changes indicator when back online
+          if (nowOnline) {
+            Future.delayed(const Duration(seconds: 2), () {
+              if (mounted) {
+                setState(() {
+                  _hasOfflineChanges = false;
+                });
+              }
+            });
+          }
+        });
+      }
+    });
+  }
 
   final List<Map<String, String>> _categories = [
     {'name': 'All', 'imagePath': 'assets/images/ALL.png'},
@@ -64,28 +94,46 @@ class _InventoryPageState extends State<InventoryPage> {
   ];
 
   Stream<List<InventoryItem>> getInventoryItems() async* {
+    if (uid == null) {
+      yield [];
+      return;
+    }
+
     final coll = FirebaseFirestore.instance
         .collection('users')
         .doc(uid)
         .collection('inventory')
         .orderBy('createdAt', descending: true);
 
-    // reads cache data first
+    // Reads cache data first
     try {
       final cacheSnapshot = await coll.get(const GetOptions(source: Source.cache));
       yield cacheSnapshot.docs
           .map((doc) => InventoryItem.fromMap(doc.data(), doc.id))
           .toList();
     } catch (_) {
-      // cache may be empty on first load
+      // Cache may be empty on first load
       yield [];
     }
 
-    // Then listen to live updates from the serve
-    yield* coll.snapshots().map(
-          (snapshot) => snapshot.docs
-              .map((doc) => InventoryItem.fromMap(doc.data(), doc.id))
-              .toList(),
+    // Then listen to live updates from the server
+    yield* coll.snapshots(includeMetadataChanges: true).map(
+          (snapshot) {
+            // Check if data is from cache and there are pending writes
+            if (snapshot.metadata.hasPendingWrites && !_isOnline) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) {
+                  setState(() {
+                    _hasOfflineChanges = true;
+                  });
+                }
+              });
+            }
+            
+            return snapshot.docs
+                .map((doc) => InventoryItem.fromMap(doc.data(), doc.id))
+                .toList();
+          },
         );
   }
 
@@ -102,26 +150,66 @@ class _InventoryPageState extends State<InventoryPage> {
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
+    // Handle no authentication
+    if (uid == null) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 64, color: Colors.red),
+              const SizedBox(height: 16),
+              const Text('Authentication error. Please sign in again.'),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pushReplacementNamed(context, '/sign-in');
+                },
+                child: const Text('Sign In'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       body: Stack(
         children: [
           Container(
-            color: Color(0xFFF7FBFF),
+            color: const Color(0xFFF7FBFF),
           ),
           SafeArea(
             child: StreamBuilder<List<InventoryItem>>(
               stream: getInventoryItems(),
               builder: (context, snapshot) {
-                if (!snapshot.hasData) {
+                // Handle loading state
+                if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
                 }
 
-                final items = snapshot.data!;
+                // Handle error state
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Error loading inventory',
+                          style: TextStyle(color: Colors.grey[600]),
+                        ),
+                      ],
+                    ),
+                  );
+                }
 
-                //filtering items
+                final items = snapshot.data ?? [];
+
+                // Filtering items
                 final query = _searchController.text.toLowerCase();
 
                 final List<InventoryItem> filteredItems = items.where((item) {
@@ -134,15 +222,13 @@ class _InventoryPageState extends State<InventoryPage> {
                   return matchesCategory && matchesSearch;
                 }).toList();
 
-
-                // prefetch a handful of images to reduce the perceived load time
+                // Prefetch a handful of images to reduce the perceived load time
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   _onInventoryLoaded(filteredItems);
                 });
 
                 return CustomScrollView(
-                  cacheExtent:
-                      3000, // preload items/images ahead of scrolling for smoothness
+                  cacheExtent: 3000,
                   slivers: [
                     SliverPadding(
                       padding: const EdgeInsets.all(16.0),
@@ -150,11 +236,41 @@ class _InventoryPageState extends State<InventoryPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            // Offline banner
+                            if (!_isOnline)
+                              Container(
+                                margin: const EdgeInsets.only(bottom: 12),
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange[50],
+                                  border: Border.all(color: Colors.orange),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.wifi_off, size: 16, color: Colors.orange[700]),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        _hasOfflineChanges
+                                            ? 'Offline - changes will sync when connected'
+                                            : 'Offline mode - images may not load',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.orange[900],
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+
                             // Search bar + settings 
                             Row(
                               children: [
                                 Expanded(
-                                  child: SizedBox ( 
+                                  child: SizedBox( 
                                     height: 45, 
                                     child: TextField(
                                       controller: _searchController,
@@ -187,7 +303,7 @@ class _InventoryPageState extends State<InventoryPage> {
                                 const SizedBox(width: 12),
                                 IconButton(
                                   icon: const Icon(Icons.settings_outlined),
-                                  color: Color(0xFF212121),
+                                  color: const Color(0xFF212121),
                                   iconSize: 24,
                                   onPressed: () {
                                      Navigator.push(
@@ -201,12 +317,14 @@ class _InventoryPageState extends State<InventoryPage> {
                             const SizedBox(height: 20),
 
                             // Categories
-                            Text(
+                            const Text(
                               'Sort by Categories',
-                              style: TextStyle( fontFamily: 'Inter',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
                                 fontSize: 16,
                                 fontWeight: FontWeight.w700,
-                                color: Color(0xFF212121)),
+                                color: Color(0xFF212121)
+                              ),
                             ),
                             const SizedBox(height: 12),
 
@@ -218,7 +336,6 @@ class _InventoryPageState extends State<InventoryPage> {
                                 itemCount: _categories.length,
                                 itemBuilder: (context, index) {
                                   final category = _categories[index];
-
                                   final String label = category['name']!;
                                   final String imagePath = category['imagePath']!;
 
@@ -241,12 +358,14 @@ class _InventoryPageState extends State<InventoryPage> {
                             const SizedBox(height: 20),
 
                             // Items header
-                            Text(
+                            const Text(
                               'Items',
-                             style: TextStyle( fontFamily: 'Inter',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
                                 fontSize: 16,
                                 fontWeight: FontWeight.w700,
-                                color: Color(0xFF212121)),
+                                color: Color(0xFF212121)
+                              ),
                             ),
                             const SizedBox(height: 8),
                           ],
@@ -254,7 +373,7 @@ class _InventoryPageState extends State<InventoryPage> {
                       ),
                     ),
 
-                    // Inventory items list (SliverList using precomputed filteredItems)
+                    // Inventory items list
                     SliverPadding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       sliver: filteredItems.isEmpty
@@ -283,6 +402,31 @@ class _InventoryPageState extends State<InventoryPage> {
                                     child: InvItemCard(
                                       item: item,
                                       onEdit: () async {
+                                        if (!_isOnline) {
+                                          // Warn user about offline editing
+                                          final proceed = await showDialog<bool>(
+                                            context: context,
+                                            builder: (context) => AlertDialog(
+                                              title: const Text('Offline Mode'),
+                                              content: const Text(
+                                                'You are offline. Changes will be saved locally and synced when you reconnect.'
+                                              ),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed: () => Navigator.pop(context, false),
+                                                  child: const Text('Cancel'),
+                                                ),
+                                                TextButton(
+                                                  onPressed: () => Navigator.pop(context, true),
+                                                  child: const Text('Continue'),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                          
+                                          if (proceed != true) return;
+                                        }
+
                                         final result = await Navigator.push(
                                           context,
                                           MaterialPageRoute(
@@ -300,6 +444,12 @@ class _InventoryPageState extends State<InventoryPage> {
                                         DialogHelper.confirmDelete(
                                           context,
                                           () async {
+                                            if (!_isOnline) {
+                                              setState(() {
+                                                _hasOfflineChanges = true;
+                                              });
+                                            }
+
                                             await FirebaseFirestore.instance
                                                 .collection('users')
                                                 .doc(uid)
@@ -309,11 +459,9 @@ class _InventoryPageState extends State<InventoryPage> {
 
                                             DialogHelper.success(
                                               context,
-                                              "Item successfully deleted.",
-                                              onOk: () {
-                                                // refresh page automatically without pushing again
-                                                //setState(() {});
-                                              },
+                                              _isOnline 
+                                                  ? "Item successfully deleted."
+                                                  : "Item deleted. Will sync when online.",
                                             );
                                           },
                                         );
@@ -338,8 +486,33 @@ class _InventoryPageState extends State<InventoryPage> {
             child: SizedBox(
               width: 64,
               height: 64,
-              child:  FloatingActionButton(
+              child: FloatingActionButton(
                 onPressed: () async {
+                  if (!_isOnline) {
+                    // Warn user about offline adding
+                    final proceed = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Offline Mode'),
+                        content: const Text(
+                          'You are offline. New items will be saved locally and synced when you reconnect. Images cannot be uploaded while offline.'
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text('Cancel'),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            child: const Text('Continue'),
+                          ),
+                        ],
+                      ),
+                    );
+                    
+                    if (proceed != true) return;
+                  }
+
                   final result = await Navigator.push(
                     context,
                     MaterialPageRoute(

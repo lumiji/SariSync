@@ -2,6 +2,8 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:sarisync/views/home.dart';
 import 'package:sarisync/services/local_storage_service.dart';
+import 'package:sarisync/views/set_pin_screen.dart';
+import 'package:sarisync/views/sign-in_options.dart';
 
 class PinScreen extends StatefulWidget {
   const PinScreen({super.key});
@@ -150,7 +152,7 @@ class _PinScreenState extends State<PinScreen> {
 
               const SizedBox(height: 30),
 
-              // account info display
+               // Account display (phone, email, or social media account)
               if (_displayAccount != null)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -161,8 +163,13 @@ class _PinScreenState extends State<PinScreen> {
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(_getAccountIcon(), color: const Color(0xFF1E88E5), size: 20),
+                      Icon(
+                        _getAccountIcon(),
+                        color: const Color(0xFF1E88E5),
+                        size: 20,
+                      ),
                       const SizedBox(width: 10),
                       Flexible(
                         child: Text(
@@ -175,6 +182,22 @@ class _PinScreenState extends State<PinScreen> {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
+                      const SizedBox(width: 12),
+                      IconButton(
+                        onPressed: () {
+                          // Navigate back to SignInOptionsScreen
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(builder: (_) => const SignInOptionsScreen()),
+                          );
+                        },
+                        icon: const Icon(
+                          Icons.swap_horiz,
+                          color: Color(0xFF1E88E5),
+                          size: 24,
+                        ),
+                      ),
+
                     ],
                   ),
                 ),
@@ -226,6 +249,35 @@ class _PinScreenState extends State<PinScreen> {
               const SizedBox(height: 40),
 
               _buildKeypad(),
+
+               // "Already have an account? Log in" text
+                        Center(
+                          child: TextButton(
+                            onPressed: () {
+                              // Navigate to login screen
+                              Navigator.push(context, MaterialPageRoute(builder: (_) => SetPinScreen()));
+                            },
+                            child: RichText(
+                              text: TextSpan(
+                                style: TextStyle( fontFamily: 'Inter',
+                                  fontSize: 14,
+                                  color: Colors.white,
+                                ),
+                                children: [
+                                  TextSpan(text: "Haven't set your PIN screen? "),
+                                  TextSpan(
+                                    text: "Set PIN",
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      decoration: TextDecoration.underline,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
             ],
           ),
         ],

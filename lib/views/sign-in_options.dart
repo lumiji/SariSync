@@ -4,6 +4,8 @@ import '../services/google_auth_service.dart';
 import 'phone_sign_in_screen.dart';
 import '../services/fb_auth_service.dart';
 import 'set_pin_screen.dart';
+import 'package:sarisync/views/pin_screen.dart';
+import 'package:sarisync/views/set_pin_screen.dart';
 import 'package:sarisync/services/local_storage_service.dart';
 import 'package:sarisync/services/auth_flow_service.dart';
 import 'package:sarisync/services/remote_db_service.dart';
@@ -55,7 +57,7 @@ class _SignInOptionsScreenState extends State<SignInOptionsScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Image.asset('assets/images/logo.png', width: 100, height: 100),
+                  Image.asset('assets/images/logo.png', width: 72, height: 72),
                   const SizedBox(width: 0),
                   Text(
                     "SariSync",
@@ -68,7 +70,7 @@ class _SignInOptionsScreenState extends State<SignInOptionsScreen> {
                 ],
               ),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 40),
 
 
           FractionallySizedBox(
@@ -103,7 +105,6 @@ class _SignInOptionsScreenState extends State<SignInOptionsScreen> {
                             fontWeight: FontWeight.normal,
                           ),
                         ),
-                        const SizedBox(height: 4),
 
                         // Username Input
                         TextField(
@@ -131,7 +132,7 @@ class _SignInOptionsScreenState extends State<SignInOptionsScreen> {
                           style: TextStyle(color: Colors.white),
                         ),
 
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 12),
 
                         // Password Label
                         Text(
@@ -142,11 +143,11 @@ class _SignInOptionsScreenState extends State<SignInOptionsScreen> {
                             fontWeight: FontWeight.normal,
                           ),
                         ),
-                        const SizedBox(height: 8),
 
                         // Password Input
                         TextField(
                           controller: _passwordController,
+                          cursorColor: Colors.white,
                           obscureText: _obscurePassword,
                           decoration: InputDecoration(
                             prefixIcon: const Icon(Icons.lock_outline, color: Colors.white70),
@@ -167,7 +168,7 @@ class _SignInOptionsScreenState extends State<SignInOptionsScreen> {
                           style: TextStyle(color: Colors.white),
                         ),
 
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 12),
 
                         // Confirm Password Label
                         Text(
@@ -178,11 +179,11 @@ class _SignInOptionsScreenState extends State<SignInOptionsScreen> {
                             fontWeight: FontWeight.normal,
                           ),
                         ),
-                        const SizedBox(height: 8),
 
                         // Confirm Password Input
                         TextField(
                           controller: _confirmPasswordController,
+                          cursorColor: Colors.white,
                           obscureText: _obscureConfirmPassword,
                           decoration: InputDecoration(
                             prefixIcon: const Icon(Icons.lock_outline, color: Colors.white70),
@@ -319,7 +320,18 @@ class _SignInOptionsScreenState extends State<SignInOptionsScreen> {
                                 if (user != null) {
                                   print("Signed in as ${user.displayName}, email: ${user.email}");
                                    await RemoteDbService.initializeUserDatabase(uid: user.uid);
-                                   await AuthFlowService.handlePostLogin(context);
+                                   final displayIdentifier = user.displayName?.isNotEmpty == true
+                                        ? user.displayName
+                                        : user.email ?? user.uid;
+
+                                    await LocalStorageService.saveAccountInfo(displayIdentifier!, "google");
+
+                                    await AuthFlowService.handlePostLogin(
+                                      context,
+                                      accountIdentifier: displayIdentifier,
+                                      accountType: "google",
+                                    );
+
 
                                 }
                               },
@@ -355,7 +367,20 @@ class _SignInOptionsScreenState extends State<SignInOptionsScreen> {
                                 if (user != null) {
                                   print("Facebook user: ${user.displayName}, email: ${user.email}");
                                   await RemoteDbService.initializeUserDatabase(uid: user.uid);
-                                  await AuthFlowService.handlePostLogin(context);
+                                  final displayIdentifier = user.displayName?.isNotEmpty == true
+                                    ? user.displayName
+                                    : user.email?.isNotEmpty == true
+                                        ? user.email
+                                        : user.uid;
+                                  
+                                  await LocalStorageService.saveAccountInfo(displayIdentifier!, "google");
+
+                                await AuthFlowService.handlePostLogin(
+                                  context,
+                                  accountIdentifier: displayIdentifier,
+                                  accountType: "facebook",
+                                );
+
                                 } else {
                                   print("Facebook login not successful");
                                 }
@@ -429,7 +454,7 @@ class _SignInOptionsScreenState extends State<SignInOptionsScreen> {
                           child: TextButton(
                             onPressed: () {
                               // Navigate to login screen
-                              // Navigator.push(context, MaterialPageRoute(builder: (_) => LoginScreen()));
+                              Navigator.push(context, MaterialPageRoute(builder: (_) => PinScreen()));
                             },
                             child: RichText(
                               text: TextSpan(
