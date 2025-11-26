@@ -308,6 +308,8 @@ class _ReceiptPageState extends State<ReceiptPage> {
                             name: item.name,
                             price: item.price,
                             quantity: item.quantity,
+                           // description: item.add_info,   
+                            //weight: item.weight, 
                           )).toList();
 
                           // Calculate change (cash)
@@ -323,8 +325,8 @@ class _ReceiptPageState extends State<ReceiptPage> {
                             totalAmount: totalAmount,
                             totalPaid: paidAmount,
                             change: changeAmount,
-                            status: status,
-                            transactionId: transactionId, // 🔥 pass SAME ID
+                            status: status,         
+                            transactionId: transactionId, // pass SAME ID to connect with History
                             receivedBy: ' ', // ledger field
                             createdAt: now,
                           );

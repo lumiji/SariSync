@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:sarisync/models/receipt_item.dart';
 
 class TransactionReceipt extends StatelessWidget {
@@ -38,9 +39,13 @@ class TransactionReceipt extends StatelessWidget {
               .map((e) => ReceiptItem.fromJson(e))
               .toList();
 
-          final createdAt = data['createdAt'] != null
-              ? (data['createdAt'] as Timestamp).toDate()
-              : DateTime.now();
+          // final createdAt = data['createdAt'] != null
+          //     ? (data['createdAt'] as Timestamp).toDate()
+          //     : DateTime.now();
+          final createdAt = data['dateTime'] != null
+          ? (data['dateTime'] as Timestamp).toDate()
+          : DateTime.now();
+
 
           return SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 15),
@@ -48,37 +53,93 @@ class TransactionReceipt extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // ITEM LIST
+                // ...items.map((item) => Padding(
+                //       padding: const EdgeInsets.only(bottom: 20),
+                //       child: Column(
+                //         crossAxisAlignment: CrossAxisAlignment.start,
+                //         children: [
+                //           Row(
+                //             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                //             children: [
+                //               Text(item.name,
+                //                   style: const TextStyle(
+                //                       fontWeight: FontWeight.w700,
+                //                       fontSize: 16)),
+                //               Text(
+                //                 item.price.toStringAsFixed(2),
+                //                 style: const TextStyle(
+                //                     fontWeight: FontWeight.bold, fontSize: 16),
+                //               ),
+                //             ],
+                //           ),
+                //           Text(item.description ?? "",
+                //               style: const TextStyle(fontSize: 13)),
+                //           Row(
+                //             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                //             children: [
+                //               Text("${item.weight ?? ""}"),
+                //               Text("x ${item.quantity}"),
+                //             ],
+                //           ),
+                //         ],
+                //       ),
+                //     )),
                 ...items.map((item) => Padding(
-                      padding: const EdgeInsets.only(bottom: 20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(item.name,
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 16)),
-                              Text(
-                                item.price.toStringAsFixed(2),
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold, fontSize: 16),
+                    padding: const EdgeInsets.only(bottom: 18),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // ITEM NAME + PRICE
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              item.name,
+                              style: GoogleFonts.inter(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 16,
                               ),
-                            ],
+                            ),
+                            Text(
+                              "₱${item.price.toStringAsFixed(2)}",
+                              style: GoogleFonts.inter(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        // DESCRIPTION 
+                        if (item.description != null && item.description!.isNotEmpty)
+                          Text(
+                            item.description!,
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              color: Colors.black54,
+                            ),
                           ),
-                          Text(item.description ?? "",
-                              style: const TextStyle(fontSize: 13)),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text("${item.weight ?? ""}"),
-                              Text("x ${item.quantity}"),
-                            ],
-                          ),
-                        ],
-                      ),
-                    )),
+
+                        // UNIT OF MEASUREMENT + QUANTITY
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              item.weight != null && item.weight!.isNotEmpty
+                                  ? "Unit: ${item.weight}"
+                                  : "",
+                              style: GoogleFonts.inter(fontSize: 13, color: Colors.black45),
+                            ),
+                            Text(
+                              "x ${item.quantity}",
+                              style: GoogleFonts.inter(fontSize: 14),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  )),
+
 
                 const SizedBox(height: 15),
 
@@ -148,7 +209,7 @@ class TransactionReceipt extends StatelessWidget {
                       ),
                     Text(
                       data['totalAmount'].toStringAsFixed(2),
-                      style: const TextStyle(
+                      style: GoogleFonts.inter(
                         fontWeight: FontWeight.w400,
                         color: Colors.black87,
                         ),
@@ -172,7 +233,7 @@ class TransactionReceipt extends StatelessWidget {
                       ),
                       child: Text(
                         data['totalPaid'].toStringAsFixed(2),
-                        style: const TextStyle(
+                        style: GoogleFonts.inter(
                           fontWeight: FontWeight.w400,
                           color: Colors.black87,
                           ),
@@ -190,7 +251,7 @@ class TransactionReceipt extends StatelessWidget {
                       ),
                     Text(
                       data['change'].toStringAsFixed(2),
-                      style: const TextStyle(
+                      style: GoogleFonts.inter(
                         fontWeight: FontWeight.w400,
                         color: Colors.black87,
                         ),
@@ -213,7 +274,7 @@ class TransactionReceipt extends StatelessWidget {
                     Expanded(
                       child: Text(
                         data['name'] ?? "N/A",
-                        style: const TextStyle(
+                        style: GoogleFonts.inter(
                           fontWeight: FontWeight.bold,
                           fontSize: 15,
                           color: Colors.black,
@@ -253,7 +314,7 @@ class TransactionReceipt extends StatelessWidget {
                     Expanded(child: Container()), // pushes value to the right
                     Text(
                       transactionId,
-                      style: const TextStyle(
+                      style: GoogleFonts.inter(
                         fontWeight: FontWeight.bold,
                         fontSize: 15,
                         color: Colors.black,
@@ -275,7 +336,7 @@ class TransactionReceipt extends StatelessWidget {
                       "${(createdAt.hour % 12 == 0 ? 12 : createdAt.hour % 12)}:"
                       "${createdAt.minute.toString().padLeft(2, '0')} "
                       "${createdAt.hour >= 12 ? 'PM' : 'AM'}",
-                      style: const TextStyle(
+                      style: GoogleFonts.inter(
                         fontSize: 15,
                         color: Colors.grey,
                         fontWeight: FontWeight.w500,

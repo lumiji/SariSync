@@ -12,6 +12,8 @@ Future<void> processSale({
   required double totalAmount,
   required String receivedBy,
   required DateTime createdAt,
+  //double? unit,
+  //required String add_info,
   double? totalPaid, 
   double? change,    
   String? status,   
@@ -64,6 +66,7 @@ Future<void> processSale({
     paymentMethod: paymentMethod,
     status: paymentStatus,     //status: 'credit',
     createdAt: createdAt,
+    
   );
 
   // update daily summary for cash sales
