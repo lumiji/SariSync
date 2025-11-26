@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:sarisync/services/local_storage_service.dart';
+import 'sign-in_options.dart';
 import 'pin_screen.dart';
 
 class SetPinScreen extends StatefulWidget {
@@ -188,11 +189,21 @@ class _SetPinScreenState extends State<SetPinScreen> {
                         ),
                       ),
                       const SizedBox(width: 12),
-                      Icon(
-                        Icons.swap_horiz,
-                        color: const Color(0xFF1E88E5),
-                        size: 24,
+                      IconButton(
+                        onPressed: () {
+                          // Navigate back to SignInOptionsScreen
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(builder: (_) => const SignInOptionsScreen()),
+                          );
+                        },
+                        icon: const Icon(
+                          Icons.swap_horiz,
+                          color: Color(0xFF1E88E5),
+                          size: 24,
+                        ),
                       ),
+
                     ],
                   ),
                 ),
@@ -245,6 +256,35 @@ class _SetPinScreenState extends State<SetPinScreen> {
 
               // Numeric keypad
               _buildKeypad(),
+
+               // "Already have an account? Log in" text
+                        Center(
+                          child: TextButton(
+                            onPressed: () {
+                              // Navigate to login screen
+                              Navigator.push(context, MaterialPageRoute(builder: (_) => PinScreen()));
+                            },
+                            child: RichText(
+                              text: TextSpan(
+                                style: TextStyle( fontFamily: 'Inter',
+                                  fontSize: 14,
+                                  color: Colors.white,
+                                ),
+                                children: [
+                                  TextSpan(text: "Already have PIN screen? "),
+                                  TextSpan(
+                                    text: "Enter PIN",
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      decoration: TextDecoration.underline,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
             ],
           ),
         ],
@@ -334,7 +374,7 @@ class _SetPinScreenState extends State<SetPinScreen> {
                   style: TextStyle( fontFamily: 'Inter',
                     fontSize: 26,
                     color: Colors.white,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
         ),
