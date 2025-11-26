@@ -1,6 +1,5 @@
 //Flutter dependencies
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 
@@ -60,7 +59,7 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false, //hides the DEBUG banner
       title: 'SariSync',
       theme: ThemeData(
-        fontFamily: GoogleFonts.inter().fontFamily,
+        fontFamily: TextStyle( fontFamily: 'Inter',).fontFamily,
         colorScheme: ColorScheme.fromSeed(seedColor: Color(0xFFFCFCFC)),
         useMaterial3: true,
       ),

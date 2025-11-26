@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:sarisync/models/inventory_item.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'inv-status_badge.dart';
@@ -166,7 +165,7 @@ class InvItemCard extends StatelessWidget {
                     //name
                     Text(
                       item.name,
-                      style: GoogleFonts.inter(
+                      style: TextStyle( fontFamily: 'Inter',
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
@@ -176,7 +175,7 @@ class InvItemCard extends StatelessWidget {
                     // Additional Info
                     Text(
                       item.add_info,
-                      style: GoogleFonts.inter(
+                      style: TextStyle( fontFamily: 'Inter',
                         fontSize: 12,
                         color: Color(0xFF757575),
                         fontWeight: FontWeight.normal,
@@ -185,7 +184,7 @@ class InvItemCard extends StatelessWidget {
 
                     Text(
                       item.barcode,
-                      style: GoogleFonts.inter(
+                      style: TextStyle( fontFamily: 'Inter',
                         fontSize: 12,
                         color: Color(0xFF757575),
                         fontWeight: FontWeight.normal,
@@ -196,7 +195,7 @@ class InvItemCard extends StatelessWidget {
                     //unit of measure
                     Text(
                       item.unit,
-                      style: GoogleFonts.inter(
+                      style: TextStyle( fontFamily: 'Inter',
                         fontSize: 12,
                         color: Color(0xFF757575),
                         fontWeight: FontWeight.normal,
@@ -207,7 +206,7 @@ class InvItemCard extends StatelessWidget {
                     //Quantity
                     Text(
                       'Qty: ${item.quantity}',
-                        style: GoogleFonts.inter(
+                        style: TextStyle( fontFamily: 'Inter',
                           fontSize: 12,
                           color: Color(0xFF757575),
                           fontWeight: FontWeight.normal,
@@ -232,7 +231,7 @@ class InvItemCard extends StatelessWidget {
                   //Price
                   Text(
                     item.price.toStringAsFixed(2),
-                      style: GoogleFonts.inter(
+                      style: TextStyle( fontFamily: 'Inter',
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFF4CAF50),
@@ -242,7 +241,7 @@ class InvItemCard extends StatelessWidget {
                   //PHP label
                   Text(
                     'PHP',
-                    style: GoogleFonts.inter(
+                    style: TextStyle( fontFamily: 'Inter',
                       fontSize: 12,
                       color: Color(0xFF757575),
                     ),
@@ -250,7 +249,7 @@ class InvItemCard extends StatelessWidget {
                   
                   Text(
                     'ED: ${item.expiration}',
-                      style: GoogleFonts.inter(
+                      style: TextStyle( fontFamily: 'Inter',
                         fontSize: 12,
                         color: Color(0xFF757575),
                       ),

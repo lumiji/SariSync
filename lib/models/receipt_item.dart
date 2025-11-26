@@ -3,16 +3,16 @@ class ReceiptItem {
   final String name;
   final double price;
   int quantity;
-  final String? description;
-  final String? weight;
+  final String? add_info;
+  final String? unit;
 
   ReceiptItem({
     required this.id,
     required this.name,
     required this.price,
     required this.quantity,
-    this.description,
-    this.weight,
+    this.add_info,
+    this.unit,
   });
 
   Map<String, dynamic> toJson() {
@@ -21,8 +21,8 @@ class ReceiptItem {
       'name': name,
       'price': price,
       'quantity': quantity,
-      'description': description,
-      'weight': weight,
+      'description': add_info,
+      'unit': unit,
     };
   }
 
@@ -32,8 +32,8 @@ class ReceiptItem {
       name: json['name'] ?? '',
       price: (json['price'] ?? 0).toDouble(),
       quantity: json['quantity'] ?? 1,
-      description: json['description'],
-      weight: json['weight'],
+      add_info: json['description'],
+      unit: json['unit'],
     );
   }
 

@@ -1,7 +1,5 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:sarisync/views/home.dart';
 import 'package:sarisync/services/local_storage_service.dart';
 import 'pin_screen.dart';
 
@@ -134,7 +132,7 @@ class _SetPinScreenState extends State<SetPinScreen> {
                       const SizedBox(width: 10),
                       Text(
                         "SariSync",
-                        style: GoogleFonts.inter(
+                        style: TextStyle( fontFamily: 'Inter',
                           color: Colors.white,
                           fontSize: 40,
                           fontWeight: FontWeight.bold,
@@ -150,7 +148,7 @@ class _SetPinScreenState extends State<SetPinScreen> {
               // Tagline
               Text(
                 "Your Store. Smarter than ever.",
-                style: GoogleFonts.inter(
+                style: TextStyle( fontFamily: 'Inter',
                   fontSize: 16,
                   color: Colors.white.withOpacity(0.9),
                   fontWeight: FontWeight.w400,
@@ -181,7 +179,7 @@ class _SetPinScreenState extends State<SetPinScreen> {
                       Flexible(
                         child: Text(
                           _displayAccount!,
-                          style: GoogleFonts.inter(
+                          style: TextStyle( fontFamily: 'Inter',
                             fontSize: 16,
                             color: const Color(0xFF1E88E5),
                             fontWeight: FontWeight.w600,
@@ -204,7 +202,7 @@ class _SetPinScreenState extends State<SetPinScreen> {
               // Set PIN text
               Text(
                 "Set PIN",
-                style: GoogleFonts.inter(
+                style: TextStyle( fontFamily: 'Inter',
                   fontSize: 20,
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -235,7 +233,7 @@ class _SetPinScreenState extends State<SetPinScreen> {
                   padding: const EdgeInsets.only(top: 8.0),
                   child: Text(
                     _errorMessage,
-                    style: GoogleFonts.inter(
+                    style: TextStyle( fontFamily: 'Inter',
                       color: const Color.fromARGB(255, 209, 22, 22),
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
@@ -333,7 +331,7 @@ class _SetPinScreenState extends State<SetPinScreen> {
               ? Icon(icon, color: Colors.white, size: 28)
               : Text(
                   key,
-                  style: GoogleFonts.inter(
+                  style: TextStyle( fontFamily: 'Inter',
                     fontSize: 26,
                     color: Colors.white,
                     fontWeight: FontWeight.w500,

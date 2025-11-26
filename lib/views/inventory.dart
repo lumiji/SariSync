@@ -2,7 +2,6 @@
 
 // flutter dependencies
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 // firebase dependencies
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -204,7 +203,7 @@ class _InventoryPageState extends State<InventoryPage> {
                             // Categories
                             Text(
                               'Sort by Categories',
-                              style: GoogleFonts.inter(
+                              style: TextStyle( fontFamily: 'Inter',
                                 fontSize: 16,
                                 fontWeight: FontWeight.w700,
                                 color: Color(0xFF212121)),
@@ -244,7 +243,7 @@ class _InventoryPageState extends State<InventoryPage> {
                             // Items header
                             Text(
                               'Items',
-                             style: GoogleFonts.inter(
+                             style: TextStyle( fontFamily: 'Inter',
                                 fontSize: 16,
                                 fontWeight: FontWeight.w700,
                                 color: Color(0xFF212121)),

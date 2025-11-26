@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:sarisync/widgets/message_prompts.dart';
-import 'transaction_receipt.dart';
-import 'package:sarisync/models/receipt_model.dart';
 import 'transaction_receipt.dart';
 import 'settings.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -100,7 +97,7 @@ class _HistoryPageState extends State<HistoryPage> {
                               child: Center(
                                 child: Text(
                                   cat,
-                                  style: GoogleFonts.inter(
+                                  style: TextStyle( fontFamily: 'Inter',
                                     fontSize: 16,
                                     fontWeight: FontWeight.w500,
                                     color: selected
@@ -147,7 +144,7 @@ class _HistoryPageState extends State<HistoryPage> {
                           return Center(
                             child: Text(
                               "No records found",
-                              style: GoogleFonts.inter(
+                              style: TextStyle( fontFamily: 'Inter',
                                 fontSize: 16,
                                 color: Colors.grey.shade600,
                               ),
@@ -182,7 +179,7 @@ class _HistoryPageState extends State<HistoryPage> {
                                       // TITLE
                                       Text(
                                         item.title,
-                                        style: GoogleFonts.inter(
+                                        style: TextStyle( fontFamily: 'Inter',
                                           fontSize: 16,
                                           fontWeight: FontWeight.w700,
                                           color: const Color(0xFF212121),
@@ -194,7 +191,7 @@ class _HistoryPageState extends State<HistoryPage> {
                                         const SizedBox(height: 2),
                                         Text(
                                           item.description,
-                                          style: GoogleFonts.inter(
+                                          style: TextStyle( fontFamily: 'Inter',
                                             fontSize: 14,
                                             color: const Color(0xFF757575),
                                           ),
@@ -209,7 +206,7 @@ class _HistoryPageState extends State<HistoryPage> {
                                         "${item.date.hour == 0 ? 12 : (item.date.hour > 12 ? item.date.hour - 12 : item.date.hour)}:"
                                         "${item.date.minute.toString().padLeft(2, '0')} "
                                         "${item.date.hour >= 12 ? "PM" : "AM"}",
-                                        style: GoogleFonts.inter(
+                                        style: TextStyle( fontFamily: 'Inter',
                                           fontSize: 13,
                                           color: Colors.grey.shade500,
                                         ),

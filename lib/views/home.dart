@@ -2,6 +2,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:sarisync/services/sales_card_service.dart';
+import 'package:sarisync/services/user_display_service.dart';
 import 'package:sarisync/views/new_sales.dart';
 import 'package:sarisync/widgets/bottom_nav_item.dart';
 import 'package:async/async.dart';
@@ -52,21 +53,21 @@ class _HomePageState extends State<HomePage> {
     todaySalesStream = salesService.todaySalesStream();
     totalDebtStream = debtService.totalDebtStream();
     _recentTransactions = FirebaseFirestore.instance
-  .collection('users')
-  .doc(uid)
-  .collection('receipts')
-  .orderBy('createdAt', descending: true)
-  .limit(5)
-  .snapshots(includeMetadataChanges: true) 
-  .map((snapshot) => snapshot.docs.map((doc) {
-    final data = doc.data();
-    return TransactionItem.fromJson({
-      'totalAmount': data['totalAmount']?.toString() ?? '0.00',
-      'createdAt': data['createdAt'],
-      'transactionId': data['transactionId'] ?? '',
-      'paymentMethod': data['paymentMethod'] ?? '',
-    });
-  }).toList());
+      .collection('users')
+      .doc(uid)
+      .collection('receipts')
+      .orderBy('createdAt', descending: true)
+      .limit(5)
+      .snapshots(includeMetadataChanges: true) 
+      .map((snapshot) => snapshot.docs.map((doc) {
+        final data = doc.data();
+        return TransactionItem.fromJson({
+          'totalAmount': data['totalAmount']?.toString() ?? '0.00',
+          'createdAt': data['createdAt'],
+          'transactionId': data['transactionId'] ?? '',
+          'paymentMethod': data['paymentMethod'] ?? '',
+        });
+      }).toList());
 
     // _pages = [
     //   InventoryPage(
@@ -317,12 +318,9 @@ class HomeContent extends StatelessWidget {
                           // Greetings
                           Builder(
                             builder: (context) {
-                              final user = FirebaseAuth.instance.currentUser;
-                              final fullName = user?.displayName ?? 'User';
-                              final nameParts = fullName.split(' ');
-                              final displayName = nameParts.length >= 2
-                                  ? '${nameParts[0]} ${nameParts[1]}'
-                                  : fullName;
+                              
+                              final displayName = UserDisplay.getDisplayName();
+
                               final hour = DateTime.now().hour;
                               final greeting = hour < 12
                                   ? 'Good morning'

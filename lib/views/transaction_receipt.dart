@@ -1,26 +1,63 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:sarisync/models/receipt_item.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:sarisync/services/user_display_service.dart';
+// import 'package:sarisync/utilities/save_receipt_png.dart';
+// import 'package:sarisync/widgets/message_prompts.dart';
 
 class TransactionReceipt extends StatelessWidget {
   final String transactionId;
   final uid = FirebaseAuth.instance.currentUser!.uid;
+  final displayName = UserDisplay.getDisplayName();
+
 
   TransactionReceipt({super.key, required this.transactionId});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF7FBFF),
       appBar: AppBar(
+        backgroundColor: const Color(0xFF1565C0),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back,
+            color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
         elevation: 0,
-        title: const Text("Receipt"),
+        title: const Text(
+          "Receipt",
+          style: TextStyle(
+            color: Colors.white, 
+            fontSize: 16, 
+            fontWeight: FontWeight.w700)
+          ),
+
+          // actions: [
+          //   IconButton(
+          //     onPressed: () async {
+          //       final path = await saveReceiptAsImage(
+          //         receiptKey, 
+          //         fileName: "receipt_${DateTime.now().millisecondsSinceEpoch}");
+
+          //       if (path != null) {
+          //         DialogHelper.success(
+          //           context, 
+          //           "Receipt saved successfully!");
+          //        } else {
+          //         DialogHelper.warning(context, "Failed to save receipt.");
+          //       }
+          //     },
+          //     icon: const Icon(
+          //       Icons.file_download_outlined,
+          //       size: 24,
+          //       color: Colors.white,
+          //     ),
+          //   ),
+          // ],
       ),
+
       body: FutureBuilder<DocumentSnapshot>(
         future: FirebaseFirestore.instance
             .collection('users')
@@ -35,7 +72,17 @@ class TransactionReceipt extends StatelessWidget {
 
           final docData = snapshot.data!.data();
           if (docData == null) {
-            return const Center(child: Text("No receipt found"));
+            return const Center(
+              child: 
+              Text(
+                "No receipt found",
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  color: Color(0xFF757575),
+                  fontWeight: FontWeight.w700,
+                  fontSize: 16,
+                  ),
+              ));
           }
 
           final data = docData as Map<String, dynamic>;
@@ -52,66 +99,73 @@ class TransactionReceipt extends StatelessWidget {
 
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 15),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 25, 
+              vertical: 24),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-               
-                ...items.map((item) => Padding(
-                    padding: const EdgeInsets.only(bottom: 18),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // ITEM NAME + PRICE
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              item.name,
-                              style: GoogleFonts.inter(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 16,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                
+                  ...items.map((item) => Padding(
+                      padding: const EdgeInsets.only(
+                        bottom: 18),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // ITEM NAME + PRICE
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                item.name,
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 16,
+                                ),
                               ),
-                            ),
-                            Text(
-                              "₱${item.price.toStringAsFixed(2)}",
-                              style: GoogleFonts.inter(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
+                              Text(
+                                "₱${item.price.toStringAsFixed(2)}",
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-
-                        // DESCRIPTION 
-                        if (item.description != null && item.description!.isNotEmpty)
-                          Text(
-                            item.description!,
-                            style: GoogleFonts.inter(
-                              fontSize: 13,
-                              color: Colors.black54,
-                            ),
+                            ],
                           ),
 
-                        // UNIT OF MEASUREMENT + QUANTITY
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
+                          // DESCRIPTION 
+                          if (item.add_info != null && item.add_info!.isNotEmpty)
                             Text(
-                              item.weight != null && item.weight!.isNotEmpty
-                                  ? "Unit: ${item.weight}"
-                                  : "",
-                              style: GoogleFonts.inter(fontSize: 13, color: Colors.black45),
+                              item.add_info!,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.black54,
+                              ),
                             ),
-                            Text(
-                              "x ${item.quantity}",
-                              style: GoogleFonts.inter(fontSize: 14),
-                            ),
-                          ],
-                        ),
-                      ],
+
+                          // UNIT OF MEASUREMENT + QUANTITY
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                item.unit != null && item.unit!.isNotEmpty
+                                    ? "${item.unit}"
+                                    : "",
+                                style: TextStyle( fontFamily: 'Inter',fontSize: 13, color: Colors.black45),
+                              ),
+                              Text(
+                                "x ${item.quantity}",
+                                style: TextStyle( fontFamily: 'Inter',fontSize: 14),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                  )),
+                  ),
+                  
 
 
                 const SizedBox(height: 15),
@@ -119,7 +173,10 @@ class TransactionReceipt extends StatelessWidget {
                 // PAYMENT BREAKDOWN HEADER
                 const Text(
                   "PAYMENT BREAKDOWN",
-                  style: TextStyle(fontWeight: FontWeight.w900, fontSize: 17),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold, 
+                    fontSize: 18,
+                  ),
                 ),
                 const SizedBox(height: 12),
 
@@ -128,22 +185,36 @@ class TransactionReceipt extends StatelessWidget {
                   children: [
                     GestureDetector(
                       child: Container(
-                        width: 22,
-                        height: 22,
+                        width: 24,
+                        height: 24,
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(6), // <-- Radius adjustable
-                          border: Border.all(color: Colors.black, width: 2),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color:Color(0xFF1565C0), 
+                            width: 2,
+                          ),
                           color: data['paymentMethod'].toString().toLowerCase() == "cash"
-                              ? Colors.blue.shade800  // filled when selected
-                              : Colors.transparent,   // empty when not selected
+                              ? Color(0xFF1565C0) 
+                              : Colors.transparent, 
                         ),
                         child: data['paymentMethod'].toString().toLowerCase() == "cash"
-                            ? const Icon(Icons.check, size: 16, color: Colors.white)
+                            ? const Icon(
+                                Icons.check_rounded, 
+                                size: 16, 
+                                color: Colors.white)
                             : null,
                       ),
                     ),
                     const SizedBox(width: 8),
-                    const Text("Cash", style: TextStyle(fontSize: 16)),
+                    const Text(
+                      "Cash", 
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          fontFamily: 'Inter',
+                          color: Color(0xFF212121),
+                        ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 6),
@@ -151,26 +222,39 @@ class TransactionReceipt extends StatelessWidget {
                   children: [
                     GestureDetector(
                       child: Container(
-                        width: 22,
-                        height: 22,
+                        width: 24,
+                        height: 24,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: Colors.black, width: 2),
+                          border: Border.all(
+                            color: Color(0xFF1565C0),
+                            width: 2),
                           color: data['paymentMethod'].toString().toLowerCase() == "credit"
-                              ? Colors.blue.shade800
+                              ? Color(0xFF1565C0)
                               : Colors.transparent,
                         ),
                         child: data['paymentMethod'].toString().toLowerCase() == "credit"
-                            ? const Icon(Icons.check, size: 16, color: Colors.white)
+                            ? const Icon(
+                                Icons.check_rounded,
+                                 size: 16, 
+                                 color: Colors.white)
                             : null,
                       ),
                     ),
                     const SizedBox(width: 8),
-                    const Text("Credit", style: TextStyle(fontSize: 16)),
+                    const Text(
+                      "Credit", 
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          fontFamily: 'Inter',
+                          color: Color(0xFF212121),
+                        ),
+                      ),
                   ],
                 ),
 
-                const SizedBox(height: 20),
+                const SizedBox(height: 24),
 
                 // PAYMENT VALUES
                 Row(
@@ -178,13 +262,18 @@ class TransactionReceipt extends StatelessWidget {
                   children: [
                     const Text(
                       "Total Amount",
-                      style: TextStyle(fontWeight: FontWeight.w100, fontSize: 15),
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize:  16,
+                        fontWeight: FontWeight.normal,
                       ),
+                    ),
                     Text(
                       data['totalAmount'].toStringAsFixed(2),
-                      style: GoogleFonts.inter(
-                        fontWeight: FontWeight.w400,
-                        color: Colors.black87,
+                      style: TextStyle( fontFamily: 'Inter',
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF212121),
+                        fontSize: 16,
                         ),
                     ),
                   ],
@@ -195,23 +284,20 @@ class TransactionReceipt extends StatelessWidget {
                   children: [
                     const Text(
                       "Total Paid",
-                      style: TextStyle(fontWeight: FontWeight.w100, fontSize: 15),
+                      style: TextStyle(
+                        fontWeight: FontWeight.normal, 
+                        fontSize: 16,
+                        fontFamily: 'Inter',
+                        ),
                       ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 4),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.black54),
-                        borderRadius: BorderRadius.circular(7),
-                      ),
-                      child: Text(
+                    Text(
                         data['totalPaid'].toStringAsFixed(2),
-                        style: GoogleFonts.inter(
+                        style: TextStyle( fontFamily: 'Inter',
+                          fontSize: 16,
                           fontWeight: FontWeight.w400,
-                          color: Colors.black87,
+                          color: Color(0xFF212121),
                           ),
                       ),
-                    ),
                   ],
                 ),
                 const SizedBox(height: 5),
@@ -220,19 +306,22 @@ class TransactionReceipt extends StatelessWidget {
                   children: [
                     const Text(
                       "Change",
-                       style: TextStyle(fontWeight: FontWeight.w100, fontSize: 15),
+                       style: TextStyle(
+                        fontWeight: FontWeight.w400, 
+                        fontSize: 16),
                       ),
                     Text(
                       data['change'].toStringAsFixed(2),
-                      style: GoogleFonts.inter(
+                      style: TextStyle( fontFamily: 'Inter',
                         fontWeight: FontWeight.w400,
-                        color: Colors.black87,
+                        fontSize: 16,
+                        color:Color(0xFF212121),
                         ),
                     ),
                   ],
                 ),
 
-                const SizedBox(height: 30),
+                const SizedBox(height: 24),
 
                // FOOTER DETAILS
                 const SizedBox(height: 20),
@@ -242,15 +331,19 @@ class TransactionReceipt extends StatelessWidget {
                   children: [
                     const Text(
                       "Customer: ",
-                      style: TextStyle(fontWeight: FontWeight.w500, fontSize: 15),
+                      style: TextStyle(
+                        fontWeight: FontWeight.normal, 
+                        fontSize: 16,
+                        fontFamily: 'Inter',
+                        ),
                     ),
                     Expanded(
                       child: Text(
                         data['name'] ?? "N/A",
-                        style: GoogleFonts.inter(
+                        style: TextStyle( fontFamily: 'Inter',
                           fontWeight: FontWeight.bold,
                           fontSize: 15,
-                          color: Colors.black,
+                          color: Color(0xFF212121),
                         ),
                       ),
                     ),
@@ -259,14 +352,18 @@ class TransactionReceipt extends StatelessWidget {
 
                 // CASHIER NAME
                 Row(
-                  children: const [
+                  children: [
                     Text(
                       "Cashier: ",
-                      style: TextStyle(fontWeight: FontWeight.w500, fontSize: 15),
+                      style: TextStyle(
+                        fontWeight: FontWeight.normal, 
+                        fontSize: 16,
+                        fontFamily: 'Inter',
+                        ),
                     ),
                     Expanded(
                       child: Text(
-                        "Lorena", // make dynamic later if needed
+                        displayName,
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 15,
@@ -287,10 +384,10 @@ class TransactionReceipt extends StatelessWidget {
                     Expanded(child: Container()), // pushes value to the right
                     Text(
                       transactionId,
-                      style: GoogleFonts.inter(
+                      style: TextStyle( fontFamily: 'Inter',
                         fontWeight: FontWeight.bold,
                         fontSize: 15,
-                        color: Colors.black,
+                        color: Color(0xFF212121),
                       ),
                     ),
                   ],
@@ -301,17 +398,20 @@ class TransactionReceipt extends StatelessWidget {
                   children: [
                     const Text(
                       "Date/Time",
-                      style: TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.normal, 
+                        fontSize: 14),
                     ),
-                    Expanded(child: Container()), // pushes value to the right
+                    Expanded(child: Container()), 
                     Text(
                       "${createdAt.month}-${createdAt.day}-${createdAt.year} "
                       "${(createdAt.hour % 12 == 0 ? 12 : createdAt.hour % 12)}:"
                       "${createdAt.minute.toString().padLeft(2, '0')} "
                       "${createdAt.hour >= 12 ? 'PM' : 'AM'}",
-                      style: GoogleFonts.inter(
+                      style: TextStyle( fontFamily: 'Inter',
                         fontSize: 15,
-                        color: Colors.grey,
+                        color: Color(0xFF757575),
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -322,11 +422,12 @@ class TransactionReceipt extends StatelessWidget {
 
                 // SariSync Logo Button at Bottom
                 Padding(
-                   padding: const EdgeInsets.only(top: 0.5),
+                   padding: const EdgeInsets.only(
+                    top: 0.5),
                  child: Center(
                   child: GestureDetector(
                     onTap: () {
-                      Navigator.pop(context); //Can be used later if want the Logo to use as button to download the Receipt.
+                      Navigator.pop(context); 
                     },
                     child: SizedBox(
                       height: 160,
@@ -342,9 +443,9 @@ class TransactionReceipt extends StatelessWidget {
                 )
               ],
             ),
-          );
+            );
         },
-      ),
-    );
+      ));
+    
   }
 }

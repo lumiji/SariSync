@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:sarisync/models/inventory_item.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:sarisync/widgets/inv-status_badge.dart';
 
 class PosItemCard extends StatelessWidget {
@@ -59,19 +58,19 @@ class PosItemCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(item.name,
-                    style: GoogleFonts.inter(
+                    style: TextStyle( fontFamily: 'Inter',
                         fontSize: 16, 
                         fontWeight: FontWeight.bold)),
                 const SizedBox(height: 2),
                 Text(item.add_info,
-                    style: GoogleFonts.inter(
+                    style: TextStyle( fontFamily: 'Inter',
                       fontSize: 14,
                       color: Color(0xFF757575),
                       fontWeight: FontWeight.normal,
                     )),
                 const SizedBox(height: 2),
                 Text(item.unit,
-                    style: GoogleFonts.inter(
+                    style: TextStyle( fontFamily: 'Inter',
                        fontSize: 12,
                         color: Color(0xFF757575),
                         fontWeight: FontWeight.normal),
@@ -80,7 +79,7 @@ class PosItemCard extends StatelessWidget {
                 Row(
                   children: [
                     Text('Qty: ${item.quantity}',
-                        style: GoogleFonts.inter(
+                        style: TextStyle( fontFamily: 'Inter',
                           fontSize: 12,
                           color: Color(0xFF757575),
                           fontWeight: FontWeight.normal),
@@ -104,19 +103,19 @@ class PosItemCard extends StatelessWidget {
                   ),
 
               Text(item.price.toStringAsFixed(2),
-                  style: GoogleFonts.inter(
+                  style: TextStyle( fontFamily: 'Inter',
                       fontSize: 20, 
                       fontWeight: FontWeight.bold,
                       color: Color(0xFF4CAF50),
                     ),
                   ),
               Text('PHP',
-                  style: GoogleFonts.inter(
+                  style: TextStyle( fontFamily: 'Inter',
                     fontSize: 12,
                     color: Color(0xFF757575),
                   )),
               Text('ED: ${item.expiration}',
-                style: GoogleFonts.inter(
+                style: TextStyle( fontFamily: 'Inter',
                 fontSize: 12, 
                 color: Color(0xFF757575)),
               ),

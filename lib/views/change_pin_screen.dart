@@ -1,6 +1,5 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:sarisync/services/local_storage_service.dart';
 import 'package:sarisync/views/home.dart';
 import 'package:sarisync/widgets/message_prompts.dart';
@@ -93,7 +92,7 @@ class _ChangePinScreenState extends State<ChangePinScreen> {
                       const SizedBox(width: 10),
                       Text(
                         "SariSync",
-                        style: GoogleFonts.inter(
+                        style: TextStyle( fontFamily: 'Inter',
                           color: Colors.white,
                           fontSize: 40,
                           fontWeight: FontWeight.bold,
@@ -108,7 +107,7 @@ class _ChangePinScreenState extends State<ChangePinScreen> {
 
               Text(
                 "Change PIN",
-                style: GoogleFonts.inter(
+                style: TextStyle( fontFamily: 'Inter',
                   fontSize: 20,
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -140,7 +139,7 @@ class _ChangePinScreenState extends State<ChangePinScreen> {
                   padding: const EdgeInsets.only(top: 8.0),
                   child: Text(
                     _errorMessage,
-                    style: GoogleFonts.inter(
+                    style: TextStyle( fontFamily: 'Inter',
                       color: Color.fromARGB(255, 209, 22, 22),
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
@@ -222,7 +221,7 @@ class _ChangePinScreenState extends State<ChangePinScreen> {
               ? Icon(icon, color: Colors.white, size: 28)
               : Text(
             key,
-            style: GoogleFonts.inter(
+            style: TextStyle( fontFamily: 'Inter',
               fontSize: 26,
               color: Colors.white,
               fontWeight: FontWeight.bold,

@@ -5,7 +5,6 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 //firebase dependencies
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -364,7 +363,7 @@ class _LedgerAddPageState extends State<LedgerAddPage> {
                         activeColor: Color(0xFF1565C0),
                       ),
                     ),
-                      Text(status, style: GoogleFonts.inter()),
+                      Text(status, style: TextStyle( fontFamily: 'Inter',)),
                       const SizedBox(width: 24),
                     ],
                   );

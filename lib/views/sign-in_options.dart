@@ -1,6 +1,5 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../services/google_auth_service.dart';
 import 'phone_sign_in_screen.dart';
 import '../services/fb_auth_service.dart';
@@ -60,7 +59,7 @@ class _SignInOptionsScreenState extends State<SignInOptionsScreen> {
                   const SizedBox(width: 0),
                   Text(
                     "SariSync",
-                    style: GoogleFonts.inter(
+                    style: TextStyle( fontFamily: 'Inter',
                       color: Colors.white,
                       fontSize: 36,
                       fontWeight: FontWeight.bold,
@@ -80,7 +79,7 @@ class _SignInOptionsScreenState extends State<SignInOptionsScreen> {
                   // Welcome text
                   Text(
                     "Create your account",
-                    style: GoogleFonts.inter(
+                    style: TextStyle( fontFamily: 'Inter',
                       fontSize: 16,
                       color: Colors.white,
                       fontWeight: FontWeight.w700,
@@ -98,7 +97,7 @@ class _SignInOptionsScreenState extends State<SignInOptionsScreen> {
                         // Username Label
                         Text(
                           "Username",
-                          style: GoogleFonts.inter(
+                          style: TextStyle( fontFamily: 'Inter',
                             fontSize: 14,
                             color: Colors.white,
                             fontWeight: FontWeight.normal,
@@ -137,7 +136,7 @@ class _SignInOptionsScreenState extends State<SignInOptionsScreen> {
                         // Password Label
                         Text(
                           "Password",
-                          style: GoogleFonts.inter(
+                          style: TextStyle( fontFamily: 'Inter',
                             fontSize: 14,
                             color: Colors.white,
                             fontWeight: FontWeight.normal,
@@ -173,7 +172,7 @@ class _SignInOptionsScreenState extends State<SignInOptionsScreen> {
                         // Confirm Password Label
                         Text(
                           "Confirm Password",
-                          style: GoogleFonts.inter(
+                          style: TextStyle( fontFamily: 'Inter',
                             fontSize: 14,
                             color: Colors.white,
                             fontWeight: FontWeight.normal,
@@ -283,7 +282,7 @@ class _SignInOptionsScreenState extends State<SignInOptionsScreen> {
                             },
                             child: Text(
                               "Create Account",
-                              style: GoogleFonts.inter(
+                              style: TextStyle( fontFamily: 'Inter',
                                 color: const Color(0xFF1565C0),
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16,
@@ -299,7 +298,7 @@ class _SignInOptionsScreenState extends State<SignInOptionsScreen> {
                         Center(
                           child: Text(
                             "-Or sign up with-",
-                            style: GoogleFonts.inter(
+                            style: TextStyle( fontFamily: 'Inter',
                               fontSize: 14,
                               color: Colors.white,
                               fontWeight: FontWeight.w500,
@@ -434,7 +433,7 @@ class _SignInOptionsScreenState extends State<SignInOptionsScreen> {
                             },
                             child: RichText(
                               text: TextSpan(
-                                style: GoogleFonts.inter(
+                                style: TextStyle( fontFamily: 'Inter',
                                   fontSize: 14,
                                   color: Colors.white,
                                 ),
