@@ -177,7 +177,16 @@ class InvItemCard extends StatelessWidget {
                     Text(
                       item.add_info,
                       style: GoogleFonts.inter(
-                        fontSize: 14,
+                        fontSize: 12,
+                        color: Color(0xFF757575),
+                        fontWeight: FontWeight.normal,
+                      ),
+                    ),
+
+                    Text(
+                      item.barcode,
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
                         color: Color(0xFF757575),
                         fontWeight: FontWeight.normal,
                       ),

@@ -7,7 +7,8 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 
 //firebase dependencies
-
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 //pages
 import 'sku_scanner.dart';
@@ -101,7 +102,7 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
   String? _unitDropdownValue;
   String? imageUrl;
 
-  final List<String> _units = ['pcs', 'oz', 'L', 'mL', 'kg', 'g'];
+  final List<String> _units = ['g', 'kg', 'mL', 'L', 'oz', 'pc', 'pk'];
 
   final List<String> _categories = [
     'Snacks',
@@ -176,65 +177,91 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
     }
   }
 
-  // for saving item (Add/Edit)
-void _saveItem() async {
-
-  if (!_formKey.currentState!.validate()) return;
-  
-
-  DialogHelper.showLoading(context,message: "Saving item. Please wait.");
-
-  try{
-    
-    setState(() {});
+  Future<void> _saveItem() async {
+    if (!_formKey.currentState!.validate()) return;
 
     final name = _nameController.text.trim();
     final quantity = int.parse(_quantityController.text);
     final price = double.parse(_priceController.text);
     final category = _selectedCategory ?? '';
-    final barcode = _barcodeController.text;
+    final barcode = _barcodeController.text.trim();
     final unit = '${_unitAmountController.text} ${_unitDropdownValue ?? ''}';
-    final info = _infoController.text;
-    final expiration = _expirationController.text;
+    final info = _infoController.text.trim();
+    final expiration = _expirationController.text.trim();
 
     String? uploadedImageUrl = imageUrl;
 
-    // Upload image if selected
-    if (_selectedImage != null) {
-      uploadedImageUrl = await _inventoryService.uploadImage(_selectedImage!);
+   
+   //DUPLICATE BARCODE CHECK (BEFORE LOADING)
+   
+    if (widget.item == null && barcode.isNotEmpty) {
+      final uid = FirebaseAuth.instance.currentUser!.uid;
+
+      // Query for any document in inventory where barcode equals the input
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .collection('inventory')
+          .where('barcode', isEqualTo: barcode)
+          .limit(1) // we only need to know if at least one exists
+          .get();
+
+      if (querySnapshot.docs.isNotEmpty) {
+        await DialogHelper.warning(
+          context,
+          '$name is already in your inventory.',
+        );
+        return; // STOP — no saving
+      }
     }
 
-    if (widget.item == null) {
-      // ADD
-      await Future.wait([
-        _inventoryService.addItem(
-        name: name,
-        quantity: quantity,
-        price: price,
-        category: category,
-        barcode: barcode,
-        unit: unit,
-        info: info,
-        expirationDate: expiration,
-        imageUrl: uploadedImageUrl,
-      ),
-      //AUTO HISTORY 
-      //(Out or Low stock / Added)
-      HistoryService.checkStockEvent(
-        itemName: _nameController.text.trim(),
-        quantity: int.parse(_quantityController.text),
-      ),
 
-      // Expiry check
-      HistoryService.checkExpiryEvent(
-        itemName: _nameController.text.trim(),
-        expirationDate: _expirationController.text,
-      )
-    ]);
+    
+    // SHOW LOADING AFTER ALL VALIDATIONS
+    DialogHelper.showLoading(context, message: "Saving item. Please wait...");
 
-      Navigator.pop(context, "added");
-    } else {
-      // EDIT
+    try {
+      // Upload image only if a new one was selected
+      if (_selectedImage != null) {
+        uploadedImageUrl =
+            await _inventoryService.uploadImage(_selectedImage!);
+      }
+
+      
+      // ADD MODE
+      
+      if (widget.item == null) {
+        await Future.wait([
+          _inventoryService.addItem(
+            name: name,
+            quantity: quantity,
+            price: price,
+            category: category,
+            barcode: barcode,
+            unit: unit,
+            info: info,
+            expirationDate: expiration,
+            imageUrl: uploadedImageUrl,
+          ),
+
+          HistoryService.checkStockEvent(
+            itemName: name,
+            quantity: quantity,
+          ),
+
+          HistoryService.checkExpiryEvent(
+            itemName: name,
+            expirationDate: expiration,
+          ),
+        ]);
+
+        Navigator.pop(context, "added");
+        return;
+      }
+
+      
+      //EDIT MODE
+
       final updatedItem = InventoryItem(
         id: widget.item!.id,
         name: name,
@@ -249,41 +276,37 @@ void _saveItem() async {
         createdAt: widget.item!.createdAt,
       );
 
-
       await _inventoryService.updateItem(updatedItem);
 
-      // AUTO HISTORY 
-      //(Out or Low stock / Updated)
       await HistoryService.checkStockEvent(
-        itemName: _nameController.text.trim(),
-        quantity: int.parse(_quantityController.text),
+        itemName: name,
+        quantity: quantity,
       );
 
-      // Expiry check
       await HistoryService.checkExpiryEvent(
-        itemName: _nameController.text.trim(),
-        expirationDate: _expirationController.text,
+        itemName: name,
+        expirationDate: expiration,
       );
 
       Navigator.pop(context, "updated");
+    } finally {
+      DialogHelper.closeLoading(context);
     }
-  } finally {
-    DialogHelper.closeLoading(context);
   }
-}
 
-  // for cleaning up controllers
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _priceController.dispose();
-    _quantityController.dispose();
-    _expirationController.dispose();
-    _infoController.dispose();
-    _barcodeController.dispose();
-    _unitAmountController.dispose();
-    super.dispose();
-  }
+
+    // for cleaning up controllers
+    @override
+    void dispose() {
+      _nameController.dispose();
+      _priceController.dispose();
+      _quantityController.dispose();
+      _expirationController.dispose();
+      _infoController.dispose();
+      _barcodeController.dispose();
+      _unitAmountController.dispose();
+      super.dispose();
+    }
 
   // for opening barcode scanner page
   void _openBarcodeScanner() {
