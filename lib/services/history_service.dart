@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:sarisync/views/receipt.dart'; 
+import 'package:firebase_auth/firebase_auth.dart';
+
 class HistoryService {
   static Future<void> addHistory({
     required String title,
@@ -10,169 +11,147 @@ class HistoryService {
     String? transactionId,
 
   }) async {
+    final uid = FirebaseAuth.instance.currentUser!.uid; // get current user
     await FirebaseFirestore.instance
-    .collection("History")
-    .add({
-      "title": title,
-      "description": description,
-      "category": category,
-      "amount": amount,
-      "transactionId": transactionId,
-      "date": FieldValue.serverTimestamp(),
-      //"transactionId": transactionId ?? null,
+        .collection('users')      // users collection
+        .doc(uid)                 // current user document
+        .collection('History')  
+        .doc(transactionId)  // user-specific history collection
+        .set({
+          "title": title,
+          "description": description,
+          "category": category,
+          "amount": amount,
+          "transactionId": transactionId,
+          "date": FieldValue.serverTimestamp(),
+        });
+    }
 
-    });
-  }
-
-//SALES-Cash
-static Future<void> recordSalesEvent({
-  required double totalAmount,
-  required String transactionId,
-}) async {
-  await addHistory(
-    title: "Sales – Php ${totalAmount.toStringAsFixed(2)}",
-    description: "A successful Transaction",
-    category: "Sales",
-    amount: totalAmount,
-    transactionId: transactionId,
-  );
-}
-
-// SALES-Credit
-static Future<void> recordCreditEvent({
-  required double totalAmount,
-  required String customerName,
-  required String transactionId,
-}) async {
-  await addHistory(
-    title: "Credit – Php ${totalAmount.toStringAsFixed(2)}",
-    description: "$customerName added to credit",
-    category: "Credit",
-    amount: totalAmount,
-    transactionId: transactionId,
-  );
-}
-
-// CREDIT
-static Future<void> recordLedgerCreditEvent({
-  required double amount,
-  required String customerName,
-  required String paymentStatus,
-  required String transactionId,
-}) async {
-  String title;
-  String description;
-
-  if (paymentStatus.toLowerCase() == "unpaid") {
-    title = "Unpaid – Php ${amount.toStringAsFixed(2)}";
-    description = "$customerName has 0 payments";
-  } 
-  else if (paymentStatus.toLowerCase() == "partial") {
-    title = "Partial Payment – Php ${amount.toStringAsFixed(2)}";
-    description = "$customerName made a partial payment";
-  } 
-  else if (paymentStatus.toLowerCase() == "paid") {
-    title = "Paid – Php ${amount.toStringAsFixed(2)}";
-    description = "$customerName has fully paid their total credit";
-  } 
-  else {
-    // fallback
-    title = "Credit – Php ${amount.toStringAsFixed(2)}";
-    description = customerName;
-  }
-
-  await addHistory(
-    title: title,
-    description: description,
-    category: "Credit",
-    amount: amount,
-    transactionId: transactionId,
-  );
-}
-
-//Credit - Update
-static Future<void> updateLedgerCreditEvent({
-  required String transactionId,
-  required double amountPaid,
-  required double change,
-  required String cashier,
-  required String status,
-}) async {
-  await FirebaseFirestore.instance
-    .collection('receipts')
-    .doc(transactionId)
-    .update({
-    'totalPaid': amountPaid,
-    'change': change,
-    'cashier': cashier,
-    'status': status,
-    'updatedAt': FieldValue.serverTimestamp(),
-  });
-}
-
-// STOCKS 
-static Future<void> checkStockEvent({
-  required String itemName,
-  required int quantity,
-}) async {
-  if (quantity == 0) {
-    await HistoryService.addHistory(
-      title: "Out of Stock – $itemName",
-      description: "Remaining: 0 pcs",
-      category: "Stocks",
-    );
-  } else if (quantity <= 5) {
-    await HistoryService.addHistory(
-      title: "Low Stock – $itemName",
-      description: "Remaining: $quantity pcs",
-      category: "Stocks",
+  // SALES-Cash
+  static Future<void> recordSalesEvent({
+    required String transactionId,
+    required double totalAmount,
+  }) async {
+    await addHistory(
+      title: "Sales – Php ${totalAmount.toStringAsFixed(2)}",
+      description: "A successful Transaction",
+      category: "Sales",
+      amount: totalAmount,
+      transactionId: transactionId,
     );
   }
-}
 
-//STOCKS - EXPIRY
-static Future<void> checkExpiryEvent({
-  required String itemName,
-  required String expirationDate,
-}) async {
-  if (expirationDate.isEmpty) return;
+  // SALES-Credit
+  static Future<void> recordCreditEvent({
+    required double totalAmount,
+    required String customerName,
+    required String transactionId,
+  }) async {
+    await addHistory(
+      title: "Credit – Php ${totalAmount.toStringAsFixed(2)}",
+      description: "$customerName added to credit",
+      category: "Credit",
+      amount: totalAmount,
+      transactionId: transactionId,
+    );
+  }
 
-  try {
-    final parts = expirationDate.split("/");
-    if (parts.length != 3) return;
+  // CREDIT
+  static Future<void> recordLedgerCreditEvent({
+    required double amount,
+    required String customerName,
+    required String paymentStatus,
+    required String transactionId,
+  }) async {
+    String title;
+    String description;
 
-    final month = int.parse(parts[0]);
-    final day = int.parse(parts[1]);
-    final year = int.parse(parts[2]);
-    final exp = DateTime(year, month, day);
+    if (paymentStatus.toLowerCase() == "unpaid") {
+      title = "Unpaid – Php ${amount.toStringAsFixed(2)}";
+      description = "$customerName has 0 payments";
+    } else if (paymentStatus.toLowerCase() == "partial") {
+      title = "Partial Payment – Php ${amount.toStringAsFixed(2)}";
+      description = "$customerName made a partial payment";
+    } else if (paymentStatus.toLowerCase() == "paid") {
+      title = "Paid – Php ${amount.toStringAsFixed(2)}";
+      description = "$customerName has fully paid their total credit";
+    } else {
+      title = "Credit – Php ${amount.toStringAsFixed(2)}";
+      description = customerName;
+    }
 
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final expiry = DateTime(exp.year, exp.month, exp.day);
-    final days = expiry.difference(today).inDays;
+    await addHistory(
+      title: title,
+      description: description,
+      category: "Credit",
+      amount: amount,
+      transactionId: transactionId, 
+    );
+  }
 
-    if (days < 0) {
+  // STOCKS 
+  static Future<void> checkStockEvent({
+    required String itemName,
+    required int quantity,
+  }) async {
+    if (quantity == 0) {
       await addHistory(
-        title: "Expired – $itemName",
-        description: "Expired last ${exp.month}-${exp.day}-${exp.year}",
+        title: "Out of Stock – $itemName",
+        description: "Remaining: 0 pcs",
         category: "Stocks",
       );
-  } else if (days == 0) {
-    await addHistory(
-      title: "Expiring Today – $itemName",
-      description: "Will expire today (${exp.month}-${exp.day}-${exp.year})",
-      category: "Stocks",
-    );
-  } else if (days <= 7) {
-      final label = days == 1 ? "1 day" : "$days days";
+    } else if (quantity <= 5) {
       await addHistory(
-        title: "Near Expiry – $itemName",
-        description: "Will expire in $label (${exp.month}-${exp.day}-${exp.year})",
+        title: "Low Stock – $itemName",
+        description: "Remaining: $quantity pcs",
         category: "Stocks",
       );
     }
-  } catch (e) {
-    print("Expiry parsing error: $e");
   }
-}
+
+  // STOCKS - EXPIRY
+  static Future<void> checkExpiryEvent({
+    required String itemName,
+    required String expirationDate,
+  }) async {
+    if (expirationDate.isEmpty) return;
+
+    try {
+      final parts = expirationDate.split("/");
+      if (parts.length != 3) return;
+
+      final month = int.parse(parts[0]);
+      final day = int.parse(parts[1]);
+      final year = int.parse(parts[2]);
+      final exp = DateTime(year, month, day);
+
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final expiry = DateTime(exp.year, exp.month, exp.day);
+      final days = expiry.difference(today).inDays;
+
+      if (days < 0) {
+        await addHistory(
+          title: "Expired – $itemName",
+          description: "Expired last ${exp.month}-${exp.day}-${exp.year}",
+          category: "Stocks",
+        );
+      } else if (days == 0) {
+        await addHistory(
+          title: "Expiring Today – $itemName",
+          description: "Will expire today (${exp.month}-${exp.day}-${exp.year})",
+          category: "Stocks",
+        );
+      } else if (days <= 7) {
+        final label = days == 1 ? "1 day" : "$days days";
+        await addHistory(
+          title: "Near Expiry – $itemName",
+          description: "Will expire in $label (${exp.month}-${exp.day}-${exp.year})",
+          category: "Stocks",
+        );
+      }
+    } catch (e) {
+      print("Expiry parsing error: $e");
+    }
+  }
 }

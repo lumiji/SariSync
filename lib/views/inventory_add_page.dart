@@ -8,7 +8,7 @@ import 'dart:io';
 
 //firebase dependencies
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 //pages
 import 'sku_scanner.dart';
@@ -18,6 +18,7 @@ import 'package:sarisync/services/history_service.dart';
 import '../services/inventory_service.dart';
 import 'package:sarisync/widgets/inv_add-label.dart';
 import '../models/inventory_item.dart';
+import 'package:sarisync/widgets/message_prompts.dart';
 
 class InventoryAddPage extends StatefulWidget {
  
@@ -101,7 +102,7 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
   String? _unitDropdownValue;
   String? imageUrl;
 
-  final List<String> _units = ['pcs', 'oz', 'L', 'mL', 'kg', 'g'];
+  final List<String> _units = ['g', 'kg', 'mL', 'L', 'oz', 'pc', 'pk'];
 
   final List<String> _categories = [
     'Snacks',
@@ -176,104 +177,136 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
     }
   }
 
-  // for saving item (Add/Edit)
-void _saveItem() async {
-  if (!_formKey.currentState!.validate()) return;
+  Future<void> _saveItem() async {
+    if (!_formKey.currentState!.validate()) return;
 
-  setState(() {});
+    final name = _nameController.text.trim();
+    final quantity = int.parse(_quantityController.text);
+    final price = double.parse(_priceController.text);
+    final category = _selectedCategory ?? '';
+    final barcode = _barcodeController.text.trim();
+    final unit = '${_unitAmountController.text} ${_unitDropdownValue ?? ''}';
+    final info = _infoController.text.trim();
+    final expiration = _expirationController.text.trim();
 
-  final name = _nameController.text.trim();
-  final quantity = int.parse(_quantityController.text);
-  final price = double.parse(_priceController.text);
-  final category = _selectedCategory ?? '';
-  final barcode = _barcodeController.text;
-  final unit = '${_unitAmountController.text} ${_unitDropdownValue ?? ''}';
-  final info = _infoController.text;
-  final expiration = _expirationController.text;
+    String? uploadedImageUrl = imageUrl;
 
-  String? uploadedImageUrl = imageUrl;
+   
+   //DUPLICATE BARCODE CHECK (BEFORE LOADING)
+   
+    if (widget.item == null && barcode.isNotEmpty) {
+      final uid = FirebaseAuth.instance.currentUser!.uid;
 
-  // Upload image if selected
-  if (_selectedImage != null) {
-    uploadedImageUrl = await _inventoryService.uploadImage(_selectedImage!);
+      // Query for any document in inventory where barcode equals the input
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .collection('inventory')
+          .where('barcode', isEqualTo: barcode)
+          .limit(1) // we only need to know if at least one exists
+          .get();
+
+      if (querySnapshot.docs.isNotEmpty) {
+        await DialogHelper.warning(
+          context,
+          '$name is already in your inventory.',
+        );
+        return; // STOP — no saving
+      }
+    }
+
+
+    
+    // SHOW LOADING AFTER ALL VALIDATIONS
+    DialogHelper.showLoading(context, message: "Saving item. Please wait...");
+
+    try {
+      // Upload image only if a new one was selected
+      if (_selectedImage != null) {
+        uploadedImageUrl =
+            await _inventoryService.uploadImage(_selectedImage!);
+      }
+
+      
+      // ADD MODE
+      
+      if (widget.item == null) {
+        await Future.wait([
+          _inventoryService.addItem(
+            name: name,
+            quantity: quantity,
+            price: price,
+            category: category,
+            barcode: barcode,
+            unit: unit,
+            info: info,
+            expirationDate: expiration,
+            imageUrl: uploadedImageUrl,
+          ),
+
+          HistoryService.checkStockEvent(
+            itemName: name,
+            quantity: quantity,
+          ),
+
+          HistoryService.checkExpiryEvent(
+            itemName: name,
+            expirationDate: expiration,
+          ),
+        ]);
+
+        Navigator.pop(context, "added");
+        return;
+      }
+
+      
+      //EDIT MODE
+
+      final updatedItem = InventoryItem(
+        id: widget.item!.id,
+        name: name,
+        quantity: quantity,
+        price: price,
+        category: category,
+        barcode: barcode,
+        unit: unit,
+        add_info: info,
+        expiration: expiration,
+        imageUrl: uploadedImageUrl,
+        createdAt: widget.item!.createdAt,
+      );
+
+      await _inventoryService.updateItem(updatedItem);
+
+      await HistoryService.checkStockEvent(
+        itemName: name,
+        quantity: quantity,
+      );
+
+      await HistoryService.checkExpiryEvent(
+        itemName: name,
+        expirationDate: expiration,
+      );
+
+      Navigator.pop(context, "updated");
+    } finally {
+      DialogHelper.closeLoading(context);
+    }
   }
 
-  if (widget.item == null) {
-    // ADD
-    await _inventoryService.addItem(
-      name: name,
-      quantity: quantity,
-      price: price,
-      category: category,
-      barcode: barcode,
-      unit: unit,
-      info: info,
-      expirationDate: expiration,
-      imageUrl: uploadedImageUrl,
-    );
 
-
-    //AUTO HISTORY 
-    //(Out or Low stock / Added)
-    await HistoryService.checkStockEvent(
-      itemName: _nameController.text.trim(),
-      quantity: int.parse(_quantityController.text),
-    );
-
-    // Expiry check
-    await HistoryService.checkExpiryEvent(
-      itemName: _nameController.text.trim(),
-      expirationDate: _expirationController.text,
-    );
-
-     Navigator.pop(context, "added");
-  } else {
-    // EDIT
-    final updatedItem = InventoryItem(
-      id: widget.item!.id,
-      name: name,
-      quantity: quantity,
-      price: price,
-      category: category,
-      barcode: barcode,
-      unit: unit,
-      add_info: info,
-      expiration: expiration,
-      imageUrl: uploadedImageUrl,
-      createdAt: widget.item!.createdAt,
-    );
-
-    await _inventoryService.updateItem(updatedItem);
-
-    // AUTO HISTORY 
-    //(Out or Low stock / Updated)
-    await HistoryService.checkStockEvent(
-      itemName: _nameController.text.trim(),
-      quantity: int.parse(_quantityController.text),
-    );
-
-    // Expiry check
-    await HistoryService.checkExpiryEvent(
-      itemName: _nameController.text.trim(),
-      expirationDate: _expirationController.text,
-    );
-
-    Navigator.pop(context, "updated");
-  }
-}
-
-  // for cleaning up controllers
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _priceController.dispose();
-    _quantityController.dispose();
-    _expirationController.dispose();
-    _infoController.dispose();
-    _barcodeController.dispose();
-    _unitAmountController.dispose();
-    super.dispose();
-  }
+    // for cleaning up controllers
+    @override
+    void dispose() {
+      _nameController.dispose();
+      _priceController.dispose();
+      _quantityController.dispose();
+      _expirationController.dispose();
+      _infoController.dispose();
+      _barcodeController.dispose();
+      _unitAmountController.dispose();
+      super.dispose();
+    }
 
   // for opening barcode scanner page
   void _openBarcodeScanner() {
@@ -299,21 +332,21 @@ void _saveItem() async {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFFEFEFE),
+      backgroundColor: const Color(0xFFF7FBFF),
       appBar: AppBar(
-        backgroundColor: Color(0xFFFEFEFE),
+        backgroundColor: const Color(0xFF1565C0),
         elevation: 0,
         leading: IconButton(
           icon: const Icon(
             Icons.arrow_back_rounded, 
-            color: Colors.black,
+            color: Colors.white,
             size: 24),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           widget.item == null ? 'Add' : 'Edit',
           style: const TextStyle(
-            color: Colors.black,
+            color: Colors.white,
             fontFamily: 'Inter',
             fontSize: 16,
             fontWeight: FontWeight.bold,

@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:sarisync/widgets/message_prompts.dart';
 import 'ledger_add_page.dart';
 import '../models/ledger_item.dart';
 import '../widgets/led-item_card.dart';
 import 'settings.dart';
+import 'package:sarisync/widgets/image_helper.dart';
 
 class LedgerPage extends StatefulWidget {
   final void Function(String type, String customerID)? onSearchSelected;
@@ -19,9 +21,12 @@ class _LedgerPageState extends State<LedgerPage> {
   List<LedgerItem> ledgerList = [];
   List<LedgerItem> filteredLedger = [];
   final TextEditingController _searchController = TextEditingController();
+  final uid = FirebaseAuth.instance.currentUser!.uid;
 
   Stream<List<LedgerItem>> getLedgerItems() {
     return FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
         .collection('ledger')
         .orderBy('updatedAt', descending: true)
         .snapshots()
@@ -60,8 +65,8 @@ class _LedgerPageState extends State<LedgerPage> {
     return Scaffold(
       body: Stack(
         children: [
-          Positioned.fill(
-            child: Image.asset('assets/images/gradient.png', fit: BoxFit.cover),
+           Container(
+            color: Color(0xFFF7FBFF),
           ),
           SafeArea(
             child: Padding(
@@ -95,7 +100,7 @@ class _LedgerPageState extends State<LedgerPage> {
                                 borderSide: const BorderSide(color: Color(0xFF327CD1)),
                               ),
                               filled: true,
-                              fillColor: Colors.white,
+                              fillColor: Colors.blueGrey.shade50,
                             ),
                           ),
                         ),
@@ -103,6 +108,7 @@ class _LedgerPageState extends State<LedgerPage> {
                       const SizedBox(width: 12),
                       IconButton(
                         icon: const Icon(Icons.settings_outlined),
+                        color: Color(0xFF212121),
                         iconSize: 24,
                         onPressed: () {
                            Navigator.push(
@@ -147,6 +153,12 @@ class _LedgerPageState extends State<LedgerPage> {
                               .toList();
                         }
 
+                        // Prefetch images for first few ledger items
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          final urls = filteredLedger.map((item) => item.imageUrl).toList();
+                          ImageHelper.prefetchImages(context: context, urls: urls, limit: 8);
+                        });
+
 
                         if (filteredLedger.isEmpty) {
                           return const Center(
@@ -172,6 +184,8 @@ class _LedgerPageState extends State<LedgerPage> {
                               item: item,
                               onEdit: () async {
                                 await FirebaseFirestore.instance
+                                    .collection('users')
+                                    .doc(uid)
                                     .collection("ledger")
                                     .doc(item.customerID)
                                     .update({
@@ -197,6 +211,8 @@ class _LedgerPageState extends State<LedgerPage> {
                                   context,
                                   () async {
                                     await FirebaseFirestore.instance
+                                        .collection('users')
+                                        .doc(uid)
                                         .collection('ledger')
                                         .doc(item.customerID)
                                         .delete();

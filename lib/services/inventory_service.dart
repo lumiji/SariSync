@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:sarisync/models/inventory_item.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class InventoryService {
   //initialization
@@ -42,7 +43,12 @@ class InventoryService {
     String? imageUrl,
   }) async {
     try {
-      await _firestore.collection('inventory').add({
+      final uid = FirebaseAuth.instance.currentUser!.uid;
+      await _firestore
+        .collection('users')
+        .doc(uid)
+        .collection('inventory')
+        .add({
         'name': name,
         'quantity': quantity,
         'price': price,
@@ -63,7 +69,13 @@ class InventoryService {
   // Update item in Firestore
   Future<void> updateItem(InventoryItem item) async {
     try {
-      await _firestore.collection('inventory').doc(item.id).update({
+      final uid = FirebaseAuth.instance.currentUser!.uid;
+      await _firestore
+        .collection('users')
+        .doc(uid)
+        .collection('inventory')
+        .doc(item.id)
+        .update({
         'name': item.name,
         'quantity': item.quantity,
         'price': item.price,
@@ -84,7 +96,10 @@ class InventoryService {
 
   // Retrieve items from Firestore as a stream
   Stream<List<InventoryItem>> getInventoryItems() {
+    final uid = FirebaseAuth.instance.currentUser!.uid;
     return _firestore
+        .collection('users')
+        .doc(uid)
         .collection('inventory')
         .orderBy('createdAt', descending: true)
         .snapshots()

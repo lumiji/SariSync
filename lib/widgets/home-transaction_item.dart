@@ -71,20 +71,15 @@ class TrnscItemCard extends StatelessWidget {
             children: [
               Row(
                 children: [
+
                   Text (
-                    transaction.totalAmount.toString(),
+                    '₱ ${transaction.totalAmount.toString()}',
                     style: GoogleFonts.inter(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  Text(
-                    'PHP',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      color: Colors.grey,
-                    ),
-                  ),
+                  
                 ],
               ),              
               const SizedBox(height: 2),

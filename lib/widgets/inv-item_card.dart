@@ -3,8 +3,6 @@ import 'package:sarisync/models/inventory_item.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-
-
 import 'inv-status_badge.dart';
 
 
@@ -179,7 +177,16 @@ class InvItemCard extends StatelessWidget {
                     Text(
                       item.add_info,
                       style: GoogleFonts.inter(
-                        fontSize: 14,
+                        fontSize: 12,
+                        color: Color(0xFF757575),
+                        fontWeight: FontWeight.normal,
+                      ),
+                    ),
+
+                    Text(
+                      item.barcode,
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
                         color: Color(0xFF757575),
                         fontWeight: FontWeight.normal,
                       ),

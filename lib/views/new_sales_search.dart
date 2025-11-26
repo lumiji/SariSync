@@ -5,7 +5,8 @@ import 'package:flutter/material.dart';
 import '../models/inventory_item.dart';
 
 //firebase dependencies
-import 'package:cloud_firestore/cloud_firestore.dart'; // Firestore
+import 'package:cloud_firestore/cloud_firestore.dart'; 
+import 'package:firebase_auth/firebase_auth.dart';
 
 //models, widgets & services
 import '../services/inventory_service.dart';
@@ -23,6 +24,7 @@ class SearchPage extends StatefulWidget {
 class _SearchPageState extends State<SearchPage> {
   final _inventoryService = InventoryService();
   final SearchController _searchController = SearchController();
+  final uid = FirebaseAuth.instance.currentUser!.uid;
 
   List<InventoryItem> allInventoryItems = [];
 
@@ -31,6 +33,8 @@ class _SearchPageState extends State<SearchPage> {
     super.initState();
     // Load all items from Firestore
     FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
         .collection('inventory')
         .snapshots()
         .listen((snapshot) {
@@ -49,18 +53,18 @@ class _SearchPageState extends State<SearchPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFEFEFE),
+      backgroundColor: const Color(0xFFF7FBFF),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFFEFEFE),
+        backgroundColor: const Color(0xFF1565C0),
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
           'Search',
           style: TextStyle(
-            color: Colors.black,
+            color: Colors.white,
             fontSize: 16,
             fontWeight: FontWeight.w700,
           ),
@@ -75,8 +79,8 @@ class _SearchPageState extends State<SearchPage> {
               SizedBox(height: 16), 
               // 1. Search bar
               Material( 
-                borderRadius: BorderRadius.circular(10),
-                color: Color(0xFFFCFCFC),
+                borderRadius: BorderRadius.circular(8),
+                color: Colors.blueGrey.shade50,
                 child: SizedBox (
                   height: 50, 
                   child: SearchBar(
@@ -87,11 +91,8 @@ class _SearchPageState extends State<SearchPage> {
                     elevation: MaterialStatePropertyAll(0),
                     shape: MaterialStatePropertyAll(
                       RoundedRectangleBorder(
-                        side: const BorderSide(
-                          color: Color(0xFFB4D7FF),
-                          width: 1,
-                        ),
-                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide.none,
+                        borderRadius: BorderRadius.circular(10),
                       ),
                     ),
                     onChanged: (value) {
@@ -100,6 +101,7 @@ class _SearchPageState extends State<SearchPage> {
                     onSubmitted: (value) {
                       setState(() {});
                     },
+                    
                   ),
                 ),
               ),
@@ -111,10 +113,11 @@ class _SearchPageState extends State<SearchPage> {
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
+                  color: Color(0xFF212121),
                 ),
               ),
 
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
 
               Expanded(
                 child: Builder(

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'sign-in_options.dart';
 import 'package:sarisync/services/auth_flow_service.dart';
+import 'package:sarisync/services/remote_db_service.dart';
 
 class PhoneSignInScreen extends StatefulWidget {
   @override
@@ -20,8 +20,9 @@ class _PhoneSignInScreenState extends State<PhoneSignInScreen> {
     await _auth.verifyPhoneNumber(
       phoneNumber: phoneController.text.trim(),
       verificationCompleted: (PhoneAuthCredential credential) async {
-        await _auth.signInWithCredential(credential);
+        UserCredential userCredential = await _auth.signInWithCredential(credential);
         //Navigator.pop(context); // Close screen after success
+        await RemoteDbService.initializeUserDatabase(uid: userCredential.user!.uid);
         await AuthFlowService.handlePostLogin(context);
       },
       verificationFailed: (error) {
@@ -44,7 +45,11 @@ class _PhoneSignInScreenState extends State<PhoneSignInScreen> {
       smsCode: otpController.text.trim(),
     );
 
-    await _auth.signInWithCredential(credential);
+    UserCredential userCredential =
+      await _auth.signInWithCredential(credential);
+
+  // Create Firestore user + default collections
+    await RemoteDbService.initializeUserDatabase(uid: userCredential.user!.uid);
 
     //Navigator.pop(context); // Close screen after success
 

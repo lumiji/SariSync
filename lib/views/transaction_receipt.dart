@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:sarisync/models/receipt_item.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class TransactionReceipt extends StatelessWidget {
   final String transactionId;
+  final uid = FirebaseAuth.instance.currentUser!.uid;
 
-  const TransactionReceipt({super.key, required this.transactionId});
+  TransactionReceipt({super.key, required this.transactionId});
 
   @override
   Widget build(BuildContext context) {
@@ -21,6 +23,8 @@ class TransactionReceipt extends StatelessWidget {
       ),
       body: FutureBuilder<DocumentSnapshot>(
         future: FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
             .collection('receipts')
             .doc(transactionId)
             .get(),
@@ -43,7 +47,7 @@ class TransactionReceipt extends StatelessWidget {
           //     ? (data['createdAt'] as Timestamp).toDate()
           //     : DateTime.now();
           final createdAt = data['dateTime'] != null
-          ? (data['dateTime'] as Timestamp).toDate()
+          ? (data['createdAt'] as Timestamp).toDate()
           : DateTime.now();
 
 
@@ -52,38 +56,7 @@ class TransactionReceipt extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ITEM LIST
-                // ...items.map((item) => Padding(
-                //       padding: const EdgeInsets.only(bottom: 20),
-                //       child: Column(
-                //         crossAxisAlignment: CrossAxisAlignment.start,
-                //         children: [
-                //           Row(
-                //             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                //             children: [
-                //               Text(item.name,
-                //                   style: const TextStyle(
-                //                       fontWeight: FontWeight.w700,
-                //                       fontSize: 16)),
-                //               Text(
-                //                 item.price.toStringAsFixed(2),
-                //                 style: const TextStyle(
-                //                     fontWeight: FontWeight.bold, fontSize: 16),
-                //               ),
-                //             ],
-                //           ),
-                //           Text(item.description ?? "",
-                //               style: const TextStyle(fontSize: 13)),
-                //           Row(
-                //             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                //             children: [
-                //               Text("${item.weight ?? ""}"),
-                //               Text("x ${item.quantity}"),
-                //             ],
-                //           ),
-                //         ],
-                //       ),
-                //     )),
+               
                 ...items.map((item) => Padding(
                     padding: const EdgeInsets.only(bottom: 18),
                     child: Column(

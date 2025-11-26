@@ -1,8 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:sarisync/services/history_service.dart';
-import 'package:sarisync/views/receipt.dart';
 
-// MODEL
 class HistoryItem {
   final String id;
   final String title;
@@ -10,7 +7,7 @@ class HistoryItem {
   final DateTime date;
   final String category; // "Sales", "Credit", "Stocks"
   final double? amount; // optional for stocks events
-  final String transactionId; // For retrieve of receipt
+  final String transactionId; // For retrieving receipt
 
   HistoryItem({
     required this.id,
@@ -34,14 +31,38 @@ class HistoryItem {
   }
 
   static HistoryItem fromMap(String id, Map<String, dynamic> map) {
+    final title = (map["title"] ?? '') as String;
+    final description = (map["description"] ?? '') as String;
+    final category = (map["category"] ?? 'Unknown') as String;
+    final transactionId = (map["transactionId"] ?? '') as String;
+
+    final amount = map["amount"] != null
+        ? (map["amount"] is num
+            ? (map["amount"] as num).toDouble()
+            : double.tryParse(map["amount"].toString()))
+        : null;
+
+    // Parse date
+    DateTime parsedDate;
+    final rawDate = map["date"];
+    if (rawDate is Timestamp) {
+      parsedDate = rawDate.toDate();
+    } else if (rawDate is DateTime) {
+      parsedDate = rawDate;
+    } else if (rawDate is String) {
+      parsedDate = DateTime.tryParse(rawDate) ?? DateTime.now();
+    } else {
+      parsedDate = DateTime.now();
+    }
+
     return HistoryItem(
       id: id,
-      title: map["title"],
-      description: map["description"],
-      category: map["category"],
-      amount: (map["amount"] != null) ? map["amount"]!.toDouble() : null,
-      date: DateTime.parse(map["date"]),
-      transactionId: map["transactionId"] ?? "",
+      title: title,
+      description: description,
+      date: parsedDate,
+      category: category,
+      amount: amount,
+      transactionId: transactionId,
     );
   }
 }

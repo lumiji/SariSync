@@ -1,4 +1,5 @@
 // flutter dependencies
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:sarisync/services/sales_card_service.dart';
 import 'package:sarisync/views/new_sales.dart';
@@ -21,8 +22,6 @@ import 'package:sarisync/widgets/home-pdf_btn.dart';
 import 'package:sarisync/widgets/home-category_card.dart';
 import 'package:sarisync/widgets/home-transaction_item.dart';
 import 'package:sarisync/models/inventory_item.dart';
-import 'package:sarisync/widgets/search_bar.dart';
-import 'package:sarisync/services/search_service.dart';
 import 'package:sarisync/services/ledger_service.dart';
 
 
@@ -42,6 +41,7 @@ class _HomePageState extends State<HomePage> {
   late final Stream<Map<String, dynamic>> todaySalesStream;
   late final Stream<double> totalDebtStream;
   late final Stream<List<TransactionItem>> _recentTransactions;
+  final uid = FirebaseAuth.instance.currentUser!.uid;
   String? _selectedCategory;
       
   @override
@@ -51,6 +51,8 @@ class _HomePageState extends State<HomePage> {
     todaySalesStream = salesService.todaySalesStream();
     totalDebtStream = debtService.totalDebtStream();
     _recentTransactions = FirebaseFirestore.instance
+    .collection('users')
+    .doc(uid)
     .collection('receipts')
     .orderBy('createdAt', descending: true)
     .limit(5)
@@ -97,6 +99,8 @@ class _HomePageState extends State<HomePage> {
 
   Stream<List<InventoryItem>> getInventoryItems() {
   return FirebaseFirestore.instance
+      .collection('users')
+      .doc(uid)
       .collection('inventory') 
       .orderBy('createdAt', descending: true)
       .snapshots()         
@@ -284,10 +288,11 @@ class HomeContent extends StatelessWidget {
   
   @override
   Widget build(BuildContext context) {
+
     return Stack(
       children: [
-        Positioned.fill(
-          child: Image.asset('assets/images/gradient.png', fit: BoxFit.cover),
+        Container(
+          color: Color(0xFFF7FBFF),
         ),
         SafeArea(
           child: SingleChildScrollView(
@@ -295,20 +300,49 @@ class HomeContent extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Search Bar with Settings Icon
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 0),
-                        child: SearchBarApp(
-                          items: GlobalSearchService.globalSearchList,
-                          onSearchSelected: (result) {
-                            final type = result["type"];
-                            final id = result["id"];
-                            onSearchSelected(type, id);
-                          },
-                        ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          // Logo
+                          Image.asset(
+                            'assets/images/logo_blue.png',
+                            width: 32, 
+                            height: 32,
+                          ),
+                          const SizedBox(width: 8),
+                          // Greetings
+                          Builder(
+                            builder: (context) {
+                              final user = FirebaseAuth.instance.currentUser;
+                              final displayName = user?.displayName ?? 'User';
+                              final hour = DateTime.now().hour;
+                              final greeting = hour < 12
+                                  ? 'Good morning'
+                                  : hour < 18
+                                      ? 'Good afternoon'
+                                      : 'Good evening';
+                              return Expanded(
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    '$greeting, $displayName!',
+                                    style: const TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF1565C0),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -330,28 +364,28 @@ class HomeContent extends StatelessWidget {
                 InfoCard(
                       title: "Today's Total Sales",
                       subtitle: "No. of items sold: $totalItemsSold",
-                      amount: "Php ${totalSales.toStringAsFixed(2)}",
+                      amount: "₱ ${totalSales.toStringAsFixed(2)}",
                       imagePath: 'assets/images/SALES.png',
-                      gradientColors: const [Color(0xFF6DE96D), Color(0xFF7FE3B5)],
+                      gradientColors: const [Color(0xFF43A047), Color(0xFF6DE96D)],
                     ),
                   
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
 
                 // Debt Card
                 InfoCard(
                   title: 'Outstanding Debt',
                   subtitle: '(total amount to be collected)',
-                  amount: 'Php ${totalDebt.toStringAsFixed(2)}',
+                  amount: '₱ ${totalDebt.toStringAsFixed(2)}',
                   imagePath: 'assets/images/CREDITS.png',
-                  gradientColors: const [Color(0xFF4393EE), Color(0xFF7BB3FF)],
+                  gradientColors: const [Color(0xFF3643F4), Color.fromARGB(255, 99, 168, 247)],
                 ),
 
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
 
                 // Download Inventory Button
                 PDFBtn(),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: 12),
 
                 // Browse Categories Header
                 Row(
@@ -360,6 +394,7 @@ class HomeContent extends StatelessWidget {
                     const Text(
                       'Browse Categories',
                       style: TextStyle(
+                        color: Color(0xFF212121),
                         fontFamily: 'Inter',
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
@@ -372,9 +407,10 @@ class HomeContent extends StatelessWidget {
                         style: TextStyle(
                           fontFamily: 'Inter',
                           fontSize: 16,
-                          color: Color(0xFF757575),
+                          color: Color(0xFF212121),
                           decoration: TextDecoration.underline,
                           decorationThickness: 0.8,
+                          decorationColor: Color(0xFF1565C0),
                         ),
                       ),
                     ),
@@ -439,6 +475,7 @@ class HomeContent extends StatelessWidget {
                     fontFamily: 'Inter',
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
+                    color: Color(0xFF212121),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -454,11 +491,24 @@ class HomeContent extends StatelessWidget {
                     if (snapshot.hasError) {
                       return Center(child: Text('Error loading transactions'));
                     }
-                    if (!snapshot.hasData) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-
+                   
                     final recentTransactions = snapshot.data!;
+
+                    if(recentTransactions.isEmpty) {
+                        return Padding(
+                            padding: const EdgeInsets.only(top: 100, bottom: 100),
+                          child: Center(                       
+                            child: Text(
+                              'No recent transactions',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 14,
+                                color:Color(0xFF757575),
+                              ),
+                            ),
+                          ),
+                        );
+                    }
 
                     return ListView.builder(
                       shrinkWrap: true,

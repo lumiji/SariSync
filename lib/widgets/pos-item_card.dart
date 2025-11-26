@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sarisync/models/inventory_item.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:sarisync/widgets/inv-status_badge.dart';
 
 class PosItemCard extends StatelessWidget {
   final InventoryItem item;
@@ -17,11 +18,11 @@ class PosItemCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Color(0xFFFEFEFE),
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withOpacity(0.15),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -59,45 +60,66 @@ class PosItemCard extends StatelessWidget {
               children: [
                 Text(item.name,
                     style: GoogleFonts.inter(
-                        fontSize: 15, fontWeight: FontWeight.w600)),
+                        fontSize: 16, 
+                        fontWeight: FontWeight.bold)),
                 const SizedBox(height: 2),
                 Text(item.add_info,
                     style: GoogleFonts.inter(
-                      fontSize: 13,
-                      color: Colors.grey,
+                      fontSize: 14,
+                      color: Color(0xFF757575),
+                      fontWeight: FontWeight.normal,
                     )),
                 const SizedBox(height: 2),
                 Text(item.unit,
                     style: GoogleFonts.inter(
-                        fontSize: 12, color: Colors.grey.shade500)),
+                       fontSize: 12,
+                        color: Color(0xFF757575),
+                        fontWeight: FontWeight.normal),
+                ),
                 const SizedBox(height: 4),
                 Row(
                   children: [
                     Text('Qty: ${item.quantity}',
                         style: GoogleFonts.inter(
-                            fontSize: 12, color: Colors.grey.shade700)),
-                    const SizedBox(width: 16),
-                    Text('ED: ${item.expiration}',
-                        style: GoogleFonts.inter(
-                            fontSize: 12, color: Colors.grey.shade700)),
+                          fontSize: 12,
+                          color: Color(0xFF757575),
+                          fontWeight: FontWeight.normal),
+                    ),
+                    
+                    
                   ],
                 ),
               ],
             ),
           ),
-
+          const SizedBox(width: 16),
           // Price
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
+
+              StatusBadge(
+                    quantity: item.quantity,
+                    expiration: item.expiration,
+                  ),
+
               Text(item.price.toStringAsFixed(2),
                   style: GoogleFonts.inter(
-                      fontSize: 20, fontWeight: FontWeight.bold)),
+                      fontSize: 20, 
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF4CAF50),
+                    ),
+                  ),
               Text('PHP',
                   style: GoogleFonts.inter(
                     fontSize: 12,
-                    color: Colors.grey,
+                    color: Color(0xFF757575),
                   )),
+              Text('ED: ${item.expiration}',
+                style: GoogleFonts.inter(
+                fontSize: 12, 
+                color: Color(0xFF757575)),
+              ),
             ],
           ),
 

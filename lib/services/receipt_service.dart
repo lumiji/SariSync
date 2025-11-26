@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:sarisync/models/receipt_item.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ReceiptService {
   final FirebaseFirestore firestore = FirebaseFirestore.instance;
+  final uid = FirebaseAuth.instance.currentUser!.uid;
 
   Future<String> createReceipt({
   required String transactionId,
@@ -30,19 +32,31 @@ class ReceiptService {
     'createdAt': Timestamp.fromDate(createdAt),
   };
 
-  await firestore.collection('receipts').doc(transactionId).set(receiptData);
+  await firestore
+    .collection('users')
+    .doc(uid)
+    .collection('receipts')
+    .doc(transactionId)
+    .set(receiptData);
 
   return transactionId;
 }
 
 
   Future<Map<String, dynamic>?> getReceipt(String id) async {
-    final doc = await firestore.collection('receipts').doc(id).get();
+    final doc = await firestore
+      .collection('users')
+      .doc(uid)
+      .collection('receipts').
+      doc(id)
+      .get();
     return doc.data();
   }
 
   Future<List<Map<String, dynamic>>> getReceiptsByCustomer(String customerID) async {
     final snapshot = await firestore
+        .collection('users')
+        .doc(uid)
         .collection('receipts')
         .where('customerID', isEqualTo: customerID)
         .orderBy('createdAt', descending: true)

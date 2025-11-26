@@ -4,13 +4,33 @@ import 'package:google_fonts/google_fonts.dart';
 import '../services/google_auth_service.dart';
 import 'phone_sign_in_screen.dart';
 import '../services/fb_auth_service.dart';
-import 'pin_screen.dart';
 import 'set_pin_screen.dart';
 import 'package:sarisync/services/local_storage_service.dart';
 import 'package:sarisync/services/auth_flow_service.dart';
+import 'package:sarisync/services/remote_db_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-class SignInOptionsScreen extends StatelessWidget {
+class SignInOptionsScreen extends StatefulWidget {
   const SignInOptionsScreen({super.key});
+
+  @override
+  State<SignInOptionsScreen> createState() => _SignInOptionsScreenState();
+}
+
+class _SignInOptionsScreenState extends State<SignInOptionsScreen> {
+  final _usernameController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
+
+  @override
+  void dispose() {
+    _usernameController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -18,214 +38,430 @@ class SignInOptionsScreen extends StatelessWidget {
     final fbService = FacebookAuthService();
 
     return Scaffold(
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          //MAIN BACKGROUND IMAGE
-          Image.asset('assets/images/background.png', fit: BoxFit.cover),
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/images/background.png'),
+            fit: BoxFit.cover,
+          ),
+        ),
+        child: SingleChildScrollView(
+          child: Column (
+             children: [
 
-          //Logo
-          Positioned(
-            top: 120, 
-            left: 60,
-            right: 0,
-            child: Row(
-              children: [
-                Image.asset('assets/images/logo.png', width: 100, height: 100),
-                const SizedBox(width: 0),
-                Text(
-                  "SariSync",
-                  style: GoogleFonts.inter(
-                    color: Colors.white,
-                    fontSize: 40,
-                    fontWeight: FontWeight.bold,
+              const SizedBox(height: 100),
+              // Logo + Text
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Image.asset('assets/images/logo.png', width: 100, height: 100),
+                  const SizedBox(width: 0),
+                  Text(
+                    "SariSync",
+                    style: GoogleFonts.inter(
+                      color: Colors.white,
+                      fontSize: 36,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ),
+                ],
+              ),
 
-          //WHITE BACKGROUND PNG LAYER (BOTTOM SECTION)
-          Positioned(
-            top: MediaQuery.of(context).size.height * 0.3, // 30% from top
-            left: 0,
-            right: 0,
-            bottom: 0, // stretch to bottom
-            child: Image.asset(
-              'assets/images/White_bg.png',
-              width: MediaQuery.of(context).size.width,
-              fit: BoxFit.fill, // fill the space
-            ),
-          ),
+              const SizedBox(height: 24),
 
 
-          //CONTENT (WELCOME + BUTTONS)
-          Positioned(
-            top:  MediaQuery.of(context).size.height * 0.50, 
-            left: 0,
-            right: 0,
+          FractionallySizedBox(
+            widthFactor: 0.85,
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Welcome text
-                Text(
-                  "Welcome!",
-                  style: GoogleFonts.inter(
-                    fontSize: 40,
-                    color: Colors.blue[800],
-                    fontWeight: FontWeight.w700,
+                  // Welcome text
+                  Text(
+                    "Create your account",
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                ),
 
-                const SizedBox(height: 45),
+                  const SizedBox(height: 16),
 
-                // BUTTONS
-                FractionallySizedBox(
-                  widthFactor: 0.8,
-                  child: Column(
-                    children: [
-                      // Google Sign-in
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          minimumSize: const Size(double.infinity, 55),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(35),
+                  // INPUT FIELDS AND BUTTONS
+                  FractionallySizedBox(
+                    widthFactor: 1,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Username Label
+                        Text(
+                          "Username",
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            color: Colors.white,
+                            fontWeight: FontWeight.normal,
                           ),
-
-                          shadowColor: Colors.black26,
-                          elevation: 5,
                         ),
-                        onPressed: () async {
-                          final user = await authService.signInWithGoogle();
+                        const SizedBox(height: 4),
 
-                          if (user != null) {
-                            print(
-                              "Signed in as ${user.displayName}, email: ${user.email}",
-                            );
-
-                          
-                            await AuthFlowService.handlePostLogin(context);
-                          }
-                        },
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          children: [
-                            const SizedBox(width: 10),
-                            Image.asset(
-                              'assets/images/google_logo.png',
-                              height: 24,
+                        // Username Input
+                        TextField(
+                          controller: _usernameController,
+                          cursorColor: Colors.white,
+                          decoration: InputDecoration(
+                            prefixIcon: const Icon(
+                              Icons.person_outline, 
+                              color: Colors.white70
                             ),
-                            const SizedBox(width: 15),
-                            Text(
-                              "Continue with Google",
+                            filled: false,
+                            border: UnderlineInputBorder(
+                              borderSide: BorderSide(color: Colors.white),
+                              borderRadius: BorderRadius.zero,
+                            ),
+                            enabledBorder: UnderlineInputBorder(
+                              borderSide: BorderSide(color: Colors.white, width: 2),
+                              borderRadius: BorderRadius.zero,
+                            ),
+                            focusedBorder: UnderlineInputBorder(
+                              borderSide: BorderSide(color: Colors.white, width: 2),
+                              borderRadius: BorderRadius.zero,
+                            ),
+                          ),
+                          style: TextStyle(color: Colors.white),
+                        ),
+
+                        const SizedBox(height: 20),
+
+                        // Password Label
+                        Text(
+                          "Password",
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            color: Colors.white,
+                            fontWeight: FontWeight.normal,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+
+                        // Password Input
+                        TextField(
+                          controller: _passwordController,
+                          obscureText: _obscurePassword,
+                          decoration: InputDecoration(
+                            prefixIcon: const Icon(Icons.lock_outline, color: Colors.white70),
+                            filled: false,
+                            border: UnderlineInputBorder(
+                              borderSide: BorderSide(color: Colors.white),
+                              borderRadius: BorderRadius.zero,
+                            ),
+                            enabledBorder: UnderlineInputBorder(
+                              borderSide: BorderSide(color: Colors.white, width: 2),
+                              borderRadius: BorderRadius.zero,
+                            ),
+                            focusedBorder: UnderlineInputBorder(
+                              borderSide: BorderSide(color: Colors.white, width: 2),
+                              borderRadius: BorderRadius.zero,
+                            ),
+                          ),
+                          style: TextStyle(color: Colors.white),
+                        ),
+
+                        const SizedBox(height: 20),
+
+                        // Confirm Password Label
+                        Text(
+                          "Confirm Password",
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            color: Colors.white,
+                            fontWeight: FontWeight.normal,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+
+                        // Confirm Password Input
+                        TextField(
+                          controller: _confirmPasswordController,
+                          obscureText: _obscureConfirmPassword,
+                          decoration: InputDecoration(
+                            prefixIcon: const Icon(Icons.lock_outline, color: Colors.white70),
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _obscureConfirmPassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                                color: Colors.white70,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _obscureConfirmPassword = !_obscureConfirmPassword;
+                                });
+                              },
+                            ),
+                            filled: false,
+                            border: UnderlineInputBorder(
+                              borderSide: BorderSide(color: Colors.white),
+                              borderRadius: BorderRadius.zero,
+                            ),
+                            enabledBorder: UnderlineInputBorder(
+                              borderSide: BorderSide(color: Colors.white, width: 2),
+                              borderRadius: BorderRadius.zero,
+                            ),
+                            focusedBorder: UnderlineInputBorder(
+                              borderSide: BorderSide(color: Colors.white, width: 2),
+                              borderRadius: BorderRadius.zero,
+                            ),
+                          ),
+                          style: TextStyle(color: Colors.white),
+                        ),
+
+                        const SizedBox(height: 24),
+
+                        //create account button
+                        FractionallySizedBox(
+                          widthFactor: 1,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              minimumSize: const Size(double.infinity, 55),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                            ),
+                            onPressed: () async {
+                              final email = _usernameController.text.trim();
+                              final password = _passwordController.text.trim();
+                              final confirmPassword = _confirmPasswordController.text.trim();
+
+                              if (email.isEmpty || password.isEmpty || confirmPassword.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text("Please fill all fields")),
+                                );
+                                return;
+                              }
+
+                              if (password != confirmPassword) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text("Passwords do not match")),
+                                );
+                                return;
+                              }
+
+                              try {
+                                // create Firebase user
+                                final userCredential =
+                                    await FirebaseAuth.instance.createUserWithEmailAndPassword(
+                                  email: email,
+                                  password: password,
+                                );
+
+                                final uid = userCredential.user!.uid;
+                                print("Created account: UID = $uid");
+
+                                // create firestore folders
+                                await RemoteDbService.initializeUserDatabase(uid: uid);
+
+                                // save account on device
+                                await LocalStorageService.saveAccountInfo(email, "password");
+                                await LocalStorageService.saveLoggedIn();
+
+                                // go to set PIN
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => SetPinScreen(
+                                      accountIdentifier: email,
+                                      accountType: "password",
+                                    ),
+                                  ),
+                                );
+                              } catch (e) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text("Error: $e")),
+                                );
+                              }
+                            },
+                            child: Text(
+                              "Create Account",
                               style: GoogleFonts.inter(
-                                color: Colors.black87,
+                                color: const Color(0xFF1565C0),
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16,
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 17),
-
-                      // Facebook
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Color(0xFF1877F2),
-                          minimumSize: const Size(double.infinity, 55),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30),
                           ),
                         ),
-                        onPressed: () async {
-                          final user = await fbService.signInWithFacebook(
-                            //forceLogin: true,
-                          );
 
-                          if (user != null) {
-                            // Successfully signed in
-                            print(
-                              "Facebook user: ${user.displayName}, email: ${user.email}",
-                            );
+                        
+                        const SizedBox(height: 36),
 
-                           
-                             await AuthFlowService.handlePostLogin(context);
-                          } else {
-                            // Login failed or cancelled
-                            print("Facebook login not successful");
-                          }
-                        },
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          children: [
-                            const SizedBox(width: 12),
-                            const Icon(
-                              Icons.facebook,
+                        // "Or sign up with" text
+                        Center(
+                          child: Text(
+                            "-Or sign up with-",
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
                               color: Colors.white,
-                              size: 25,
+                              fontWeight: FontWeight.w500,
                             ),
-                            const SizedBox(width: 20),
-                            Text(
-                              "Continue with Facebook",
-                              style: GoogleFonts.inter(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 17),
-
-                      // Phone
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          minimumSize: const Size(double.infinity, 55),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30),
                           ),
                         ),
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => PhoneSignInScreen(),
-                            ),
-                          );
-                        },
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.start,
+
+                        const SizedBox(height: 20),
+
+                        // Social Sign-in Buttons Row
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const SizedBox(width: 12),
-                            const Icon(
-                              Icons.phone,
-                              color: Colors.white,
-                              size: 25,
+                            // Google Button
+                            InkWell(
+                              onTap: () async {
+                                final user = await authService.signInWithGoogle();
+                                if (user != null) {
+                                  print("Signed in as ${user.displayName}, email: ${user.email}");
+                                   await RemoteDbService.initializeUserDatabase(uid: user.uid);
+                                   await AuthFlowService.handlePostLogin(context);
+
+                                }
+                              },
+                              child: Container(
+                                width: 64,
+                                height: 64,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black26,
+                                      blurRadius: 8,
+                                      offset: Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: Center(
+                                  child: Image.asset(
+                                    'assets/images/google_logo.png',
+                                    height: 24,
+                                  ),
+                                ),
+                              ),
                             ),
-                            const SizedBox(width: 20),
-                            Text(
-                              "Continue with Phone",
-                              style: GoogleFonts.inter(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
+
+                            const SizedBox(width: 32),
+
+                            // Facebook Button
+                            InkWell(
+                              onTap: () async {
+                                final user = await fbService.signInWithFacebook();
+                                if (user != null) {
+                                  print("Facebook user: ${user.displayName}, email: ${user.email}");
+                                  await RemoteDbService.initializeUserDatabase(uid: user.uid);
+                                  await AuthFlowService.handlePostLogin(context);
+                                } else {
+                                  print("Facebook login not successful");
+                                }
+                              },
+                              child: Container(
+                                width: 64,
+                                height: 64,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black26,
+                                      blurRadius: 8,
+                                      offset: Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: Center(
+                                  child: Icon(
+                                    Icons.facebook,
+                                    color: Color(0xFF1877F2),
+                                    size: 32,
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                            const SizedBox(width: 32),
+
+                            // Phone Button
+                            InkWell(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => PhoneSignInScreen(),
+                                  ),
+                                );
+                              },
+                              child: Container(
+                                width: 64,
+                                height: 64,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black26,
+                                      blurRadius: 8,
+                                      offset: Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: Center(
+                                  child: Icon(
+                                    Icons.phone,
+                                    color: Colors.green,
+                                    size: 24,
+                                  ),
+                                ),
                               ),
                             ),
                           ],
                         ),
-                      ),
-                    ],
+
+                        const SizedBox(height: 30),
+
+                        // "Already have an account? Log in" text
+                        Center(
+                          child: TextButton(
+                            onPressed: () {
+                              // Navigate to login screen
+                              // Navigator.push(context, MaterialPageRoute(builder: (_) => LoginScreen()));
+                            },
+                            child: RichText(
+                              text: TextSpan(
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  color: Colors.white,
+                                ),
+                                children: [
+                                  TextSpan(text: "Already have an account? "),
+                                  TextSpan(
+                                    text: "Log in",
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      decoration: TextDecoration.underline,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
+        ),
       ),
     );
   }

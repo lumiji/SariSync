@@ -15,6 +15,8 @@ import '../services/ledger_service.dart';
 import 'package:sarisync/widgets/inv_add-label.dart';
 import 'package:sarisync/models/ledger_item.dart';
 import 'package:sarisync/services/history_service.dart';
+import 'package:sarisync/widgets/image_helper.dart';
+import 'package:sarisync/widgets/message_prompts.dart';
 
 
 class LedgerAddPage extends StatefulWidget {
@@ -104,12 +106,22 @@ class _LedgerAddPageState extends State<LedgerAddPage> {
       _partialController.text = '';
       _receivedByController.text = item.received;
 
+
+
       // load image preview if existing
       if (item.imageUrl != null && item.imageUrl!.isNotEmpty) {
         imageUrl = item.imageUrl;
+
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          ImageHelper.prefetchImages(
+            context: context,
+            urls: [item.imageUrl!],
+          );
+        });
       }
     }
   }
+
   
   Future<void> addPartialPayment(LedgerItem item, double amountPaid) async {
     final newPartial = (item.partialPay ?? 0) + amountPaid;
@@ -130,6 +142,8 @@ class _LedgerAddPageState extends State<LedgerAddPage> {
     final partial = _paymentStatus == 'Partial'
         ? double.tryParse(_partialController.text) ?? 0.0
         : 0.0;
+
+    DialogHelper.showLoading(context,message: "Saving item. Please wait.");
 
     try {
       if (widget.item == null) {
@@ -205,8 +219,8 @@ class _LedgerAddPageState extends State<LedgerAddPage> {
         if (!mounted) return;
         Navigator.pop(context, "updated");
       }
-    } catch (e) {
-      print('Error saving ledger item: $e');
+    } finally {
+      DialogHelper.closeLoading(context);
     }
   }
 
@@ -226,21 +240,21 @@ class _LedgerAddPageState extends State<LedgerAddPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFEFEFE),
+      backgroundColor: const Color(0xFFF7FBFF),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFFEFEFE),
+        backgroundColor:  const Color(0xFF1565C0),
         elevation: 0,
         leading: IconButton(
           icon: const Icon(
             Icons.arrow_back_rounded, 
-            color: Colors.black,
+            color: Colors.white,
             size: 24),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           widget.item == null ? 'Add' : 'Edit',
           style: TextStyle(
-            color: Colors.black,
+            color: Colors.white,
             fontFamily: 'Inter',
             fontSize: 16,
             fontWeight: FontWeight.bold,
@@ -268,14 +282,17 @@ class _LedgerAddPageState extends State<LedgerAddPage> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: _selectedImage != null
-                            ? ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Image.file(
-                                  _selectedImage!,
-                                   fit: BoxFit.cover),
-                              )
-                            : const Icon(Icons.image_outlined,
-                                size: 64, color: Color(0xFFFEFEFE)),
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.file(_selectedImage!, fit: BoxFit.cover),
+                            )
+                          : imageUrl != null
+                              ? ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Image.network(imageUrl!, fit: BoxFit.cover),
+                                )
+                              : const Icon(Icons.image_outlined,
+                                  size: 64, color: Color(0xFFFEFEFE)),
                       ),
                       Positioned(
                         bottom: 4,

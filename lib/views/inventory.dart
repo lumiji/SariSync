@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 // firebase dependencies
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 // widgets & pages
 import 'package:sarisync/widgets/inv-category_card.dart';
@@ -39,7 +40,9 @@ class _InventoryPageState extends State<InventoryPage> {
   late String _selectedCategory;
   List<InventoryItem> inventoryList = [];
   List<InventoryItem> filteredInventory = [];
+  final Set<String> _prefetchedUrls = {};
   final TextEditingController _searchController = TextEditingController();
+  final uid = FirebaseAuth.instance.currentUser!.uid;
 
   @override
   void initState(){
@@ -61,19 +64,43 @@ class _InventoryPageState extends State<InventoryPage> {
     {'name': 'Others', 'imagePath': 'assets/images/OTHERS.png'},
   ];
 
-  Stream<List<InventoryItem>> getInventoryItems() {
-    return FirebaseFirestore.instance
+  Stream<List<InventoryItem>> getInventoryItems() async* {
+    final coll = FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
         .collection('inventory')
-        .orderBy('createdAt', descending: true)
-        .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => InventoryItem.fromMap(doc.data(), doc.id))
-            .toList());
+        .orderBy('createdAt', descending: true);
+
+    // reads cache data first
+    try {
+      final cacheSnapshot = await coll.get(const GetOptions(source: Source.cache));
+      yield cacheSnapshot.docs
+          .map((doc) => InventoryItem.fromMap(doc.data(), doc.id))
+          .toList();
+    } catch (_) {
+      // cache may be empty on first load
+      yield [];
+    }
+
+    // Then listen to live updates from the serve
+    yield* coll.snapshots().map(
+          (snapshot) => snapshot.docs
+              .map((doc) => InventoryItem.fromMap(doc.data(), doc.id))
+              .toList(),
+        );
   }
 
   void _onInventoryLoaded(List<InventoryItem> items) {
-    final urls = items.map((item) => item.imageUrl).toList();
-    ImageHelper.prefetchImages(context: context, urls: urls, limit: 8);
+    final urls = items
+      .map((item) => item.imageUrl)
+      .whereType<String>()
+      .where((url) => !_prefetchedUrls.contains(url))
+      .toList();
+
+    if (urls.isNotEmpty) {
+      ImageHelper.prefetchImages(context: context, urls: urls, limit: 8);
+      _prefetchedUrls.addAll(urls);
+    }
   }
 
 
@@ -82,9 +109,8 @@ class _InventoryPageState extends State<InventoryPage> {
     return Scaffold(
       body: Stack(
         children: [
-          Positioned.fill(
-            child:
-                Image.asset('assets/images/gradient.png', fit: BoxFit.cover),
+          Container(
+            color: Color(0xFFF7FBFF),
           ),
           SafeArea(
             child: StreamBuilder<List<InventoryItem>>(
@@ -154,7 +180,7 @@ class _InventoryPageState extends State<InventoryPage> {
                                           borderSide: const BorderSide(color: Color(0xFF327CD1)),
                                         ),
                                         filled: true,
-                                        fillColor: Colors.white,
+                                        fillColor: Colors.blueGrey.shade50,
                                       ),
                                     ),
                                   ),
@@ -162,6 +188,7 @@ class _InventoryPageState extends State<InventoryPage> {
                                 const SizedBox(width: 12),
                                 IconButton(
                                   icon: const Icon(Icons.settings_outlined),
+                                  color: Color(0xFF212121),
                                   iconSize: 24,
                                   onPressed: () {
                                      Navigator.push(
@@ -275,6 +302,8 @@ class _InventoryPageState extends State<InventoryPage> {
                                           context,
                                           () async {
                                             await FirebaseFirestore.instance
+                                                .collection('users')
+                                                .doc(uid)
                                                 .collection('inventory')
                                                 .doc(item.id)
                                                 .delete();

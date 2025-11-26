@@ -21,12 +21,12 @@ class InvCategoryCard extends StatelessWidget {
       width: 100,
       height: 100,
       decoration: BoxDecoration(
-        color: isSelected ? const Color(0xFF1877F2) : const Color(0xFFFEFEFE),
+        color: isSelected ? const Color(0xFFB4D7FF) : const Color(0xFFFEFEFE),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.15),
-            blurRadius: 10,
+            blurRadius: 4,
             offset: const Offset(0, 2),
           ),
         ],
@@ -34,18 +34,18 @@ class InvCategoryCard extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          splashColor: const Color(0xFF1877F2),
+          splashColor: const Color(0xFFB4D7FF),
           borderRadius: BorderRadius.circular(16),
           onTap: onTap, 
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               SizedBox(
-                width: 40,
-                height: 40,
+                width: 36,
+                height: 36,
                 child: Image.asset(imagePath, fit: BoxFit.contain),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 8),
               Text(
                 label,
                 textAlign: TextAlign.center,

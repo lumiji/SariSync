@@ -19,7 +19,7 @@ class InfoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: gradientColors,
@@ -34,15 +34,31 @@ class InfoCard extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(amount, style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w900)),
-              const SizedBox(height: 4),
-              Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              Text(subtitle, style: const TextStyle(fontSize: 14)),
+              Text(
+                title, 
+                style: const TextStyle(
+                  fontSize: 12, 
+                  fontWeight: FontWeight.bold, 
+                  color: Colors.white
+                ),
+              ),
+              const SizedBox(height: 0),
+              Text(amount, 
+              style: const TextStyle(
+                fontSize: 32, 
+                fontWeight: FontWeight.bold, 
+                color: Colors.white),
+              ),
+              Text(subtitle, 
+              style: const TextStyle(
+                fontSize: 12, 
+                color: Colors.white),
+              ),
             ],
           ),
           SizedBox(
-            width: 100,
-            height: 100,
+            width: 72,
+            height: 72,
             child: Image.asset(imagePath, fit: BoxFit.fill),
           ),
         ],
