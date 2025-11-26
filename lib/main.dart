@@ -30,7 +30,6 @@ Future<void> main() async {
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  
   bool hasPin = await LocalStorageService.getPin() != null;
 
   // Enable offline persistence
@@ -97,17 +96,32 @@ class _InitialNavigatorState extends State<InitialNavigator> {
 
       bool isLoggedIn = await LocalStorageService.isLoggedIn();
       String? pin = await LocalStorageService.getPin();
+      bool enablePin = await LocalStorageService.isPinEnabled();
 
       Widget nextScreen;
 
+      // if (!isLoggedIn) {
+      //   nextScreen = const SignInOptionsScreen();
+      // } else if (pin == null || pin.isEmpty) {
+      //   nextScreen = const SetPinScreen();
+      // } else {
+      //   nextScreen = const PinScreen();
+      // }
       if (!isLoggedIn) {
+        // not signed in yet -> sign in options
         nextScreen = const SignInOptionsScreen();
+      } else if (!enablePin) {
+        // PIN disabled in settings -> go straight to home
+        nextScreen = const HomePage();
       } else if (pin == null || pin.isEmpty) {
+        // no pin set yet -> force set pin screen
         nextScreen = const SetPinScreen();
       } else {
+        // pin exists and pin is enabled -> show pin entry
         nextScreen = const PinScreen();
       }
 
+      if (!mounted) return;
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => nextScreen),
@@ -117,8 +131,6 @@ class _InitialNavigatorState extends State<InitialNavigator> {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: CircularProgressIndicator()),
-    );
+    return const Scaffold(body: Center(child: CircularProgressIndicator()));
   }
 }

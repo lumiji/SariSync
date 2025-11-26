@@ -64,7 +64,8 @@ Future<void> processSale({
     customerID: customerID,
     name: paymentMethod == 'credit' ? name : null,
     paymentMethod: paymentMethod,
-    status: paymentStatus,     //status: 'credit',
+    //status: paymentStatus, 
+    status: 'credit',    //status: 'credit',
     createdAt: createdAt,
     
   );

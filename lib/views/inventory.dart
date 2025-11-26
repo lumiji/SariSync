@@ -13,6 +13,7 @@ import 'package:sarisync/widgets/inv-item_card.dart';
 import 'inventory_add_page.dart';
 import 'package:sarisync/widgets/image_helper.dart';
 import 'package:sarisync/widgets/message_prompts.dart';
+import 'settings.dart';
 
 // models & services
 import '../models/inventory_item.dart';
@@ -162,7 +163,12 @@ class _InventoryPageState extends State<InventoryPage> {
                                 IconButton(
                                   icon: const Icon(Icons.settings_outlined),
                                   iconSize: 24,
-                                  onPressed: () {},
+                                  onPressed: () {
+                                     Navigator.push(
+                                     context,
+                                     MaterialPageRoute(builder: (context) => SettingsPage()),
+                                    );
+                                  },
                                 ),
                               ],
                             ),

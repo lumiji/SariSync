@@ -5,6 +5,7 @@ import 'package:sarisync/widgets/message_prompts.dart';
 import 'ledger_add_page.dart';
 import '../models/ledger_item.dart';
 import '../widgets/led-item_card.dart';
+import 'settings.dart';
 
 class LedgerPage extends StatefulWidget {
   final void Function(String type, String customerID)? onSearchSelected;
@@ -103,7 +104,12 @@ class _LedgerPageState extends State<LedgerPage> {
                       IconButton(
                         icon: const Icon(Icons.settings_outlined),
                         iconSize: 24,
-                        onPressed: () {},
+                        onPressed: () {
+                           Navigator.push(
+                           context,
+                           MaterialPageRoute(builder: (context) => SettingsPage()),
+                          );
+                        },
                       ),
                     ],
                   ),

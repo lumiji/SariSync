@@ -12,6 +12,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:sarisync/views/inventory.dart';
 import 'package:sarisync/views/ledger.dart';
 import 'package:sarisync/views/history.dart';
+import 'settings.dart';
 
 // models, services, and widgets
 import 'package:sarisync/models/transaction_model.dart';
@@ -313,7 +314,12 @@ class HomeContent extends StatelessWidget {
                     const SizedBox(width: 12),
                     IconButton(
                       icon: const Icon(Icons.settings_outlined),
-                      onPressed: () {},
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => SettingsPage()),
+                        );
+                      },
                     ),
                   ],
                 ),

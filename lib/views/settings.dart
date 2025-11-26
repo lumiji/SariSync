@@ -1,0 +1,314 @@
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'change_pin_screen.dart';
+import 'package:sarisync/widgets/message_prompts.dart';
+import 'change_pin_screen.dart';
+
+
+class SettingsPage extends StatefulWidget {
+  const SettingsPage({super.key});
+
+  @override
+  State<SettingsPage> createState() => _SettingsPageState();
+}
+
+class _SettingsPageState extends State<SettingsPage> {
+  bool enablePin = true;
+  bool autoCleanup = false;
+  bool weekly = false;
+  bool monthly = false;
+  bool lowStocksAlert = false;
+  bool scheduledDataCleanup = false;
+
+  Future<void> loadSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      enablePin = prefs.getBool('enablePin') ?? true;
+      autoCleanup = prefs.getBool('autoCleanup') ?? false;
+      weekly = prefs.getBool('weekly') ?? false;
+      monthly = prefs.getBool('monthly') ?? false;
+      lowStocksAlert = prefs.getBool('lowStocksAlert') ?? false;
+      scheduledDataCleanup = prefs.getBool('scheduledDataCleanup') ?? false;
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    loadSettings(); // Call load settings here
+  }
+
+  void saveSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('enablePin', enablePin);
+    await prefs.setBool('autoCleanup', autoCleanup);
+    await prefs.setBool('weekly', weekly);
+    await prefs.setBool('monthly', monthly);
+    await prefs.setBool('lowStocksAlert', lowStocksAlert);
+    await prefs.setBool('scheduledDataCleanup', scheduledDataCleanup);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        titleSpacing: -2,
+        title: Text(
+          "Settings",
+          style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w600),
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+
+      body: ListView(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        children: [
+          // SECURITY
+          sectionHeader("Security"),
+
+          // Enable PIN
+          customSwitchTile(
+            title: "Enable PIN",
+            value: enablePin,
+            onChanged: (v) {
+              setState(() {
+                enablePin = v;
+              });
+              saveSettings();
+            },
+          ),
+
+          // Change PIN (depends ONLY on Enable PIN)
+          customListTile(
+            title: "Change PIN",
+            enabled: enablePin,
+            onTap: enablePin 
+               ? () {
+                 DialogHelper.confirmDelete(
+                    context,
+                    () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const ChangePinScreen()),
+                        );
+                      },
+                      title: "Do you want to change your PIN?",
+                      yesText: "Yes",
+                      noText: "No",
+                     );
+                    }
+                   : null,              
+          ),
+
+          const SizedBox(height: 16),
+
+          // DATA MANAGEMENT
+          sectionHeader("Data Management"),
+
+          // Enable Auto Cleanup
+          customSwitchTile(
+            title: "Enable Auto-Cleanup",
+            value: autoCleanup,
+            onChanged: (v) {
+              setState(() {
+                autoCleanup = v;
+                if (!v) {
+                  weekly = false;
+                  monthly = false;
+                }
+              });
+              saveSettings();
+            },
+          ),
+
+          // Set Cleanup Schedule (gray if disabled)
+          Padding(
+            padding: const EdgeInsets.only(left: 15, bottom: 4),
+            child: Text(
+              "Set Cleanup Schedule",
+              style: GoogleFonts.inter(
+                fontSize: 15,
+                color: autoCleanup ? Colors.black : Colors.grey,
+              ),
+            ),
+          ),
+
+          // WEEKLY
+          customCheckboxTile(
+            title: "Weekly (7 Days)",
+            value: weekly,
+            enabled: autoCleanup,
+            onChanged: autoCleanup
+                ? (v) {
+                    setState(() {
+                      weekly = v!;
+                      if (v) monthly = false;
+                    });
+                    saveSettings();
+                  }
+                : null,
+          ),
+
+          // MONTHLY
+          customCheckboxTile(
+            title: "Monthly (30 Days)",
+            value: monthly,
+            enabled: autoCleanup,
+            onChanged: autoCleanup
+                ? (v) {
+                    setState(() {
+                      monthly = v!;
+                      if (v) weekly = false;
+                    });
+                    saveSettings();
+                  }
+                : null,
+          ),
+
+          // CLEAR DATA (always enabled)
+          customListTile(title: "Clear Data", enabled: true, onTap: () {}),
+
+          const SizedBox(height: 16),
+
+          // NOTIFICATIONS (not affected by auto-cleanup)
+          sectionHeader("Notifications"),
+
+          customSwitchTile(
+            title: "Low Stocks Alert",
+            value: lowStocksAlert,
+            // onChanged: (v) {},
+            onChanged: (v) {
+              setState(() {
+                lowStocksAlert = v;
+              });
+              saveSettings();
+            },
+          ),
+          customSwitchTile(
+            title: "Scheduled Data Cleanup",
+            value: scheduledDataCleanup,
+            //onChanged: (_) {},
+            onChanged: (v) {
+              setState(() {
+                scheduledDataCleanup = v;
+              });
+              saveSettings();
+            },
+          ),
+
+          const SizedBox(height: 16),
+
+          // ABOUT / HELP
+          sectionHeader("About/Help"),
+
+          customListTile(title: "User Guide / How To Use", enabled: true),
+          customListTile(title: "Contact Support", enabled: true),
+          customListTile(title: "About SariSync", enabled: true),
+
+          const SizedBox(height: 20),
+
+          // LOGOUT
+          ListTile(
+            title: Text(
+              "Logout",
+              style: GoogleFonts.inter(
+                fontSize: 16,
+                color: const Color.fromARGB(255, 128, 14, 6),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            onTap: () {},
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget sectionHeader(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6, top: 10),
+      child: Text(
+        text,
+        style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700),
+      ),
+    );
+  }
+
+  // Custom SwitchListTile design
+  Widget customSwitchTile({
+    required String title,
+    required bool value,
+    required Function(bool) onChanged,
+  }) {
+    return Column(
+      children: [
+        SwitchListTile(
+          title: Text(title, style: GoogleFonts.inter(fontSize: 15)),
+          value: value,
+          onChanged: onChanged,
+          activeColor: Colors.white,
+          activeTrackColor: const Color(0xFFCFE9FF), // pastel blue
+          trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
+          thumbColor: WidgetStatePropertyAll(
+            value ? const Color(0xFF1976D2) : Colors.grey,
+          ),
+        ),
+        //Divider(thickness: 0.5, height: 0),
+      ],
+    );
+  }
+
+  // Custom CheckboxListTile
+  Widget customCheckboxTile({
+    required String title,
+    required bool value,
+    required bool enabled,
+    required Function(bool?)? onChanged,
+  }) {
+    return Column(
+      children: [
+        CheckboxListTile(
+          title: Text(
+            title,
+            style: GoogleFonts.inter(
+              fontSize: 15,
+              color: enabled ? Colors.black : Colors.grey,
+            ),
+          ),
+          value: value,
+          onChanged: enabled ? onChanged : null,
+          controlAffinity: ListTileControlAffinity.leading,
+        ),
+        // Divider(thickness: 0.5, height: 0),
+      ],
+    );
+  }
+
+  // Custom ListTile with grey when disabled
+  Widget customListTile({
+    required String title,
+    bool enabled = true,
+    Function()? onTap,
+  }) {
+    return Column(
+      children: [
+        ListTile(
+          title: Text(
+            title,
+            style: GoogleFonts.inter(
+              fontSize: 15,
+              color: enabled ? Colors.black : Colors.grey,
+            ),
+          ),
+          enabled: enabled,
+          onTap: onTap,
+        ),
+        //Divider(thickness: 0.5, height: 0),
+      ],
+    );
+  }
+}
