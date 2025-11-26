@@ -2,7 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'change_pin_screen.dart';
 import 'package:sarisync/widgets/message_prompts.dart';
-
+import 'change_pin_screen.dart';
+import 'package:sarisync/services/local_storage_service.dart';
+import 'home.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'auto_cleanup_executor.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -14,6 +19,7 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   bool enablePin = true;
   bool autoCleanup = false;
+  String? schedule;
   bool weekly = false;
   bool monthly = false;
   bool lowStocksAlert = false;
@@ -23,9 +29,6 @@ class _SettingsPageState extends State<SettingsPage> {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       enablePin = prefs.getBool('enablePin') ?? true;
-      autoCleanup = prefs.getBool('autoCleanup') ?? false;
-      weekly = prefs.getBool('weekly') ?? false;
-      monthly = prefs.getBool('monthly') ?? false;
       lowStocksAlert = prefs.getBool('lowStocksAlert') ?? false;
       scheduledDataCleanup = prefs.getBool('scheduledDataCleanup') ?? false;
     });
@@ -33,18 +36,44 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   void initState() {
+
     super.initState();
     loadSettings(); // Call load settings here
+    loadAutoCleanupSettings(); // added
+
+    LocalStorageService.getAutoCleanupEnabled().then((value) {
+      setState(() => autoCleanup = value);
+    });
+    LocalStorageService.getCleanupSchedule().then((value) {
+      setState(() => schedule = value);
+    });
   }
 
-  void saveSettings() async {
+  Future <void> saveSettings() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('enablePin', enablePin);
-    await prefs.setBool('autoCleanup', autoCleanup);
-    await prefs.setBool('weekly', weekly);
-    await prefs.setBool('monthly', monthly);
     await prefs.setBool('lowStocksAlert', lowStocksAlert);
     await prefs.setBool('scheduledDataCleanup', scheduledDataCleanup);
+  }
+
+  Future<void> loadAutoCleanupSettings() async {
+    bool enabled = await LocalStorageService.getAutoCleanupEnabled();
+    String? schedule = await LocalStorageService.getCleanupSchedule();
+
+    setState(() {
+      autoCleanup = enabled;
+      if (!enabled) {
+      // If cleanup disabled → do not activate checkboxes
+        weekly = false;
+        monthly = false;
+      } else if (schedule == "weekly") {
+        weekly = true;
+        monthly = false;
+      } else if (schedule == "monthly") {
+        weekly = false;
+        monthly = true;
+      }
+    });
   }
 
   @override
@@ -84,22 +113,24 @@ class _SettingsPageState extends State<SettingsPage> {
           customListTile(
             title: "Change PIN",
             enabled: enablePin,
-            onTap: enablePin 
-               ? () {
-                 DialogHelper.confirmDelete(
-                    context,
-                    () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const ChangePinScreen()),
+            onTap: enablePin
+                ? () {
+                    DialogHelper.confirmDelete(
+                      context,
+                      () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const ChangePinScreen(),
+                          ),
                         );
                       },
                       title: "Do you want to change your PIN?",
                       yesText: "Yes",
                       noText: "No",
-                     );
-                    }
-                   : null,              
+                    );
+                  }
+                : null,
           ),
 
           const SizedBox(height: 16),
@@ -111,7 +142,7 @@ class _SettingsPageState extends State<SettingsPage> {
           customSwitchTile(
             title: "Enable Auto-Cleanup",
             value: autoCleanup,
-            onChanged: (v) {
+            onChanged: (v) async {
               setState(() {
                 autoCleanup = v;
                 if (!v) {
@@ -119,7 +150,12 @@ class _SettingsPageState extends State<SettingsPage> {
                   monthly = false;
                 }
               });
-              saveSettings();
+               await LocalStorageService.saveAutoCleanupEnabled(autoCleanup);
+
+               if (!v) {
+                await LocalStorageService.saveCleanupSchedule(""); // reset schedule
+              }
+              saveSettings(); // saves other settings only
             },
           ),
 
@@ -140,13 +176,17 @@ class _SettingsPageState extends State<SettingsPage> {
             title: "Weekly (7 Days)",
             value: weekly,
             enabled: autoCleanup,
+            activeColor: Colors.black,
             onChanged: autoCleanup
-                ? (v) {
+                ? (v) async {
                     setState(() {
                       weekly = v!;
-                      if (v) monthly = false;
+                      if (v) monthly = false; //only one can be selected
                     });
-                    saveSettings();
+                    // await LocalStorageService.saveAutoCleanupEnabled(
+                    //   autoCleanup,
+                    // );
+                    await LocalStorageService.saveCleanupSchedule("weekly");        
                   }
                 : null,
           ),
@@ -156,23 +196,84 @@ class _SettingsPageState extends State<SettingsPage> {
             title: "Monthly (30 Days)",
             value: monthly,
             enabled: autoCleanup,
+            activeColor: Colors.black,
             onChanged: autoCleanup
-                ? (v) {
+                ? (v) async {
                     setState(() {
                       monthly = v!;
-                      if (v) weekly = false;
+                      if (v) weekly = false; //only one can be selected
                     });
-                    saveSettings();
-                  }
+                    // await LocalStorageService.saveAutoCleanupEnabled(
+                    //   autoCleanup,
+                    // );
+                      await LocalStorageService.saveCleanupSchedule("monthly");
+                    }
                 : null,
           ),
 
-          // CLEAR DATA (always enabled)
-          customListTile(title: "Clear Data", enabled: true, onTap: () {}),
+          // CLEAR DATA
+          customListTile(
+            title: "Clear Data",
+            enabled: true,
+            onTap: () {
+              DialogHelper.confirmDelete(
+                context,
+                () async {
+                  // Show loading first while clearing of data
+                  DialogHelper.showLoading(
+                    context,
+                    message: "Clearing all data. Please wait...",
+                  );
+
+                  // Clearing data from Firestore and Local
+                  final uid = FirebaseAuth.instance.currentUser!.uid;
+                  final userRef = FirebaseFirestore.instance
+                      .collection('users')
+                      .doc(uid);
+
+                  // Delet Firestore subcollections
+                  for (final collection in [
+                    'History',
+                    'inventory',
+                    'ledger',
+                    'receipts',
+                    'dailySales',
+                  ]) {
+                    final snapshot = await userRef.collection(collection).get();
+                    for (var doc in snapshot.docs) {
+                      await doc.reference.delete();
+                    }
+                  }
+
+                //Clear local storage through shared preferences
+                  //SharedPreferences prefs = await SharedPreferences.getInstance();
+                  //await prefs.clear();
+
+                  // After delete, show success popup
+                  DialogHelper.success(
+                    context,
+                    "All data has been cleared successfully!",
+                    onOk: () {
+                      // Navigate back to Home Page
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(builder: (_) => const HomePage()),
+                        (route) => false,
+                      );
+                    },
+                  );
+                },
+                title:
+                    "Clear All Data?\nAll saved records will be permanently removed.\nThis action cannot be undone.",
+                yesText: "Yes",
+                noText: "No",
+              );
+            },
+          ),
 
           const SizedBox(height: 16),
 
-          // NOTIFICATIONS (not affected by auto-cleanup)
+          // NOTIFICATIONS
           sectionHeader("Notifications"),
 
           customSwitchTile(
@@ -266,6 +367,7 @@ class _SettingsPageState extends State<SettingsPage> {
     required bool value,
     required bool enabled,
     required Function(bool?)? onChanged,
+    Color? activeColor,
   }) {
     return Column(
       children: [
@@ -280,6 +382,13 @@ class _SettingsPageState extends State<SettingsPage> {
           value: value,
           onChanged: enabled ? onChanged : null,
           controlAffinity: ListTileControlAffinity.leading,
+
+          // Checkbox color behavior
+          activeColor: enabled
+              ? (activeColor ??
+                    Colors.lightBlue) // color when enabled & checked
+              : Colors.grey, // gray if autoCleanup is disabled
+          checkColor: enabled ? Colors.white : Colors.black26,
         ),
         // Divider(thickness: 0.5, height: 0),
       ],

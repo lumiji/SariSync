@@ -1,6 +1,8 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LocalStorageService {
+
+  // For Pins/Password
   static Future<void> savePin(String pin) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString("user_pin", pin);
@@ -58,4 +60,43 @@ class LocalStorageService {
     await prefs.remove("account_identifier");
     await prefs.remove("account_type");
   }
+
+  // Auto-Cleanup
+  static const _autoCleanupEnabledKey = "autoCleanupEnabled";
+  static const _autoCleanupScheduleKey = "autoCleanupSchedule";
+
+  static Future<void> saveAutoCleanupEnabled(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_autoCleanupEnabledKey, value);
+  }
+
+  static Future<bool> getAutoCleanupEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_autoCleanupEnabledKey) ?? false;
+  }
+
+  static Future<void> saveCleanupSchedule(String schedule) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_autoCleanupScheduleKey, schedule);
+  }
+
+  static Future<String?> getCleanupSchedule() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_autoCleanupScheduleKey); // "weekly" or "monthly"
+  }
+
+  static const _lastCleanupDateKey = "lastCleanupDate";
+
+  static Future saveLastCleanupDate() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_lastCleanupDateKey, DateTime.now().toIso8601String());
+  }
+
+  static Future<DateTime?> getLastCleanupDate() async {
+    final prefs = await SharedPreferences.getInstance();
+    final value = prefs.getString(_lastCleanupDateKey);
+    return value != null ? DateTime.parse(value) : null;
+  }
+
+
 }

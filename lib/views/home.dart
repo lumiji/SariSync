@@ -26,11 +26,19 @@ import 'package:sarisync/widgets/home-category_card.dart';
 import 'package:sarisync/widgets/home-transaction_item.dart';
 import 'package:sarisync/models/inventory_item.dart';
 import 'package:sarisync/services/ledger_service.dart';
-
+import 'auto_cleanup_executor.dart';
 
 class HomePage extends StatefulWidget {
   final int initialIndex;
   const HomePage({Key? key, this.initialIndex = 0}) : super(key: key);
+
+
+//   @override
+//   void initState() {
+//   super.initState();
+//   AutoCleanupExecutor.run();
+// }
+
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -99,6 +107,15 @@ class _HomePageState extends State<HomePage> {
         });
       }
     });
+    // _pages = [
+    //   InventoryPage(
+    //     onSearchSelected: switchToPage,
+    //     selectedCategory: _selectedCategory ?? 'All'),
+    //   LedgerPage(),
+    //   HistoryPage(),
+    // ];
+
+    AutoCleanupExecutor.run(); //invisible cleaning, no UI needed
   }
 
   void _onItemTapped(int index) {

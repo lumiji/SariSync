@@ -74,7 +74,7 @@ class _ChangePinScreenState extends State<ChangePinScreen> {
             children: [
               const SizedBox(height: 80),
 
-                            // Logo and text
+             // Logo + tagline
               Align(
                 alignment: Alignment.topCenter,
                 child: Padding(
@@ -89,7 +89,7 @@ class _ChangePinScreenState extends State<ChangePinScreen> {
                         width: 80,
                         height: 80,
                       ),
-                      const SizedBox(width: 10),
+                      const SizedBox(width: 4),
                       Text(
                         "SariSync",
                         style: TextStyle( fontFamily: 'Inter',
@@ -103,7 +103,19 @@ class _ChangePinScreenState extends State<ChangePinScreen> {
                 ),
               ),
 
-              const SizedBox(height: 75),
+              const SizedBox(height: 20),
+
+              Text(
+                "Your Store. Smarter than ever.",
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 16,
+                  color: Colors.white.withOpacity(0.9),
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+
+              const SizedBox(height: 30),
 
               Text(
                 "Change PIN",
