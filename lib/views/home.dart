@@ -14,6 +14,7 @@ import 'package:sarisync/views/inventory.dart';
 import 'package:sarisync/views/ledger.dart';
 import 'package:sarisync/views/history.dart';
 import 'settings.dart';
+import 'package:sarisync/views/transaction_receipt.dart';
 
 // models, services, and widgets
 import 'package:sarisync/models/transaction_model.dart';
@@ -51,22 +52,21 @@ class _HomePageState extends State<HomePage> {
     todaySalesStream = salesService.todaySalesStream();
     totalDebtStream = debtService.totalDebtStream();
     _recentTransactions = FirebaseFirestore.instance
-    .collection('users')
-    .doc(uid)
-    .collection('receipts')
-    .orderBy('createdAt', descending: true)
-    .limit(5)
-    .snapshots()
-    .map((snapshot) => snapshot.docs.map((doc) {
-      final data = doc.data();
-      return TransactionItem.fromJson({
-        'totalAmount': data['totalAmount']?.toString() ?? '0.00',
-        'createdAt': data['createdAt'],
-        'transactionId': data['transactionId'] ?? '',
-        'paymentMethod': data['paymentMethod'] ?? '',
-      });
-    }).toList())
-    .asBroadcastStream();
+  .collection('users')
+  .doc(uid)
+  .collection('receipts')
+  .orderBy('createdAt', descending: true)
+  .limit(5)
+  .snapshots(includeMetadataChanges: true) 
+  .map((snapshot) => snapshot.docs.map((doc) {
+    final data = doc.data();
+    return TransactionItem.fromJson({
+      'totalAmount': data['totalAmount']?.toString() ?? '0.00',
+      'createdAt': data['createdAt'],
+      'transactionId': data['transactionId'] ?? '',
+      'paymentMethod': data['paymentMethod'] ?? '',
+    });
+  }).toList());
 
     // _pages = [
     //   InventoryPage(
@@ -318,7 +318,11 @@ class HomeContent extends StatelessWidget {
                           Builder(
                             builder: (context) {
                               final user = FirebaseAuth.instance.currentUser;
-                              final displayName = user?.displayName ?? 'User';
+                              final fullName = user?.displayName ?? 'User';
+                              final nameParts = fullName.split(' ');
+                              final displayName = nameParts.length >= 2
+                                  ? '${nameParts[0]} ${nameParts[1]}'
+                                  : fullName;
                               final hour = DateTime.now().hour;
                               final greeting = hour < 12
                                   ? 'Good morning'
@@ -326,18 +330,33 @@ class HomeContent extends StatelessWidget {
                                       ? 'Good afternoon'
                                       : 'Good evening';
                               return Expanded(
-                                child: FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  alignment: Alignment.centerLeft,
-                                  child: Text(
+                                
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
                                     '$greeting, $displayName!',
-                                    style: const TextStyle(
-                                      fontFamily: 'Inter',
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFF1565C0),
+                                      style: const TextStyle(
+                                        fontFamily: 'Inter',
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF1565C0),
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                  ),
+                                    Text(
+                                      'Welcome to SariSync!',
+                                        style: const TextStyle(
+                                          fontFamily: 'Inter',
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.normal,
+                                          color: Color(0xFF1565C0),
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                    )
+                                  ],
                                 ),
                               );
                             },
@@ -410,7 +429,7 @@ class HomeContent extends StatelessWidget {
                           color: Color(0xFF212121),
                           decoration: TextDecoration.underline,
                           decorationThickness: 0.8,
-                          decorationColor: Color(0xFF1565C0),
+                          decorationColor: Color(0xFF212121),
                         ),
                       ),
                     ),
@@ -492,22 +511,22 @@ class HomeContent extends StatelessWidget {
                       return Center(child: Text('Error loading transactions'));
                     }
                    
-                    final recentTransactions = snapshot.data!;
+                    final recentTransactions = snapshot.data ?? [];
 
-                    if(recentTransactions.isEmpty) {
-                        return Padding(
-                            padding: const EdgeInsets.only(top: 100, bottom: 100),
-                          child: Center(                       
-                            child: Text(
-                              'No recent transactions',
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 14,
-                                color:Color(0xFF757575),
-                              ),
+                    if (recentTransactions.isEmpty) {
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 100, bottom: 100),
+                        child: Center(
+                          child: Text(
+                            'No recent transactions',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 14,
+                              color: Color(0xFF757575),
                             ),
                           ),
-                        );
+                        ),
+                      );
                     }
 
                     return ListView.builder(
@@ -515,7 +534,18 @@ class HomeContent extends StatelessWidget {
                       physics: const NeverScrollableScrollPhysics(),
                       itemCount: recentTransactions.length,
                       itemBuilder: (context, index) {
-                        return TrnscItemCard(transaction: recentTransactions[index]);
+                        final transaction = recentTransactions[index];
+                        return GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => TransactionReceipt(transactionId: transaction.transactionId),
+                              ),
+                            );
+                          },
+                          child: TrnscItemCard(transaction: transaction),
+                        );
                       },
                     );
                   },

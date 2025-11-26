@@ -72,13 +72,16 @@ class TrnscItemCard extends StatelessWidget {
               Row(
                 children: [
 
-                  Text (
-                    '₱ ${transaction.totalAmount.toString()}',
-                    style: GoogleFonts.inter(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                    ),
+                 Text(
+                  '${transaction.paymentMethod.toLowerCase() == 'cash' ? '+ ' : ''}₱ ${transaction.totalAmount.toString()}',
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    color: transaction.paymentMethod.toLowerCase() == 'cash'
+                        ? Color(0xFF4CAF50)   // green for cash
+                        : Color(0xFFFF9800),  // orange for credit
+                    fontWeight: FontWeight.bold,
                   ),
+                ),
                   
                 ],
               ),              
@@ -92,6 +95,12 @@ class TrnscItemCard extends StatelessWidget {
               ),
             ],
           ),
+
+          Icon(
+            Icons.chevron_right_rounded,
+            color: Colors.grey,
+            size: 24,
+          )
         ],
       ),
     );
