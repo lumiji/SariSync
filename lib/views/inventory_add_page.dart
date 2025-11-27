@@ -3,6 +3,7 @@
 // flutter dependencies
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 
@@ -335,7 +336,7 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
       backgroundColor: const Color(0xFFF7FBFF),
       appBar: AppBar(
         backgroundColor: const Color(0xFF1565C0),
-        elevation: 0,
+        titleSpacing: -2,
         leading: IconButton(
           icon: const Icon(
             Icons.arrow_back_rounded, 
@@ -345,11 +346,10 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
         ),
         title: Text(
           widget.item == null ? 'Add' : 'Edit',
-          style: const TextStyle(
+          style: GoogleFonts.inter(
             color: Colors.white,
-            fontFamily: 'Inter',
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
           ),
         ),
       ),

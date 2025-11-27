@@ -48,6 +48,9 @@ dependencies:
   flutter_slidable: 4.0.1
   flutter_image_compress:
   cached_network_image: ^3.3.1
+  path_provider: ^2.0.15
+  printing: ^5.11.0
+  pdf: 3.11.3
 
 
   # The following adds the Cupertino Icons font to your application.

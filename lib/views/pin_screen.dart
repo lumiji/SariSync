@@ -105,12 +105,13 @@ class _PinScreenState extends State<PinScreen> {
             child: Container(color: Colors.black.withOpacity(0.1)),
           ),
 
+          //Content Layout
           Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const SizedBox(height: 80),
 
-              //Logo + tagline
+              //Logo and text
               Align(
                 alignment: Alignment.topCenter,
                 child: Padding(
@@ -123,7 +124,7 @@ class _PinScreenState extends State<PinScreen> {
                         width: 80,
                         height: 80,
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: 10),
                       Text(
                         "SariSync",
                         style: GoogleFonts.inter(
@@ -217,7 +218,7 @@ class _PinScreenState extends State<PinScreen> {
                   child: Text(
                     _errorMessage,
                     style: GoogleFonts.inter(
-                      color: const Color.fromARGB(255, 209, 22, 22),
+                      color: const Color.fromARGB(255, 114, 3, 3),
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
                     ),

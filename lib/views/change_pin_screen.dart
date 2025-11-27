@@ -70,12 +70,13 @@ class _ChangePinScreenState extends State<ChangePinScreen> {
             child: Container(color: Colors.black.withOpacity(0.1)),
           ),
 
+          // Content Layout
           Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const SizedBox(height: 80),
 
-             // Logo + tagline
+             // Logo and text
               Align(
                 alignment: Alignment.topCenter,
                 child: Padding(
@@ -90,7 +91,7 @@ class _ChangePinScreenState extends State<ChangePinScreen> {
                         width: 80,
                         height: 80,
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: 10),
                       Text(
                         "SariSync",
                         style: GoogleFonts.inter(
@@ -106,6 +107,7 @@ class _ChangePinScreenState extends State<ChangePinScreen> {
 
               const SizedBox(height: 20),
 
+              //Tagline
               Text(
                 "Your Store. Smarter than ever.",
                 style: GoogleFonts.inter(
@@ -117,6 +119,7 @@ class _ChangePinScreenState extends State<ChangePinScreen> {
 
               const SizedBox(height: 30),
 
+              // Change PIN text
               Text(
                 "Change PIN",
                 style: GoogleFonts.inter(
@@ -126,9 +129,9 @@ class _ChangePinScreenState extends State<ChangePinScreen> {
                 ),
               ),
 
-              const SizedBox(height: 40),
+              const SizedBox(height: 25),
 
-              // PIN indicator
+              // PIN circles
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(4, (index) {
@@ -152,7 +155,7 @@ class _ChangePinScreenState extends State<ChangePinScreen> {
                   child: Text(
                     _errorMessage,
                     style: GoogleFonts.inter(
-                      color: Color.fromARGB(255, 209, 22, 22),
+                      color: Color.fromARGB(255, 114, 3, 3),
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
                     ),

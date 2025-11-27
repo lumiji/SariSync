@@ -108,14 +108,22 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+        backgroundColor: const Color(0xFFF7FBFF), 
       appBar: AppBar(
+        backgroundColor: const Color(0xFF1565C0),
         titleSpacing: -2,
         title: Text(
           "Settings",
-          style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w600),
+          style: GoogleFonts.inter(
+            fontSize: 20,
+            color: Colors.white, 
+            fontWeight: FontWeight.w600),
         ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(
+            Icons.arrow_back_rounded,
+            color: Colors.white,
+            size: 24 ),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -376,7 +384,7 @@ class _SettingsPageState extends State<SettingsPage> {
               "Logout",
               style: GoogleFonts.inter(
                 fontSize: 16,
-                color: const Color.fromARGB(255, 128, 14, 6),
+                color: const Color.fromARGB(255, 0, 0, 0),
                 fontWeight: FontWeight.w600,
               ),
             ),

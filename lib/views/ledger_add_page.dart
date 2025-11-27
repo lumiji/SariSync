@@ -243,7 +243,7 @@ class _LedgerAddPageState extends State<LedgerAddPage> {
       backgroundColor: const Color(0xFFF7FBFF),
       appBar: AppBar(
         backgroundColor:  const Color(0xFF1565C0),
-        elevation: 0,
+        titleSpacing: -2,
         leading: IconButton(
           icon: const Icon(
             Icons.arrow_back_rounded, 
@@ -253,11 +253,10 @@ class _LedgerAddPageState extends State<LedgerAddPage> {
         ),
         title: Text(
           widget.item == null ? 'Add' : 'Edit',
-          style: TextStyle(
+          style: GoogleFonts.inter(
             color: Colors.white,
-            fontFamily: 'Inter',
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
           ),
         ),
       ),

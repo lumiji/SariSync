@@ -236,7 +236,7 @@ class _SetPinScreenState extends State<SetPinScreen> {
                   child: Text(
                     _errorMessage,
                     style: GoogleFonts.inter(
-                      color: const Color.fromARGB(255, 209, 22, 22),
+                      color: const Color.fromARGB(255, 114, 3, 3),
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
                     ),
