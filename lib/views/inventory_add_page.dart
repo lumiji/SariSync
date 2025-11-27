@@ -34,6 +34,7 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
   final _formKey = GlobalKey<FormState>();
   final _inventoryService = InventoryService();
   bool _isOnline = true;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
 
   @override
   void initState() {
@@ -73,7 +74,7 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
     });
     
     // Listen for connectivity changes
-    Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> result) {
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> result) {
       if (mounted) {
         setState(() {
           _isOnline = result.first != ConnectivityResult.none;
@@ -194,6 +195,236 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
     }
   }
 
+  // Check for duplicate barcode (works both online and offline)
+  Future<bool> _checkDuplicateBarcode(String barcode, String name) async {
+    if (barcode.isEmpty) return false;
+    
+    final uid = FirebaseAuth.instance.currentUser!.uid;
+    final inventoryRef = FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('inventory');
+
+    try {
+      QuerySnapshot querySnapshot;
+      
+      if (_isOnline) {
+        // Online: Check server
+        querySnapshot = await inventoryRef
+            .where('barcode', isEqualTo: barcode)
+            .limit(1)
+            .get();
+      } else {
+        // Offline: Check cache only
+        querySnapshot = await inventoryRef
+            .where('barcode', isEqualTo: barcode)
+            .limit(1)
+            .get(const GetOptions(source: Source.cache));
+      }
+
+      if (querySnapshot.docs.isNotEmpty) {
+        await DialogHelper.warning(
+          context,
+          '$name is already in your inventory.',
+        );
+        return true; // Duplicate found
+      }
+      
+      return false; // No duplicate
+    } catch (e) {
+      print('Error checking for duplicates: $e');
+      // If cache is empty or error, allow the save
+      return false;
+    }
+  }
+
+  // OFFLINE SAVE - Fast and simple
+  Future<void> _saveOffline(
+    String name,
+    int quantity,
+    double price,
+    String category,
+    String barcode,
+    String unit,
+    String info,
+    String expiration,
+  ) async {
+    final uid = FirebaseAuth.instance.currentUser!.uid;
+
+    try {
+      if (widget.item == null) {
+        // ADD MODE - Offline
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
+            .collection('inventory')
+            .add({
+          'name': name,
+          'quantity': quantity,
+          'price': price,
+          'category': category,
+          'barcode': barcode,
+          'unit': unit,
+          'add_info': info,
+          'expiration': expiration,
+          'imageUrl': null, // No image offline
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      } else {
+        // EDIT MODE - Offline
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
+            .collection('inventory')
+            .doc(widget.item!.id)
+            .update({
+          'name': name,
+          'quantity': quantity,
+          'price': price,
+          'category': category,
+          'barcode': barcode,
+          'unit': unit,
+          'add_info': info,
+          'expiration': expiration,
+          // Keep existing imageUrl when editing offline
+          if (imageUrl != null) 'imageUrl': imageUrl,
+        });
+      }
+
+      // Success
+      if (mounted) {
+        Navigator.of(context).pop(); // Close loading
+        await DialogHelper.success(
+          context,
+          'Item saved offline. Will sync when connected.',
+        );
+        Navigator.of(context).pop(widget.item == null ? "added" : "updated");
+      }
+    } catch (e) {
+      print('Offline save error: $e');
+      if (mounted) {
+        Navigator.of(context).pop(); // Close loading
+        await DialogHelper.warning(
+          context,
+          'Failed to save offline. Please try again.',
+        );
+      }
+    }
+  }
+
+  // ONLINE SAVE - Full featured with images and history
+  Future<void> _saveOnline(
+    String name,
+    int quantity,
+    double price,
+    String category,
+    String barcode,
+    String unit,
+    String info,
+    String expiration,
+  ) async {
+    String? uploadedImageUrl = imageUrl;
+
+    try {
+      // Upload image if new image selected
+      if (_selectedImage != null) {
+        try {
+          uploadedImageUrl = await _inventoryService
+              .uploadImage(_selectedImage!)
+              .timeout(
+                const Duration(seconds: 30),
+                onTimeout: () {
+                  print('Image upload timed out');
+                  return null;
+                },
+              );
+        } catch (e) {
+          print('Image upload failed: $e');
+          uploadedImageUrl = null;
+        }
+      }
+
+      if (widget.item == null) {
+        // ADD MODE - Online
+        await _inventoryService.addItem(
+          name: name,
+          quantity: quantity,
+          price: price,
+          category: category,
+          barcode: barcode,
+          unit: unit,
+          info: info,
+          expirationDate: expiration,
+          imageUrl: uploadedImageUrl,
+        );
+
+        // Run history checks
+        try {
+          await Future.wait([
+            HistoryService.checkStockEvent(
+              itemName: name,
+              quantity: quantity,
+            ),
+            HistoryService.checkExpiryEvent(
+              itemName: name,
+              expirationDate: expiration,
+            ),
+          ]).timeout(const Duration(seconds: 5));
+        } catch (e) {
+          print('History service error: $e');
+        }
+      } else {
+        // EDIT MODE - Online
+        final updatedItem = InventoryItem(
+          id: widget.item!.id,
+          name: name,
+          quantity: quantity,
+          price: price,
+          category: category,
+          barcode: barcode,
+          unit: unit,
+          add_info: info,
+          expiration: expiration,
+          imageUrl: uploadedImageUrl,
+          createdAt: widget.item!.createdAt,
+        );
+
+        await _inventoryService.updateItem(updatedItem);
+
+        // Run history checks
+        try {
+          await Future.wait([
+            HistoryService.checkStockEvent(
+              itemName: name,
+              quantity: quantity,
+            ),
+            HistoryService.checkExpiryEvent(
+              itemName: name,
+              expirationDate: expiration,
+            ),
+          ]).timeout(const Duration(seconds: 5));
+        } catch (e) {
+          print('History service error: $e');
+        }
+      }
+
+      // Success
+      if (mounted) {
+        Navigator.of(context).pop(); // Close loading
+        Navigator.of(context).pop(widget.item == null ? "added" : "updated");
+      }
+    } catch (e) {
+      print('Online save error: $e');
+      if (mounted) {
+        Navigator.of(context).pop(); // Close loading
+        await DialogHelper.warning(
+          context,
+          'Failed to save item. Please try again.',
+        );
+      }
+    }
+  }
+
   Future<void> _saveItem() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -206,39 +437,24 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
     final info = _infoController.text.trim();
     final expiration = _expirationController.text.trim();
 
-    String? uploadedImageUrl = imageUrl;
+    // Double-check connectivity
+    final connectivityCheck = await Connectivity().checkConnectivity();
+    final isCurrentlyOnline = connectivityCheck.first != ConnectivityResult.none;
+    
+    if (isCurrentlyOnline != _isOnline) {
+      setState(() {
+        _isOnline = isCurrentlyOnline;
+      });
+    }
 
-    // DUPLICATE BARCODE CHECK (BEFORE LOADING)
-    if (widget.item == null && barcode.isNotEmpty) {
-      final uid = FirebaseAuth.instance.currentUser!.uid;
-
-      try {
-        // Only check online if connected
-        if (_isOnline) {
-          final querySnapshot = await FirebaseFirestore.instance
-              .collection('users')
-              .doc(uid)
-              .collection('inventory')
-              .where('barcode', isEqualTo: barcode)
-              .limit(1)
-              .get();
-
-          if (querySnapshot.docs.isNotEmpty) {
-            await DialogHelper.warning(
-              context,
-              '$name is already in your inventory.',
-            );
-            return;
-          }
-        }
-      } catch (e) {
-        // If offline or error, skip duplicate check
-        print('Could not check for duplicates: $e');
-      }
+    // Check for duplicate barcode (works both online and offline)
+    if (widget.item == null) {
+      final isDuplicate = await _checkDuplicateBarcode(barcode, name);
+      if (isDuplicate) return;
     }
 
     // Warn about offline image upload
-    if (!_isOnline && _selectedImage != null) {
+    if (!isCurrentlyOnline && _selectedImage != null) {
       final proceed = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
@@ -262,136 +478,42 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
       if (proceed != true) return;
     }
 
-    // SHOW LOADING
+    // Show loading
     DialogHelper.showLoading(
-      context, 
-      message: _isOnline ? "Saving item. Please wait..." : "Saving offline..."
+      context,
+      message: isCurrentlyOnline ? "Saving item..." : "Saving offline...",
     );
 
-    bool success = false;
-    String resultMessage = "";
-
-    try {
-      // Upload image ONLY if online and new image selected
-      if (_isOnline && _selectedImage != null) {
-        try {
-          // Set timeout for image upload to prevent hanging
-          uploadedImageUrl = await _inventoryService.uploadImage(_selectedImage!)
-              .timeout(
-                const Duration(seconds: 30),
-                onTimeout: () {
-                  print('Image upload timed out');
-                  return null;
-                },
-              );
-        } catch (e) {
-          print('Image upload failed: $e');
-          // Continue without image
-          uploadedImageUrl = null;
-        }
-      } else if (!_isOnline && _selectedImage != null) {
-        // Don't try to upload offline, keep existing imageUrl or set to null
-        uploadedImageUrl = imageUrl; // Keep existing if editing, null if adding
-      }
-
-      // ADD MODE
-      if (widget.item == null) {
-        // Save to Firestore (will cache offline and sync later)
-        await _inventoryService.addItem(
-          name: name,
-          quantity: quantity,
-          price: price,
-          category: category,
-          barcode: barcode,
-          unit: unit,
-          info: info,
-          expirationDate: expiration,
-          imageUrl: uploadedImageUrl,
-        );
-
-        // Only run history checks if online
-        if (_isOnline) {
-          await Future.wait([
-            HistoryService.checkStockEvent(
-              itemName: name,
-              quantity: quantity,
-            ),
-            HistoryService.checkExpiryEvent(
-              itemName: name,
-              expirationDate: expiration,
-            ),
-          ]);
-        }
-
-        success = true;
-        resultMessage = "added";
-      } else {
-        // EDIT MODE
-        final updatedItem = InventoryItem(
-          id: widget.item!.id,
-          name: name,
-          quantity: quantity,
-          price: price,
-          category: category,
-          barcode: barcode,
-          unit: unit,
-          add_info: info,
-          expiration: expiration,
-          imageUrl: uploadedImageUrl,
-          createdAt: widget.item!.createdAt,
-        );
-
-        await _inventoryService.updateItem(updatedItem);
-
-        // Only run history checks if online
-        if (_isOnline) {
-          await Future.wait([
-            HistoryService.checkStockEvent(
-              itemName: name,
-              quantity: quantity,
-            ),
-            HistoryService.checkExpiryEvent(
-              itemName: name,
-              expirationDate: expiration,
-            ),
-          ]);
-        }
-
-        success = true;
-        resultMessage = "updated";
-      }
-    } catch (e) {
-      print('Error saving item: $e');
-      
-      // Show appropriate error message
-      DialogHelper.closeLoading(context);
-      
-      await DialogHelper.warning(
-        context,
-        _isOnline 
-            ? 'Failed to save item. Please try again.'
-            : 'Item saved offline. Will sync when connected.',
+    // Route to appropriate save method
+    if (isCurrentlyOnline) {
+      await _saveOnline(
+        name,
+        quantity,
+        price,
+        category,
+        barcode,
+        unit,
+        info,
+        expiration,
       );
-      
-      // Still close the form if offline save succeeded
-      if (!_isOnline) {
-        Navigator.pop(context, widget.item == null ? "added" : "updated");
-      }
-      return;
-    }
-
-    // Close loading dialog
-    DialogHelper.closeLoading(context);
-
-    // Navigate back with result
-    if (success) {
-      Navigator.pop(context, resultMessage);
+    } else {
+      await _saveOffline(
+        name,
+        quantity,
+        price,
+        category,
+        barcode,
+        unit,
+        info,
+        expiration,
+      );
     }
   }
 
   // for cleaning up controllers
   @override
   void dispose() {
+    _connectivitySubscription?.cancel();
     _nameController.dispose();
     _priceController.dispose();
     _quantityController.dispose();

@@ -7,6 +7,7 @@ import 'package:sarisync/views/new_sales.dart';
 import 'package:sarisync/widgets/bottom_nav_item.dart';
 import 'package:async/async.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'dart:async';
 
 //firebase dependencies
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -32,14 +33,6 @@ class HomePage extends StatefulWidget {
   final int initialIndex;
   const HomePage({Key? key, this.initialIndex = 0}) : super(key: key);
 
-
-//   @override
-//   void initState() {
-//   super.initState();
-//   AutoCleanupExecutor.run();
-// }
-
-
   @override
   State<HomePage> createState() => _HomePageState();
 }
@@ -54,6 +47,7 @@ class _HomePageState extends State<HomePage> {
   String? uid;
   String? _selectedCategory;
   bool _isOnline = true;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
       
   @override
   void initState() {
@@ -66,12 +60,14 @@ class _HomePageState extends State<HomePage> {
     
     if (uid == null) {
       // Handle case where user is not authenticated
-      // This shouldn't happen normally, but prevents crashes
       return;
     }
     
-    // Check initial connectivity
+    // Check initial connectivity and set up listener
     _checkConnectivity();
+    
+    // Run auto cleanup
+    AutoCleanupExecutor.run();
     
     todaySalesStream = salesService.todaySalesStream();
     totalDebtStream = debtService.totalDebtStream();
@@ -100,22 +96,19 @@ class _HomePageState extends State<HomePage> {
     });
     
     // Listen for connectivity changes
-    Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> result) {
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> result) {
       if (mounted) {
         setState(() {
           _isOnline = result.first != ConnectivityResult.none;
         });
       }
     });
-    // _pages = [
-    //   InventoryPage(
-    //     onSearchSelected: switchToPage,
-    //     selectedCategory: _selectedCategory ?? 'All'),
-    //   LedgerPage(),
-    //   HistoryPage(),
-    // ];
+  }
 
-    AutoCleanupExecutor.run(); //invisible cleaning, no UI needed
+  @override
+  void dispose() {
+    _connectivitySubscription?.cancel();
+    super.dispose();
   }
 
   void _onItemTapped(int index) {

@@ -67,7 +67,7 @@ class DialogHelper {
 
 
 // Success Popup
-  static void success(
+  static success(
     BuildContext context,
     String message, {
     VoidCallback? onOk,
