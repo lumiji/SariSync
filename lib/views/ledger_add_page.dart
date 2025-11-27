@@ -1,13 +1,15 @@
-// This is the "ADD" form for the ledger page
+// This is the "ADD" form for the ledger page (Offline-friendly version)
 
 //flutter dependencies
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 //firebase dependencies
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 //models, widgets & services
 import '../services/ledger_service.dart';
@@ -30,8 +32,67 @@ class LedgerAddPage extends StatefulWidget {
 class _LedgerAddPageState extends State<LedgerAddPage> {
   final _formKey = GlobalKey<FormState>();
   final _ledgerService = LedgerService();
+  bool _isOnline = true;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
 
- // for picking image
+  // Controllers
+  final _nameController = TextEditingController();
+  final _contactController = TextEditingController();
+  final _creditController = TextEditingController();
+  final _partialController = TextEditingController();
+  final _receivedByController = TextEditingController();
+
+  // State
+  File? _selectedImage;
+  String? imageUrl;
+  String _paymentStatus = 'Unpaid';
+ 
+  
+  @override
+  void initState() {
+    super.initState();
+    _checkConnectivity();
+
+    if (widget.item != null) {
+      final item = widget.item!;
+      _nameController.text = item.name;
+      _contactController.text = item.contact.toString();
+      _paymentStatus = item.payStatus;
+      _creditController.text = item.credit.toString();
+      _partialController.text = '';
+      _receivedByController.text = item.received;
+
+      // load image preview if existing
+      if (item.imageUrl != null && item.imageUrl!.isNotEmpty) {
+        imageUrl = item.imageUrl;
+
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          ImageHelper.prefetchImages(
+            context: context,
+            urls: [item.imageUrl!],
+          );
+        });
+      }
+    }
+  }
+
+  Future<void> _checkConnectivity() async {
+    final connectivityResult = await Connectivity().checkConnectivity();
+    setState(() {
+      _isOnline = connectivityResult.first != ConnectivityResult.none;
+    });
+    
+    // Listen for connectivity changes
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> result) {
+      if (mounted) {
+        setState(() {
+          _isOnline = result.first != ConnectivityResult.none;
+        });
+      }
+    });
+  }
+
+  // for picking image
   Future<void> _pickImage() async {
     showModalBottomSheet(
       context: context,
@@ -79,106 +140,133 @@ class _LedgerAddPageState extends State<LedgerAddPage> {
     );
   }
 
-  // Controllers
-  final _nameController = TextEditingController();
-  final _contactController = TextEditingController();
-  final _creditController = TextEditingController();
-  final _partialController = TextEditingController();
-  final _receivedByController = TextEditingController();
-
-  // State
-  File? _selectedImage;
-  String? imageUrl;
-  String _paymentStatus = 'Unpaid';
- 
-  
-  @override
-  void initState() {
-    super.initState();
-
-    if (widget.item != null) {
-      final item = widget.item!;
-      _nameController.text = item.name;
-      _contactController.text = item.contact.toString();
-      _paymentStatus = item.payStatus;
-      _creditController.text = item.credit.toString();
-      _partialController.text = '';
-      _receivedByController.text = item.received;
-
-
-
-      // load image preview if existing
-      if (item.imageUrl != null && item.imageUrl!.isNotEmpty) {
-        imageUrl = item.imageUrl;
-
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          ImageHelper.prefetchImages(
-            context: context,
-            urls: [item.imageUrl!],
-          );
-        });
-      }
-    }
-  }
-
-  
-  Future<void> addPartialPayment(LedgerItem item, double amountPaid) async {
-    final newPartial = (item.partialPay ?? 0) + amountPaid;
-
-    await _ledgerService.updateLedgerItem(item.id!, {
-      'partialPay': newPartial,
-      'updatedAt': FieldValue.serverTimestamp(),
-      'payStatus': newPartial >= item.credit ? 'Paid' : 'Partial',
-    });
-  }
-
-
-  // Save ledger item
-  void _saveLedger() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    final credit = double.tryParse(_creditController.text) ?? 0.0;
-    final partial = _paymentStatus == 'Partial'
-        ? double.tryParse(_partialController.text) ?? 0.0
-        : 0.0;
-
-    DialogHelper.showLoading(context,message: "Saving item. Please wait.");
+  // OFFLINE SAVE - Fast and simple
+  Future<void> _saveOffline(
+    String name,
+    String contact,
+    String payStatus,
+    double credit,
+    double partial,
+    String received,
+  ) async {
+    final uid = FirebaseAuth.instance.currentUser!.uid;
 
     try {
       if (widget.item == null) {
-        // ADD NEW CUSTOMER
+        // ADD MODE - Offline
+        final customerID = await _ledgerService.generateCustomerId();
 
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
+            .collection('ledger')
+            .add({
+          'name': name,
+          'customerID': customerID,
+          'contact': contact,
+          'payStatus': payStatus,
+          'credit': credit,
+          'partialPay': partial,
+          'received': received,
+          'imageUrl': null, // No image offline
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      } else {
+        // EDIT MODE - Offline
+        final docId = widget.item!.id;
+        final enteredPartial = partial;
+        double newPartial = (widget.item!.partialPay ?? 0) + enteredPartial;
+        
+        String updatedStatus = payStatus;
+        if (payStatus == 'Paid') {
+          newPartial = credit;
+        } else if (payStatus == 'Unpaid') {
+          newPartial = 0.0;
+        }
+
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
+            .collection('ledger')
+            .doc(docId)
+            .update({
+          'name': name,
+          'customerID': widget.item!.customerID,
+          'contact': contact,
+          'payStatus': updatedStatus,
+          'credit': credit,
+          'partialPay': newPartial,
+          'received': received,
+          'updatedAt': FieldValue.serverTimestamp(),
+          // Keep existing imageUrl when editing offline
+          if (imageUrl != null) 'imageUrl': imageUrl,
+        });
+      }
+
+      // Success
+      if (!mounted) return;
+      DialogHelper.closeLoading(context);
+      await DialogHelper.success(
+        context,
+        'Customer saved offline. Will sync when connected.',
+      );
+      if (!mounted) return;
+      Navigator.of(context).pop(widget.item == null ? "added" : "updated");
+    } catch (e) {
+      print('Offline save error: $e');
+      if (!mounted) return;
+      DialogHelper.closeLoading(context);
+      await DialogHelper.warning(
+        context,
+        'Failed to save offline. Please try again.',
+      );
+    }
+  }
+
+  // ONLINE SAVE - Full featured with images and history
+  Future<void> _saveOnline(
+    String name,
+    String contact,
+    String payStatus,
+    double credit,
+    double partial,
+    String received,
+  ) async {
+    try {
+      if (widget.item == null) {
+        // ADD NEW CUSTOMER
         final customerID = await _ledgerService.generateCustomerId();
 
         await _ledgerService.addLedgerItem(
-          name: _nameController.text.trim(),
+          name: name,
           customerID: customerID,
-          contact: _contactController.text.trim(),
-          payStatus: _paymentStatus,
+          contact: contact,
+          payStatus: payStatus,
           credit: credit,
           partialPay: partial,
-          received: _receivedByController.text.trim(),
+          received: received,
           imageFile: _selectedImage,
         );
 
         if (!mounted) return;
+        DialogHelper.closeLoading(context);
         Navigator.pop(context, "added");
       } else {
         // UPDATE EXISTING CUSTOMER
         final docId = widget.item!.id;
-        final enteredPartial = double.tryParse(_partialController.text) ?? 0.0;
+        final enteredPartial = partial;
         double newPartial = (widget.item!.partialPay ?? 0) + enteredPartial;
         final updatedCredit = credit;
 
         double remaining = (updatedCredit - newPartial).clamp(0.0, updatedCredit);
         
-        String updatedStatus = _paymentStatus;
+        String updatedStatus = payStatus;
 
-        if (_paymentStatus == 'Paid') {
+        if (payStatus == 'Paid') {
           updatedStatus = 'Paid';
           newPartial = credit;
           remaining = 0.0;
-        } else if (_paymentStatus == 'Partial') {
+        } else if (payStatus == 'Partial') {
           updatedStatus = 'Partial';
         } else {
           updatedStatus = 'Unpaid';
@@ -187,19 +275,18 @@ class _LedgerAddPageState extends State<LedgerAddPage> {
         }
 
         final data = {
-          'name': _nameController.text.trim(),
+          'name': name,
           'customerID': widget.item!.customerID, 
-          'contact': _contactController.text.trim(),
-          'payStatus':updatedStatus,
+          'contact': contact,
+          'payStatus': updatedStatus,
           'credit': updatedCredit,
           'partialPay': newPartial,
-          'received': _receivedByController.text.trim(),
+          'received': received,
           'updatedAt': FieldValue.serverTimestamp(),
         };
 
         await _ledgerService.updateLedgerItem(docId, data);
 
-     
         if (_selectedImage != null) {
           final url = await _ledgerService.uploadImage(_selectedImage!);
           if (url != null) {
@@ -210,24 +297,90 @@ class _LedgerAddPageState extends State<LedgerAddPage> {
         String transactionId = DateTime.now().millisecondsSinceEpoch.toString();
         await HistoryService.recordLedgerCreditEvent(
           amount: updatedCredit,
-          customerName:  _nameController.text.trim(),
-          paymentStatus: updatedStatus, // "Unpaid" / "Partial" / "Paid"
+          customerName: name,
+          paymentStatus: updatedStatus,
           transactionId: transactionId,
         );
         
         if (!mounted) return;
+        DialogHelper.closeLoading(context);
         Navigator.pop(context, "updated");
       }
-    } finally {
+    } catch (e) {
+      print('Online save error: $e');
+      if (!mounted) return;
       DialogHelper.closeLoading(context);
+      await DialogHelper.warning(
+        context,
+        'Failed to save customer. Please try again.',
+      );
     }
   }
 
+  void _saveLedger() async {
+    if (!_formKey.currentState!.validate()) return;
 
+    final name = _nameController.text.trim();
+    final contact = _contactController.text.trim();
+    final credit = double.tryParse(_creditController.text) ?? 0.0;
+    final partial = _paymentStatus == 'Partial'
+        ? double.tryParse(_partialController.text) ?? 0.0
+        : 0.0;
+    final received = _receivedByController.text.trim();
 
-// for cleaning up controllers
+    // Double-check connectivity
+    final connectivityCheck = await Connectivity().checkConnectivity();
+    final isCurrentlyOnline = connectivityCheck.first != ConnectivityResult.none;
+    
+    if (isCurrentlyOnline != _isOnline) {
+      setState(() {
+        _isOnline = isCurrentlyOnline;
+      });
+    }
+
+    // Warn about offline image upload
+    if (!isCurrentlyOnline && _selectedImage != null) {
+      final proceed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Offline Mode'),
+          content: const Text(
+            'You are offline. The customer will be saved without the image. You can edit it later to add the image when online.'
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Save Without Image'),
+            ),
+          ],
+        ),
+      );
+      
+      if (proceed != true) return;
+    }
+
+    // Show loading
+    DialogHelper.showLoading(
+      context,
+      message: isCurrentlyOnline ? "Saving customer..." : "Saving offline...",
+    );
+
+    // Route to appropriate save method
+    if (isCurrentlyOnline) {
+      await _saveOnline(name, contact, _paymentStatus, credit, partial, received);
+    } else {
+      await _saveOffline(name, contact, _paymentStatus, credit, partial, received);
+    }
+  }
+
+  // for cleaning up controllers
   @override
   void dispose() {
+    _connectivitySubscription?.cancel();
     _nameController.dispose();
     _contactController.dispose();
     _creditController.dispose();
@@ -267,6 +420,34 @@ class _LedgerAddPageState extends State<LedgerAddPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Offline banner
+              if (!_isOnline)
+                Container(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.orange[50],
+                    border: Border.all(color: Colors.orange),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.wifi_off, size: 18, color: Colors.orange[700]),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Offline - images cannot be uploaded',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.orange[900],
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
               // for customer image
               Center(
                 child: GestureDetector(
@@ -395,7 +576,7 @@ class _LedgerAddPageState extends State<LedgerAddPage> {
                 style: TextStyle(
                   color: _paymentStatus == 'Partial'
                       ? Colors.black
-                      : Colors.grey,  // Text color when disabled
+                      : Colors.grey,
                 ),
 
                 decoration: InputDecoration(
@@ -403,14 +584,14 @@ class _LedgerAddPageState extends State<LedgerAddPage> {
                   filled: true,
                   fillColor: _paymentStatus == 'Partial'
                       ? Color(0xFFF0F8FF)
-                      : Colors.grey.shade200, // Background when disabled
+                      : Colors.grey.shade200,
 
                   enabledBorder: OutlineInputBorder(
                     borderSide: BorderSide(color: Color(0xFFB4D7FF)),
                   ),
 
                   disabledBorder: OutlineInputBorder(
-                    borderSide: BorderSide.none, // Border when disabled
+                    borderSide: BorderSide.none,
                   ),
 
                   focusedBorder: OutlineInputBorder(
@@ -427,9 +608,7 @@ class _LedgerAddPageState extends State<LedgerAddPage> {
                     : null,
               ),
 
-
               const SizedBox(height: 16),
-
 
               InvAddLabel(
               text: 'Received by:'), 

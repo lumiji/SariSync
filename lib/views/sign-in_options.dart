@@ -5,7 +5,6 @@ import '../services/google_auth_service.dart';
 import 'phone_sign_in_screen.dart';
 import '../services/fb_auth_service.dart';
 import 'set_pin_screen.dart';
-import 'package:sarisync/views/pin_screen.dart';
 import 'package:sarisync/widgets/terms_and_conditions.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
@@ -23,7 +22,6 @@ class _SignInOptionsScreenState extends State<SignInOptionsScreen> {
   final _confirmPasswordController = TextEditingController();
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
-  bool _acceptedTerms = false;
 
   @override
   void dispose() {
@@ -104,7 +102,7 @@ class _SignInOptionsScreenState extends State<SignInOptionsScreen> {
                       children: [
                         // Username Label
                         Text(
-                          "Email",
+                          "Username",
                           style: TextStyle( fontFamily: 'Inter',
                             fontSize: 14,
                             color: Colors.white,

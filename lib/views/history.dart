@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:sarisync/widgets/message_prompts.dart';
 import 'transaction_receipt.dart';
 import 'settings.dart';
@@ -16,6 +17,72 @@ class HistoryPage extends StatefulWidget {
 class _HistoryPageState extends State<HistoryPage> {
   String selectedCategory = "All";
   final uid = FirebaseAuth.instance.currentUser!.uid;
+  bool _isOnline = true;
+  bool _hasOfflineChanges = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkConnectivity();
+  }
+
+  Future<void> _checkConnectivity() async {
+    final connectivityResult = await Connectivity().checkConnectivity();
+    setState(() {
+      _isOnline = connectivityResult.first != ConnectivityResult.none;
+    });
+    
+    // Listen for connectivity changes
+    Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> result) {
+      if (mounted) {
+        final nowOnline = result.first != ConnectivityResult.none;
+        setState(() {
+          _isOnline = nowOnline;
+          // Clear offline changes indicator when back online
+          if (nowOnline) {
+            Future.delayed(const Duration(seconds: 2), () {
+              if (mounted) {
+                setState(() {
+                  _hasOfflineChanges = false;
+                });
+              }
+            });
+          }
+        });
+      }
+    });
+  }
+
+  Stream<QuerySnapshot> getHistoryStream() async* {
+    final coll = FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection("History")
+        .orderBy("date", descending: true);
+
+    // Read cache data first
+    try {
+      final cacheSnapshot = await coll.get(const GetOptions(source: Source.cache));
+      yield cacheSnapshot;
+    } catch (_) {
+      // Cache may be empty on first load
+    }
+
+    // Then listen to live updates from the server
+    yield* coll.snapshots(includeMetadataChanges: true).map((snapshot) {
+      // Check if data is from cache and there are pending writes
+      if (snapshot.metadata.hasPendingWrites && !_isOnline) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            setState(() {
+              _hasOfflineChanges = true;
+            });
+          }
+        });
+      }
+      return snapshot;
+    });
+  }
 
   IconData getCategoryIcon(String category) {
     switch (category) {
@@ -46,6 +113,36 @@ class _HistoryPageState extends State<HistoryPage> {
                 children: [
                   const SizedBox(height: 16),
 
+                  // Offline banner
+                  if (!_isOnline)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.orange[50],
+                        border: Border.all(color: Colors.orange),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.wifi_off, size: 16, color: Colors.orange[700]),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _hasOfflineChanges
+                                  ? 'Offline - changes will sync when connected'
+                                  : 'Offline mode - viewing cached history',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.orange[900],
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
                   // SETTINGS BUTTON (RIGHT)
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
@@ -54,9 +151,9 @@ class _HistoryPageState extends State<HistoryPage> {
                         icon: const Icon(Icons.settings_outlined, size: 24),
                         onPressed: () {
                           Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => SettingsPage()),
-                        );
+                            context,
+                            MaterialPageRoute(builder: (context) => SettingsPage()),
+                          );
                         },
                       ),
                     ],
@@ -97,7 +194,8 @@ class _HistoryPageState extends State<HistoryPage> {
                               child: Center(
                                 child: Text(
                                   cat,
-                                  style: TextStyle( fontFamily: 'Inter',
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
                                     fontSize: 16,
                                     fontWeight: FontWeight.w500,
                                     color: selected
@@ -118,16 +216,24 @@ class _HistoryPageState extends State<HistoryPage> {
                   // HISTORY LIST STREAM
                   Expanded(
                     child: StreamBuilder<QuerySnapshot>(
-                      stream: FirebaseFirestore.instance
-                          .collection('users')
-                          .doc(uid)
-                          .collection("History")
-                          .orderBy("date", descending: true)
-                          .snapshots(),
+                      stream: getHistoryStream(),
                       builder: (context, snapshot) {
-                        if (!snapshot.hasData) {
+                        if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
                           return const Center(
                             child: CircularProgressIndicator(),
+                          );
+                        }
+
+                        if (!snapshot.hasData || snapshot.data == null) {
+                          return Center(
+                            child: Text(
+                              "No records found",
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 16,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
                           );
                         }
 
@@ -144,7 +250,8 @@ class _HistoryPageState extends State<HistoryPage> {
                           return Center(
                             child: Text(
                               "No records found",
-                              style: TextStyle( fontFamily: 'Inter',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
                                 fontSize: 16,
                                 color: Colors.grey.shade600,
                               ),
@@ -154,7 +261,7 @@ class _HistoryPageState extends State<HistoryPage> {
 
                         return ListView.separated(
                           itemCount: items.length,
-                          separatorBuilder: (_, _) =>
+                          separatorBuilder: (_, __) =>
                               Divider(color: Colors.grey.shade300),
                           itemBuilder: (context, index) {
                             final item = items[index];
@@ -179,7 +286,8 @@ class _HistoryPageState extends State<HistoryPage> {
                                       // TITLE
                                       Text(
                                         item.title,
-                                        style: TextStyle( fontFamily: 'Inter',
+                                        style: TextStyle(
+                                          fontFamily: 'Inter',
                                           fontSize: 16,
                                           fontWeight: FontWeight.w700,
                                           color: const Color(0xFF212121),
@@ -191,7 +299,8 @@ class _HistoryPageState extends State<HistoryPage> {
                                         const SizedBox(height: 2),
                                         Text(
                                           item.description,
-                                          style: TextStyle( fontFamily: 'Inter',
+                                          style: TextStyle(
+                                            fontFamily: 'Inter',
                                             fontSize: 14,
                                             color: const Color(0xFF757575),
                                           ),
@@ -206,7 +315,8 @@ class _HistoryPageState extends State<HistoryPage> {
                                         "${item.date.hour == 0 ? 12 : (item.date.hour > 12 ? item.date.hour - 12 : item.date.hour)}:"
                                         "${item.date.minute.toString().padLeft(2, '0')} "
                                         "${item.date.hour >= 12 ? "PM" : "AM"}",
-                                        style: TextStyle( fontFamily: 'Inter',
+                                        style: TextStyle(
+                                          fontFamily: 'Inter',
                                           fontSize: 13,
                                           color: Colors.grey.shade500,
                                         ),
@@ -215,63 +325,89 @@ class _HistoryPageState extends State<HistoryPage> {
                                   ),
                                 ),
 
-                               PopupMenuButton(
-                                icon: const Icon(
-                                  Icons.more_horiz,
-                                  size: 32,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                itemBuilder: (context) => const [
-                                  PopupMenuItem(
-                                    value: "view",
-                                    child: Text("View Transaction"),
+                                PopupMenuButton(
+                                  icon: const Icon(
+                                    Icons.more_horiz,
+                                    size: 32,
                                   ),
-                                  PopupMenuItem(
-                                    value: "delete",
-                                    child: Text("Delete"),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
                                   ),
-                                ],
-                                onSelected: (value) async {
-                               
-                                  if (value == "delete") {
-                                    DialogHelper.confirmDelete(
-                                      context,
-                                      () async {
-                                        // Delete from Firestore
-                                        await FirebaseFirestore.instance
-                                            .collection('users')
-                                            .doc(uid)
-                                            .collection("History")
-                                            .doc(item.id)
-                                            .delete();
+                                  itemBuilder: (context) => const [
+                                    PopupMenuItem(
+                                      value: "view",
+                                      child: Text("View Transaction"),
+                                    ),
+                                    PopupMenuItem(
+                                      value: "delete",
+                                      child: Text("Delete"),
+                                    ),
+                                  ],
+                                  onSelected: (value) async {
+                                    if (value == "delete") {
+                                      DialogHelper.confirmDelete(
+                                        context,
+                                        () async {
+                                          if (!_isOnline) {
+                                            setState(() {
+                                              _hasOfflineChanges = true;
+                                            });
+                                          }
 
-                                        // Show success after deletion
-                                        DialogHelper.success(
-                                          context,
-                                          "Record deleted successfully",
+                                          // Delete from Firestore
+                                          await FirebaseFirestore.instance
+                                              .collection('users')
+                                              .doc(uid)
+                                              .collection("History")
+                                              .doc(item.id)
+                                              .delete();
+
+                                          // Show success after deletion
+                                          DialogHelper.success(
+                                            context,
+                                            _isOnline 
+                                                ? "Record deleted successfully"
+                                                : "Record deleted. Will sync when online.",
+                                          );
+                                        },
+                                        title: "Delete this record?",
+                                        yesText: "Yes",
+                                        noText: "No",
+                                      );
+                                    }
+
+                                    if (value == "view") {
+                                      if (!_isOnline) {
+                                        // Warn about viewing transactions offline
+                                        showDialog(
+                                          context: context,
+                                          builder: (context) => AlertDialog(
+                                            title: const Text('Offline Mode'),
+                                            content: const Text(
+                                              'Transaction details may not be fully available while offline.'
+                                            ),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () => Navigator.pop(context),
+                                                child: const Text('OK'),
+                                              ),
+                                            ],
+                                          ),
                                         );
-                                      },
-                                      title: "Delete this record?",
-                                      yesText: "Yes",
-                                      noText: "No",
-                                    );
-                                  }
+                                        return;
+                                      }
 
-                                  if (value == "view") {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => TransactionReceipt(
-                                          transactionId: item.transactionId,
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => TransactionReceipt(
+                                            transactionId: item.transactionId,
+                                          ),
                                         ),
-                                      ),
-                                    );
-                                  }
-                                },
-                              ),
-
+                                      );
+                                    }
+                                  },
+                                ),
                               ],
                             );
                           },

@@ -267,7 +267,7 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
           'unit': unit,
           'add_info': info,
           'expiration': expiration,
-          'imageUrl': null, // No image offline
+          'imageUrl': null,
           'createdAt': FieldValue.serverTimestamp(),
         });
       } else {
@@ -286,29 +286,27 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
           'unit': unit,
           'add_info': info,
           'expiration': expiration,
-          // Keep existing imageUrl when editing offline
           if (imageUrl != null) 'imageUrl': imageUrl,
         });
       }
 
       // Success
-      if (mounted) {
-        Navigator.of(context).pop(); // Close loading
-        await DialogHelper.success(
-          context,
-          'Item saved offline. Will sync when connected.',
-        );
-        Navigator.of(context).pop(widget.item == null ? "added" : "updated");
-      }
+      if (!mounted) return;
+      DialogHelper.closeLoading(context); // Use closeLoading instead of Navigator.pop
+      await DialogHelper.success(
+        context,
+        'Item saved offline. Will sync when connected.',
+      );
+      if (!mounted) return;
+      Navigator.of(context).pop(widget.item == null ? "added" : "updated");
     } catch (e) {
       print('Offline save error: $e');
-      if (mounted) {
-        Navigator.of(context).pop(); // Close loading
-        await DialogHelper.warning(
-          context,
-          'Failed to save offline. Please try again.',
-        );
-      }
+      if (!mounted) return;
+      DialogHelper.closeLoading(context); // Use closeLoading instead of Navigator.pop
+      await DialogHelper.warning(
+        context,
+        'Failed to save offline. Please try again.',
+      );
     }
   }
 
@@ -409,19 +407,18 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
       }
 
       // Success
-      if (mounted) {
-        Navigator.of(context).pop(); // Close loading
-        Navigator.of(context).pop(widget.item == null ? "added" : "updated");
-      }
+      if (!mounted) return;
+      DialogHelper.closeLoading(context); // Use closeLoading instead of Navigator.pop
+      if (!mounted) return;
+      Navigator.of(context).pop(widget.item == null ? "added" : "updated");
     } catch (e) {
       print('Online save error: $e');
-      if (mounted) {
-        Navigator.of(context).pop(); // Close loading
-        await DialogHelper.warning(
-          context,
-          'Failed to save item. Please try again.',
-        );
-      }
+      if (!mounted) return;
+      DialogHelper.closeLoading(context); // Use closeLoading instead of Navigator.pop
+      await DialogHelper.warning(
+        context,
+        'Failed to save item. Please try again.',
+      );
     }
   }
 
