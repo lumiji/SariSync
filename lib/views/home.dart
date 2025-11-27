@@ -18,6 +18,7 @@ import 'package:sarisync/views/ledger.dart';
 import 'package:sarisync/views/history.dart';
 import 'settings.dart';
 import 'package:sarisync/views/transaction_receipt.dart';
+import 'package:sarisync/views/sign-in_options.dart';
 
 // models, services, and widgets
 import 'package:sarisync/models/transaction_model.dart';
@@ -161,7 +162,10 @@ class _HomePageState extends State<HomePage> {
               ElevatedButton(
                 onPressed: () {
                   // Navigate back to sign-in
-                  Navigator.pushReplacementNamed(context, '/sign-in');
+                  Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const SignInOptionsScreen()),
+              );
                 },
                 child: const Text('Sign In'),
               ),

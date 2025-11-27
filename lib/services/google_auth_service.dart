@@ -5,23 +5,40 @@ class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn();
 
-  /// Sign in with Google
-  Future<User?> signInWithGoogle() async {
+  //Get tokens without creating Firebase account
+  Future<Map<String, dynamic>?> signInWithGoogleGetTokens() async {
     try {
-      // Trigger Google Sign-In
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) return null; // user cancelled
+      if (googleUser == null) return null;
 
-      // Obtain auth details
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
 
-      // Create credential for Firebase
+      return {
+        'idToken': googleAuth.idToken,
+        'accessToken': googleAuth.accessToken,
+        'email': googleUser.email,
+        'displayName': googleUser.displayName,
+      };
+    } catch (e) {
+      print("Google Sign-In Error: $e");
+      return null;
+    }
+  }
+
+
+  // Sign in with Google
+  Future<User?> signInWithGoogle() async {
+    try {
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) return null;
+
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      
       final OAuthCredential credential = GoogleAuthProvider.credential(
         idToken: googleAuth.idToken,
         accessToken: googleAuth.accessToken,
       );
 
-      // Sign in with Firebase
       final UserCredential userCredential =
           await _auth.signInWithCredential(credential);
 
@@ -32,15 +49,15 @@ class AuthService {
     }
   }
 
-  /// Sign out from both Google and Firebase
+  // Sign out from both Google and Firebase
   Future<void> signOut() async {
     await _googleSignIn.signOut();
     await _auth.signOut();
   }
 
-  /// Get current user
+  // Get current user
   User? get currentUser => _auth.currentUser;
 
-  /// Listen to auth state changes
+  // Listen to auth state changes
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 }

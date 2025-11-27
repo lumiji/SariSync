@@ -138,11 +138,11 @@ class _PinScreenState extends State<PinScreen> {
                 ),
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 12),
 
               
               Text(
-                "Your Store. Smarter than ever.",
+                "Smooth sales, smooth days.",
                 style: TextStyle( fontFamily: 'Inter',
                   fontSize: 16,
                   color: Colors.white.withOpacity(0.9),
@@ -155,8 +155,8 @@ class _PinScreenState extends State<PinScreen> {
                // Account display (phone, email, or social media account)
               if (_displayAccount != null)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  margin: const EdgeInsets.symmetric(horizontal: 40),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+                  margin: const EdgeInsets.symmetric(horizontal: 12),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.95),
                     borderRadius: BorderRadius.circular(30),
@@ -170,7 +170,7 @@ class _PinScreenState extends State<PinScreen> {
                         color: const Color(0xFF1E88E5),
                         size: 20,
                       ),
-                      const SizedBox(width: 10),
+                      const SizedBox(width: 12),
                       Flexible(
                         child: Text(
                           _displayAccount!,
@@ -250,34 +250,42 @@ class _PinScreenState extends State<PinScreen> {
 
               _buildKeypad(),
 
-               // "Already have an account? Log in" text
-                        Center(
-                          child: TextButton(
-                            onPressed: () {
-                              // Navigate to login screen
-                              Navigator.push(context, MaterialPageRoute(builder: (_) => SetPinScreen()));
-                            },
-                            child: RichText(
-                              text: TextSpan(
-                                style: TextStyle( fontFamily: 'Inter',
-                                  fontSize: 14,
-                                  color: Colors.white,
-                                ),
-                                children: [
-                                  TextSpan(text: "Haven't set your PIN screen? "),
-                                  TextSpan(
-                                    text: "Set PIN",
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      decoration: TextDecoration.underline,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
+               Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => SetPinScreen()),
+                      );
+                    },
+                    child: Text(
+                      "Set PIN",
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.white,
+                        decoration: TextDecoration.none,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 32),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => SignInOptionsScreen()),
+                      );
+                    },
+                    child: Text(
+                      "Sign Up",
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.white,
+                        decoration: TextDecoration.none,
+                      ),
+                    ),
+                  ),
+                ],
+              )
             ],
           ),
         ],

@@ -1,15 +1,12 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:sarisync/models/pending_registration.dart';
 import '../services/google_auth_service.dart';
 import 'phone_sign_in_screen.dart';
 import '../services/fb_auth_service.dart';
 import 'set_pin_screen.dart';
 import 'package:sarisync/views/pin_screen.dart';
-import 'package:sarisync/views/set_pin_screen.dart';
-import 'package:sarisync/services/local_storage_service.dart';
-import 'package:sarisync/services/auth_flow_service.dart';
-import 'package:sarisync/services/remote_db_service.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:sarisync/widgets/terms_and_conditions.dart';
 
 class SignInOptionsScreen extends StatefulWidget {
   const SignInOptionsScreen({super.key});
@@ -20,18 +17,26 @@ class SignInOptionsScreen extends StatefulWidget {
 
 class _SignInOptionsScreenState extends State<SignInOptionsScreen> {
   final _usernameController = TextEditingController();
+  final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  bool _acceptedTerms = false;
 
   @override
   void dispose() {
     _usernameController.dispose();
+    _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
   }
+
+    bool _isValidEmail(String email) {
+      return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
+    }
+  
 
   @override
   Widget build(BuildContext context) {
@@ -98,7 +103,7 @@ class _SignInOptionsScreenState extends State<SignInOptionsScreen> {
                       children: [
                         // Username Label
                         Text(
-                          "Username",
+                          "Email",
                           style: TextStyle( fontFamily: 'Inter',
                             fontSize: 14,
                             color: Colors.white,
@@ -115,6 +120,9 @@ class _SignInOptionsScreenState extends State<SignInOptionsScreen> {
                               Icons.person_outline, 
                               color: Colors.white70
                             ),
+                            hintText: "e.g., Jane Doe",
+                            hintStyle: TextStyle(
+                              color: Colors.white38),
                             filled: false,
                             border: UnderlineInputBorder(
                               borderSide: BorderSide(color: Colors.white),
@@ -134,7 +142,49 @@ class _SignInOptionsScreenState extends State<SignInOptionsScreen> {
 
                         const SizedBox(height: 12),
 
-                        // Password Label
+                        // Email Label
+                          Text(
+                            "Email",
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 14,
+                              color: Colors.white,
+                              fontWeight: FontWeight.normal,
+                            ),
+                          ),
+
+                          // Email Input
+                          TextField(
+                            controller: _emailController,
+                            cursorColor: Colors.white,
+                            keyboardType: TextInputType.emailAddress,
+                            decoration: InputDecoration(
+                              prefixIcon: const Icon(
+                                Icons.email_outlined,
+                                color: Colors.white70,
+                              ),
+                              hintText: "your@email.com",
+                              hintStyle: TextStyle(color: Colors.white38),
+                              filled: false,
+                              border: UnderlineInputBorder(
+                                borderSide: BorderSide(color: Colors.white),
+                                borderRadius: BorderRadius.zero,
+                              ),
+                              enabledBorder: UnderlineInputBorder(
+                                borderSide: BorderSide(color: Colors.white, width: 2),
+                                borderRadius: BorderRadius.zero,
+                              ),
+                              focusedBorder: UnderlineInputBorder(
+                                borderSide: BorderSide(color: Colors.white, width: 2),
+                                borderRadius: BorderRadius.zero,
+                              ),
+                            ),
+                            style: TextStyle(color: Colors.white),
+                          ),
+
+                          const SizedBox(height: 12),
+
+                          // Password Label
                         Text(
                           "Password",
                           style: TextStyle( fontFamily: 'Inter',
@@ -229,16 +279,36 @@ class _SignInOptionsScreenState extends State<SignInOptionsScreen> {
                               ),
                             ),
                             onPressed: () async {
-                              final email = _usernameController.text.trim();
+                              final username = _usernameController.text.trim();
+                              final email = _emailController.text.trim();
                               final password = _passwordController.text.trim();
                               final confirmPassword = _confirmPasswordController.text.trim();
 
-                              if (email.isEmpty || password.isEmpty || confirmPassword.isEmpty) {
+                              if (username.isEmpty || email.isEmpty || password.isEmpty || confirmPassword.isEmpty) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(content: Text("Please fill all fields")),
                                 );
                                 return;
                               }
+                               final accepted = await showTermsAndConditionsDialog(context: context);
+
+                                if (!accepted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text("Please accept the Terms and Conditions"),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                  return;
+                                }
+
+
+                              if (!_isValidEmail(email)) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text("Please enter a valid email address")),
+                                  );
+                                  return;
+                                }
 
                               if (password != confirmPassword) {
                                 ScaffoldMessenger.of(context).showSnackBar(
@@ -247,31 +317,29 @@ class _SignInOptionsScreenState extends State<SignInOptionsScreen> {
                                 return;
                               }
 
+                              if (password.length < 6) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      "Password must be at least 6 characters"
+                                    )),
+                                ); 
+                                return;
+                              }
+
                               try {
-                                // create Firebase user
-                                final userCredential =
-                                    await FirebaseAuth.instance.createUserWithEmailAndPassword(
-                                  email: email,
-                                  password: password,
-                                );
-
-                                final uid = userCredential.user!.uid;
-                                print("Created account: UID = $uid");
-
-                                // create firestore folders
-                                await RemoteDbService.initializeUserDatabase(uid: uid);
-
-                                // save account on device
-                                await LocalStorageService.saveAccountInfo(email, "password");
-                                await LocalStorageService.saveLoggedIn();
-
-                                // go to set PIN
+                              
                                 Navigator.pushReplacement(
                                   context,
                                   MaterialPageRoute(
                                     builder: (_) => SetPinScreen(
-                                      accountIdentifier: email,
+                                      accountIdentifier: username,
                                       accountType: "password",
+                                      pendingRegistration: PendingRegistration(
+                                        email: email,
+                                        password: password,
+                                        accountType: "password",
+                                        displayIdentifier: username),
                                     ),
                                   ),
                                 );
@@ -316,25 +384,42 @@ class _SignInOptionsScreenState extends State<SignInOptionsScreen> {
                             // Google Button
                             InkWell(
                               onTap: () async {
-                                final user = await authService.signInWithGoogle();
-                                if (user != null) {
-                                  print("Signed in as ${user.displayName}, email: ${user.email}");
-                                   await RemoteDbService.initializeUserDatabase(uid: user.uid);
-                                   final displayIdentifier = user.displayName?.isNotEmpty == true
-                                        ? user.displayName
-                                        : user.email ?? user.uid;
 
-                                    await LocalStorageService.saveAccountInfo(displayIdentifier!, "google");
+                                final accepted = await showTermsAndConditionsDialog(context: context);
 
-                                    await AuthFlowService.handlePostLogin(
-                                      context,
-                                      accountIdentifier: displayIdentifier,
-                                      accountType: "google",
-                                    );
-
-
+                                if (!accepted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text("Please accept the Terms and Conditions"),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                  return;
                                 }
-                              },
+
+
+                                final result = await authService.signInWithGoogleGetTokens();
+                                if (result != null) {
+                                  final displayIdentifier = result['displayName'] ?? result['email'] ?? '';
+
+                                    Navigator.pushReplacement(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => SetPinScreen(
+                                          accountIdentifier: displayIdentifier,
+                                          accountType: "google",
+                                          pendingRegistration: PendingRegistration(
+                                            googleIdToken: result['idToken'],
+                                            googleAccessToken: result['accessToken'],
+                                            accountType: "google",
+                                            displayIdentifier: displayIdentifier,
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                },
+                              
                               child: Container(
                                 width: 64,
                                 height: 64,
@@ -363,24 +448,39 @@ class _SignInOptionsScreenState extends State<SignInOptionsScreen> {
                             // Facebook Button
                             InkWell(
                               onTap: () async {
-                                final user = await fbService.signInWithFacebook();
-                                if (user != null) {
-                                  print("Facebook user: ${user.displayName}, email: ${user.email}");
-                                  await RemoteDbService.initializeUserDatabase(uid: user.uid);
-                                  final displayIdentifier = user.displayName?.isNotEmpty == true
-                                    ? user.displayName
-                                    : user.email?.isNotEmpty == true
-                                        ? user.email
-                                        : user.uid;
-                                  
-                                  await LocalStorageService.saveAccountInfo(displayIdentifier!, "google");
 
-                                await AuthFlowService.handlePostLogin(
-                                  context,
-                                  accountIdentifier: displayIdentifier,
-                                  accountType: "facebook",
-                                );
+                                final accepted = await showTermsAndConditionsDialog(context: context);
 
+                                if (!accepted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text("Please accept the Terms and Conditions"),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                  return;
+                                }
+
+
+                                final result = await fbService.signInWithFacebookGetTokens();
+                                if (result != null) {
+
+                                  final displayIdentifier = result['displayName'] ?? result['email'] ?? '';
+                                
+                                   Navigator.pushReplacement(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => SetPinScreen(
+                                        accountIdentifier: displayIdentifier,
+                                        accountType: "facebook",
+                                        pendingRegistration: PendingRegistration(
+                                          facebookAccessToken: result['accessToken'],
+                                          accountType: "facebook",
+                                          displayIdentifier: displayIdentifier,
+                                        ),
+                                      ),
+                                    ),
+                                  );
                                 } else {
                                   print("Facebook login not successful");
                                 }
@@ -413,7 +513,22 @@ class _SignInOptionsScreenState extends State<SignInOptionsScreen> {
 
                             // Phone Button
                             InkWell(
-                              onTap: () {
+                              onTap: () async {
+
+                                 final accepted = await showTermsAndConditionsDialog(
+                                    context: context,
+                                  );
+
+                                  if (!accepted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text("Please accept the Terms and Conditions"),
+                                        backgroundColor: Color(0xFFE53935),
+                                      ),
+                                    );
+                                    return;
+                                  }
+                              
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
