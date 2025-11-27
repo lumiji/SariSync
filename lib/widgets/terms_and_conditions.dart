@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import 'package:flutter/material.dart';
-
 Future<bool> showTermsAndConditionsDialog({
   required BuildContext context,
 }) async {

@@ -1,13 +1,21 @@
+//dependencies
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'change_pin_screen.dart';
-import 'package:sarisync/widgets/message_prompts.dart';
-import 'change_pin_screen.dart';
-import 'package:sarisync/services/local_storage_service.dart';
-import 'home.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'auto_cleanup_executor.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+//pages
+import 'home.dart';
+import 'change_pin_screen.dart';
+import 'user_guide_page.dart';
+import 'contact_support_page.dart';
+import 'about_sarisync_page.dart';
+import 'sign-in_options.dart';
+//widgets
+import 'package:sarisync/widgets/message_prompts.dart';
+//services
+import 'package:sarisync/services/local_storage_service.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -36,7 +44,6 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   void initState() {
-
     super.initState();
     loadSettings(); // Call load settings here
     loadAutoCleanupSettings(); // added
@@ -49,7 +56,7 @@ class _SettingsPageState extends State<SettingsPage> {
     });
   }
 
-  Future <void> saveSettings() async {
+  Future<void> saveSettings() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('enablePin', enablePin);
     await prefs.setBool('lowStocksAlert', lowStocksAlert);
@@ -63,7 +70,7 @@ class _SettingsPageState extends State<SettingsPage> {
     setState(() {
       autoCleanup = enabled;
       if (!enabled) {
-      // If cleanup disabled → do not activate checkboxes
+        // If cleanup disabled → do not activate checkboxes
         weekly = false;
         monthly = false;
       } else if (schedule == "weekly") {
@@ -76,17 +83,47 @@ class _SettingsPageState extends State<SettingsPage> {
     });
   }
 
+  Future<void> signOutUser() async {
+    try {
+      await FirebaseAuth.instance.signOut();
+
+      // Google Sign Out
+      try {
+        final GoogleSignIn googleSignIn = GoogleSignIn();
+        if (await googleSignIn.isSignedIn()) {
+          await googleSignIn.signOut();
+        }
+      } catch (e) {}
+
+      // Facebook Sign Out
+      try {
+        await FacebookAuth.instance.logOut();
+      } catch (e) {}
+    } catch (e) {
+      print("Sign out error: $e");
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+        backgroundColor: const Color(0xFFF7FBFF), 
       appBar: AppBar(
+        backgroundColor: const Color(0xFF1565C0),
         titleSpacing: -2,
         title: Text(
           "Settings",
-          style: TextStyle( fontFamily: 'Inter',fontSize: 20, fontWeight: FontWeight.w600),
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 20, 
+            fontWeight: FontWeight.w600
+          ),
         ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(
+            Icons.arrow_back_rounded,
+            color: Colors.white,
+            size: 24 ),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -150,10 +187,12 @@ class _SettingsPageState extends State<SettingsPage> {
                   monthly = false;
                 }
               });
-               await LocalStorageService.saveAutoCleanupEnabled(autoCleanup);
+              await LocalStorageService.saveAutoCleanupEnabled(autoCleanup);
 
-               if (!v) {
-                await LocalStorageService.saveCleanupSchedule(""); // reset schedule
+              if (!v) {
+                await LocalStorageService.saveCleanupSchedule(
+                  "",
+                ); // reset schedule
               }
               saveSettings(); // saves other settings only
             },
@@ -186,7 +225,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     // await LocalStorageService.saveAutoCleanupEnabled(
                     //   autoCleanup,
                     // );
-                    await LocalStorageService.saveCleanupSchedule("weekly");        
+                    await LocalStorageService.saveCleanupSchedule("weekly");
                   }
                 : null,
           ),
@@ -206,8 +245,8 @@ class _SettingsPageState extends State<SettingsPage> {
                     // await LocalStorageService.saveAutoCleanupEnabled(
                     //   autoCleanup,
                     // );
-                      await LocalStorageService.saveCleanupSchedule("monthly");
-                    }
+                    await LocalStorageService.saveCleanupSchedule("monthly");
+                  }
                 : null,
           ),
 
@@ -245,7 +284,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     }
                   }
 
-                //Clear local storage through shared preferences
+                  //Clear local storage through shared preferences
                   //SharedPreferences prefs = await SharedPreferences.getInstance();
                   //await prefs.clear();
 
@@ -304,9 +343,38 @@ class _SettingsPageState extends State<SettingsPage> {
           // ABOUT / HELP
           sectionHeader("About/Help"),
 
-          customListTile(title: "User Guide / How To Use", enabled: true),
-          customListTile(title: "Contact Support", enabled: true),
-          customListTile(title: "About SariSync", enabled: true),
+          customListTile(
+            title: "User Guide / How To Use",
+            enabled: true,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => UserGuidePage()),
+              );
+            },
+          ),
+
+          customListTile(
+            title: "Contact Support",
+            enabled: true,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => ContactSupportPage()),
+              );
+            },
+          ),
+
+          customListTile(
+            title: "About SariSync",
+            enabled: true,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => AboutSariSyncPage()),
+              );
+            },
+          ),
 
           const SizedBox(height: 20),
 
@@ -316,11 +384,40 @@ class _SettingsPageState extends State<SettingsPage> {
               "Logout",
               style: TextStyle( fontFamily: 'Inter',
                 fontSize: 16,
-                color: const Color.fromARGB(255, 128, 14, 6),
+                color: const Color.fromARGB(255, 0, 0, 0),
                 fontWeight: FontWeight.w600,
               ),
             ),
-            onTap: () {},
+            onTap: () async {
+              final result = await showDialog(
+                context: context,
+                builder: (_) => AlertDialog(
+                  title: Text("Logout"),
+                  content: Text("Are you sure you want to logout?"),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: Text("Cancel"),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      child: Text("Logout"),
+                    ),
+                  ],
+                ),
+              );
+
+              if (result == true) {
+                await signOutUser();
+
+                // Navigate to Login Page & remove history
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => SignInOptionsScreen()),
+                  (route) => false,
+                );
+              }
+            },
           ),
         ],
       ),
@@ -395,27 +492,24 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  // Custom ListTile with grey when disabled
   Widget customListTile({
     required String title,
-    bool enabled = true,
-    Function()? onTap,
+    required bool enabled,
+    VoidCallback? onTap,
   }) {
-    return Column(
-      children: [
-        ListTile(
-          title: Text(
-            title,
-            style: TextStyle( fontFamily: 'Inter',
-              fontSize: 15,
-              color: enabled ? Colors.black : Colors.grey,
-            ),
-          ),
-          enabled: enabled,
-          onTap: onTap,
+    return ListTile(
+      title: Text(
+        title,
+        style: TextStyle(
+          fontFamily: 'Inter',
+          fontSize: 15,
+          color: enabled ? Colors.black : Colors.grey,
         ),
-        //Divider(thickness: 0.5, height: 0),
-      ],
+      ),
+      enabled: enabled,
+      onTap: enabled ? onTap : null,
+      trailing: null,
+      //trailing: const Icon(Icons.arrow_forward_ios, size: 16),
     );
   }
 }

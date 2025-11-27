@@ -11,6 +11,8 @@ import 'dart:async';
 
 //firebase dependencies
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:sarisync/services/pdf_generator.dart';
+
 
 // pages
 import 'package:sarisync/views/inventory.dart';
@@ -490,7 +492,11 @@ class HomeContent extends StatelessWidget {
                 const SizedBox(height: 12),
 
                 // Download Inventory Button
-                PDFBtn(),
+                PDFBtn(
+                  onTap: () async {
+                await PdfGenerator.generateFullReport(context);
+                },
+              ),
 
                 const SizedBox(height: 12),
 
