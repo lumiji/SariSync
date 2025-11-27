@@ -6,7 +6,13 @@ import 'package:sarisync/views/set_pin_screen.dart';
 import 'package:sarisync/views/sign-in_options.dart';
 
 class PinScreen extends StatefulWidget {
-  const PinScreen({super.key});
+  final String? accountIdentifier;
+  final String? accountType;
+
+  const PinScreen({
+    super.key,
+    this.accountIdentifier,
+    this.accountType});
 
   @override
   State<PinScreen> createState() => _PinScreenState();
@@ -72,7 +78,14 @@ class _PinScreenState extends State<PinScreen> {
       return;
     }
 
-    String? savedPin = await LocalStorageService.getPin();
+    String? accountIdentifier = await LocalStorageService.getAccountIdentifier();
+
+    if (accountIdentifier == null) {
+      setState(() => _errorMessage = 'Account not found');
+      return;
+    }
+
+    String? savedPin = await LocalStorageService.getPin(accountIdentifier);
 
     if (savedPin == null) {
       setState(() => _errorMessage = 'No PIN is set. Please set a PIN first.');

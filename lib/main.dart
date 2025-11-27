@@ -9,6 +9,7 @@ import 'dart:async';
 import 'firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; // Firestore
+import 'package:firebase_auth/firebase_auth.dart';
 
 //pages
 import 'views/set_pin_screen.dart';
@@ -210,11 +211,25 @@ class _InitialNavigatorState extends State<InitialNavigator> {
       bool isLoggedIn = false;
       String? pin;
       bool enablePin = false;
+      User? firebaseUser;
 
       try {
+        firebaseUser = FirebaseAuth.instance.currentUser;
         isLoggedIn = await LocalStorageService.isLoggedIn();
-        pin = await LocalStorageService.getPin();
+
+        String? accountIdentifier = await LocalStorageService.getAccountIdentifier();
+
+        if (accountIdentifier != null) {
+          pin = await LocalStorageService.getPin(accountIdentifier);
+        }
         enablePin = await LocalStorageService.isPinEnabled();
+
+        if (isLoggedIn && firebaseUser == null) {
+          // Local says logged in but Firebase says no user
+          await LocalStorageService.clearUserData();
+          isLoggedIn = false;
+          pin = null;
+        }
       } catch (e) {
         if (kDebugMode) {
           print("Error reading local storage: $e");

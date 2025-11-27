@@ -40,7 +40,13 @@ class _ChangePinScreenState extends State<ChangePinScreen> {
       return;
     }
 
-    await LocalStorageService.savePin(_enteredPin);
+    String? accountIdentifier = await LocalStorageService.getAccountIdentifier();
+
+    if (accountIdentifier == null) {
+      setState(() => _errorMessage = 'Account not found');
+      return;
+    }
+    await LocalStorageService.savePin(accountIdentifier, _enteredPin);
 
     //if (!mounted) return;
       DialogHelper.success(

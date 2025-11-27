@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:crypto/crypto.dart';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:sarisync/services/local_storage_service.dart';
@@ -29,6 +31,7 @@ class SetPinScreen extends StatefulWidget {
 }
 
 class _SetPinScreenState extends State<SetPinScreen> {
+  String? _existingPin;
   String _enteredPin = '';
   String _errorMessage = '';
   String? _pressedKey;
@@ -42,15 +45,32 @@ class _SetPinScreenState extends State<SetPinScreen> {
   }
 
   Future<void> _loadAccountInfo() async {
-    // Try to get account info from widget parameters first, then from storage
+    
     String? account = widget.accountIdentifier ?? await LocalStorageService.getAccountIdentifier();
     String? type = widget.accountType ?? await LocalStorageService.getAccountType();
-    
+    String? existingPin;
+
+     if (account != null) {
+      // Query Firestore for a user document where username/email/phone == account
+      final query = await FirebaseFirestore.instance
+          .collection('users')
+          .where('username', isEqualTo: account) // or 'email' / 'phone'
+          .limit(1)
+          .get();
+
+      if (query.docs.isNotEmpty) {
+        existingPin = query.docs.first.data()['pinHash'];
+      }
+    }
+
+
     setState(() {
       _displayAccount = account;
       _accountType = type;
+      _existingPin = existingPin;
     });
   }
+
 
   IconData _getAccountIcon() {
     switch (_accountType?.toLowerCase()) {
@@ -89,38 +109,86 @@ class _SetPinScreenState extends State<SetPinScreen> {
   }
 
   void _onSubmit() async {
-    if (_enteredPin.length == 4) {
-      setState(() {
-        _errorMessage = '';
-      });
+      if (_enteredPin.length != 4) {
+        setState(() => _errorMessage = 'Enter 4 digits');
+        return;
+      }
+      setState(() => _errorMessage = '');
 
-      await _completeRegistration();
+      // Check for existing PIN first
+      if (_existingPin != null) {
+        _showExistingPinDialog();
+      } else {
+        await _saveNewPinFlow();
+      }
+    }
 
-         
-  } else {
-    setState(() {
-      _errorMessage = 'Enter 4 digits';
-    });
+  void _showExistingPinDialog() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Existing Account"),
+        content: const Text(
+            "An account with this identifier already has a PIN. What would you like to do?"),
+        actions: [
+          TextButton(
+            child: const Text("Enter existing PIN"),
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => PinScreen(
+                  accountIdentifier: _displayAccount,
+                  accountType: _accountType,
+                )),
+              );
+            },
+          ),
+          TextButton(
+            child: const Text("Set a new PIN"),
+            onPressed: () {
+              Navigator.pop(context);
+              _saveNewPinFlow();
+            },
+          ),
+        ],
+      ),
+    );
   }
-}
+
 
  // In SetPinScreen, when PIN is confirmed:
-Future<void> _completeRegistration() async {
-  if (widget.pendingRegistration == null) {
+Future<void> _saveNewPinFlow() async {
+  final pending = widget.pendingRegistration;
 
-    // Existing user logging in, just save PIN
-    await LocalStorageService.savePin(_enteredPin);
+  if (pending == null) {
+    // Existing user flow
+    final account = await LocalStorageService.getAccountIdentifier();
+    if (account == null) {
+      setState(() => _errorMessage = 'Account not found');
+      return;
+    }
+    
+    await LocalStorageService.savePin(account, _enteredPin);
     await LocalStorageService.saveLoggedIn();
     
-    // Navigate to PIN entry screen
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => PinScreen()),
-    );
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final pinHash = sha256.convert(utf8.encode(_enteredPin)).toString();
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .update({'pinHash': pinHash});
+    }
+    
+    if (context.mounted) {
+      Navigator.pushReplacement(
+          context, MaterialPageRoute(builder: (_) => PinScreen()));
+    }
     return;
   }
-  final pending = widget.pendingRegistration!;
 
+  // New user registration flow
   try {
     UserCredential? userCredential;
 
@@ -131,18 +199,7 @@ Future<void> _completeRegistration() async {
           email: pending.email!,
           password: pending.password!,
         );
-
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(userCredential.user!.uid)
-            .set({
-          'username': pending.displayIdentifier,
-          'email': pending.email,
-          'accountType': 'password',
-          'createdAt': FieldValue.serverTimestamp(),
-        });
         break;
-        
 
       case 'google':
         final credential = GoogleAuthProvider.credential(
@@ -150,31 +207,11 @@ Future<void> _completeRegistration() async {
           accessToken: pending.googleAccessToken,
         );
         userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
-
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(userCredential.user!.uid)
-            .set({
-          'username': pending.displayIdentifier,
-          'email': userCredential.user!.email,
-          'accountType': 'google',
-          'createdAt': FieldValue.serverTimestamp(),
-        });
         break;
 
       case 'facebook':
         final credential = FacebookAuthProvider.credential(pending.facebookAccessToken!);
         userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
-
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(userCredential.user!.uid)
-            .set({
-          'username': pending.displayIdentifier,
-          'email': userCredential.user!.email,
-          'accountType': 'facebook',
-          'createdAt': FieldValue.serverTimestamp(),
-        });
         break;
 
       case 'phone':
@@ -183,16 +220,6 @@ Future<void> _completeRegistration() async {
           smsCode: pending.phoneCode!,
         );
         userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
-
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(userCredential.user!.uid)
-            .set({
-          'username': pending.displayIdentifier,
-          'phone': userCredential.user!.phoneNumber,
-          'accountType': 'phone',
-          'createdAt': FieldValue.serverTimestamp(),
-        });
         break;
     }
 
@@ -202,16 +229,33 @@ Future<void> _completeRegistration() async {
       // Initialize Firestore
       await RemoteDbService.initializeUserDatabase(uid: uid);
 
-      // Save account info
-      await LocalStorageService.saveAccountInfo(pending.displayIdentifier, pending.accountType);
+      // Save account info FIRST
+      await LocalStorageService.saveAccountInfo(
+        pending.displayIdentifier, 
+        pending.accountType
+      );
       
-      // Save PIN
-      await LocalStorageService.savePin(_enteredPin);
-      
+      // NOW save PIN with the correct identifier
+      await LocalStorageService.savePin(pending.displayIdentifier, _enteredPin);
+
+      // Save hashed PIN to Firebase
+      final pinHash = sha256.convert(utf8.encode(_enteredPin)).toString();
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userCredential.user!.uid)
+          .set({
+            'username': pending.displayIdentifier,
+            'email': pending.email ?? userCredential.user!.email,
+            'phone': pending.accountType == 'phone' ? userCredential.user!.phoneNumber : null,
+            'accountType': pending.accountType,
+            'pinHash': pinHash,
+            'createdAt': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
+
       // Mark as logged in
       await LocalStorageService.saveLoggedIn();
 
-      // Navigate to PIN screen (which will then go to home)
+      // Navigate to PIN screen
       if (context.mounted) {
         Navigator.pushReplacement(
           context,
@@ -354,18 +398,7 @@ Future<void> _completeRegistration() async {
                       ),
                       const SizedBox(width: 12),
                       IconButton(
-                        onPressed: () async {
-                           final googleSignIn = GoogleSignIn();
-                            await googleSignIn.signOut();
-                            await FacebookAuth.instance.logOut();
-                            
-                            if (context.mounted) {
-                              Navigator.pushReplacement(
-                                context,
-                                MaterialPageRoute(builder: (_) => const SignInOptionsScreen()),
-                              );
-                            }
-                          },
+                        onPressed:  () => _handleSwitchAccount(context),
                           icon: const Icon(
                             Icons.swap_horiz,
                             color: Color(0xFF1E88E5),
@@ -565,17 +598,26 @@ Future<void> _completeRegistration() async {
       // Sign out from Google
       final googleSignIn = GoogleSignIn();
       await googleSignIn.signOut();
-      
+
       // Sign out from Facebook
       await FacebookAuth.instance.logOut();
-      
-      // Sign out from Firebase (covers email/password and phone auth)
+
+      // Sign out from Firebase (covers email/password + phone)
       await FirebaseAuth.instance.signOut();
-      
-      // Clear any temporary registration data from local storage
+
+      // Remove temp data if any
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('temp_user_data');
-      
+
+      // Clear PIN for the current account
+      final account = await LocalStorageService.getAccountIdentifier();
+      if (account != null) {
+        await LocalStorageService.clearPin(account);
+      }
+
+      // Clear account info + login flags
+      await LocalStorageService.clearUserData();
+
       if (context.mounted) {
         Navigator.pushReplacement(
           context,
@@ -584,9 +626,6 @@ Future<void> _completeRegistration() async {
       }
     } catch (e) {
       print('Error switching account: $e');
-      // Optionally show error to user
     }
-  }
-
- 
+  } 
 }

@@ -3,14 +3,19 @@ import 'package:shared_preferences/shared_preferences.dart';
 class LocalStorageService {
 
   // For Pins/Password
-  static Future<void> savePin(String pin) async {
+  static Future<void> savePin(String account, String pin) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString("user_pin", pin);
+    await prefs.setString("pin_$account", pin);
   }
 
-  static Future<String?> getPin() async {
+  static Future<String?> getPin(String account) async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString("user_pin");
+    return prefs.getString("pin_$account");
+  }
+
+   static Future<void> clearPin(String account) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove("pin_$account");
   }
 
   // new: return whether PIN is enabled (default true)
@@ -55,7 +60,10 @@ class LocalStorageService {
   // Optional: Clear all user data on logout
   static Future<void> clearUserData() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove("user_pin");
+    final account = prefs.getString("account_identifier");
+    if (account != null) {
+      await prefs.remove("pin_$account");
+    }
     await prefs.remove("is_logged_in");
     await prefs.remove("account_identifier");
     await prefs.remove("account_type");

@@ -7,6 +7,7 @@ import '../services/fb_auth_service.dart';
 import 'set_pin_screen.dart';
 import 'package:sarisync/views/pin_screen.dart';
 import 'package:sarisync/widgets/terms_and_conditions.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 class SignInOptionsScreen extends StatefulWidget {
   const SignInOptionsScreen({super.key});
@@ -366,7 +367,7 @@ class _SignInOptionsScreenState extends State<SignInOptionsScreen> {
                         // "Or sign up with" text
                         Center(
                           child: Text(
-                            "-Or sign up with-",
+                            "-Or continue with-",
                             style: TextStyle( fontFamily: 'Inter',
                               fontSize: 14,
                               color: Colors.white,
@@ -396,6 +397,10 @@ class _SignInOptionsScreenState extends State<SignInOptionsScreen> {
                                   );
                                   return;
                                 }
+
+                                final googleSignIn = GoogleSignIn();
+                                await googleSignIn.signOut();
+
 
 
                                 final result = await authService.signInWithGoogleGetTokens();
@@ -564,34 +569,34 @@ class _SignInOptionsScreenState extends State<SignInOptionsScreen> {
 
                         const SizedBox(height: 30),
 
-                        // "Already have an account? Log in" text
-                        Center(
-                          child: TextButton(
-                            onPressed: () {
-                              // Navigate to login screen
-                              Navigator.push(context, MaterialPageRoute(builder: (_) => PinScreen()));
-                            },
-                            child: RichText(
-                              text: TextSpan(
-                                style: TextStyle( fontFamily: 'Inter',
-                                  fontSize: 14,
-                                  color: Colors.white,
-                                ),
-                                children: [
-                                  TextSpan(text: "Already have an account? "),
-                                  TextSpan(
-                                    text: "Log in",
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      decoration: TextDecoration.underline,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
+                        // // "Already have an account? Log in" text
+                        // Center(
+                        //   child: TextButton(
+                        //     onPressed: () {
+                        //       // Navigate to login screen
+                        //       Navigator.push(context, MaterialPageRoute(builder: (_) => PinScreen()));
+                        //     },
+                        //     child: RichText(
+                        //       text: TextSpan(
+                        //         style: TextStyle( fontFamily: 'Inter',
+                        //           fontSize: 14,
+                        //           color: Colors.white,
+                        //         ),
+                        //         children: [
+                        //           TextSpan(text: "Already have an account? "),
+                        //           TextSpan(
+                        //             text: "Log in",
+                        //             style: TextStyle(
+                        //               color: Colors.white,
+                        //               fontWeight: FontWeight.bold,
+                        //               decoration: TextDecoration.underline,
+                        //             ),
+                        //           ),
+                        //         ],
+                        //       ),
+                        //     ),
+                        //   ),
+                        // ),
                       ],
                     ),
                   ),

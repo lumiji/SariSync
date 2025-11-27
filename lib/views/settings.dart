@@ -99,6 +99,9 @@ class _SettingsPageState extends State<SettingsPage> {
       try {
         await FacebookAuth.instance.logOut();
       } catch (e) {}
+
+       await LocalStorageService.clearUserData();
+
     } catch (e) {
       print("Sign out error: $e");
     }
@@ -116,6 +119,7 @@ class _SettingsPageState extends State<SettingsPage> {
           style: TextStyle(
             fontFamily: 'Inter',
             fontSize: 20, 
+            color: Colors.white,
             fontWeight: FontWeight.w600
           ),
         ),

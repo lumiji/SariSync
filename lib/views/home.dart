@@ -31,6 +31,7 @@ import 'package:sarisync/widgets/home-transaction_item.dart';
 import 'package:sarisync/models/inventory_item.dart';
 import 'package:sarisync/services/ledger_service.dart';
 import 'auto_cleanup_executor.dart';
+import 'package:sarisync/services/local_storage_service.dart';
 
 class HomePage extends StatefulWidget {
   final int initialIndex;
@@ -56,6 +57,11 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _selectedIndex = widget.initialIndex;
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _checkAuthState();
+      });
+      
     
     // Safely get UID with fallback
     final currentUser = FirebaseAuth.instance.currentUser;
@@ -90,6 +96,25 @@ class _HomePageState extends State<HomePage> {
           'paymentMethod': data['paymentMethod'] ?? '',
         });
       }).toList());
+  }
+
+  Future<void> _checkAuthState() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final isLoggedIn = await LocalStorageService.isLoggedIn();
+    
+    // If Firebase says no user but local storage says logged in, something is wrong
+    if (currentUser == null && isLoggedIn) {
+      // Clear inconsistent state
+      await LocalStorageService.clearUserData();
+      
+      if (mounted) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const SignInOptionsScreen()),
+          (route) => false,
+        );
+      }
+    }
   }
 
   Future<void> _checkConnectivity() async {

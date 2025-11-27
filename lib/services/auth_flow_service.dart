@@ -9,11 +9,15 @@ class AuthFlowService {
     required String accountIdentifier,
     String accountType = "password",
   }) async {
+
+    // Save account info
+    await LocalStorageService.saveAccountInfo(accountIdentifier, accountType);
+
     // Mark user as logged in
     await LocalStorageService.saveLoggedIn();
 
     // Check if PIN exists
-    String? pin = await LocalStorageService.getPin();
+    String? pin = await LocalStorageService.getPin(accountIdentifier);
 
     if (pin == null || pin.isEmpty) {
       // NO PIN → go to Set PIN screen
