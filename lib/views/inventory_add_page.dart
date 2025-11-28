@@ -527,7 +527,28 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
       context,
       MaterialPageRoute(
         builder: (_) => Scaffold(
-          appBar: AppBar(title: const Text('Scan Barcode')),
+          backgroundColor: const Color(0xFFF7FBFF), 
+          appBar: AppBar(
+            backgroundColor: const Color(0xFF1565C0),
+            titleSpacing: -2,
+            leading: IconButton(
+          icon: const Icon(
+            Icons.arrow_back_rounded,
+            color: Colors.white,
+            size: 24),
+            onPressed: () => Navigator.pop(context),
+          ),
+            title: Text(
+              'Scan Barcode',
+              style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 20, 
+              color: Colors.white,
+              fontWeight: FontWeight.w600
+            ),
+          )
+        ),
+
           body: BarcodeScanner(
             onDetect: (barcode) {
               setState(() {

@@ -1,338 +1,483 @@
-// lib/services/pdf_generator.dart
+// pdf_generator.dart
 import 'dart:io';
-import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:path_provider/path_provider.dart';
-import 'package:printing/printing.dart';
+import 'package:open_file/open_file.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:pdf/pdf.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class PdfGenerator {
-  static Future<void> generateFullReport(BuildContext context) async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    final user = FirebaseAuth.instance.currentUser;
-    if (uid == null || user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No signed-in user found.')),
-      );
-      return;
-    }
+  final FirebaseFirestore firestore;
+  final String userId;
 
-    // fetch user display/store name (tries multiple common field names)
-    String headerName = user.displayName ?? user.email ?? 'User';
-    try {
-      final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-      if (doc.exists) {
-        final data = doc.data()!;
-        headerName = (data['storeName'] ?? data['displayName'] ?? data['ownerName'] ?? headerName).toString();
-      }
-    } catch (_) {}
+  PdfGenerator({required this.firestore, required this.userId});
 
-    // Fetch collections: inventory, ledger, dailySales, History/transactions
-    final invSnapshot = await FirebaseFirestore.instance
+  // Header/first column color (same as your header)
+  final PdfColor _headerColor = PdfColor.fromInt(0xffd3e3ff);
+
+  Future<void> generateAndDownloadPDF() async {
+    final pdf = pw.Document();
+
+    // ----------------------- Fetch data -----------------------
+    // Inventory
+    final inventorySnapshot = await firestore
         .collection('users')
-        .doc(uid)
+        .doc(userId)
         .collection('inventory')
-        .orderBy('name', descending: false)
         .get();
+    final inventoryData = inventorySnapshot.docs.map((d) => d.data()).toList();
 
-    final ledgerSnapshot = await FirebaseFirestore.instance
+    // Ledger
+    final ledgerSnapshot = await firestore
         .collection('users')
-        .doc(uid)
+        .doc(userId)
         .collection('ledger')
         .get();
+    final ledgerData = ledgerSnapshot.docs.map((d) => d.data()).toList();
 
-    final salesSnapshot = await FirebaseFirestore.instance
+    // Receipts (transactions)
+    final receiptSnapshot = await firestore
         .collection('users')
-        .doc(uid)
-        .collection('dailySales')
-        .orderBy('date', descending: true)
+        .doc(userId)
+        .collection('receipts')
         .get();
+    final transactionData = receiptSnapshot.docs.map((d) => d.data()).toList();
 
-    final historySnapshot = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(uid)
-        .collection('History')
-        .orderBy('timestamp', descending: true)
-        .get();
-
-    // Prepare data lists
-    final inventory = invSnapshot.docs.map((d) => d.data()).toList();
-    final ledger = ledgerSnapshot.docs.map((d) => d.data()).toList();
-    final dailySales = salesSnapshot.docs.map((d) => d.data()).toList();
-    final transactions = historySnapshot.docs.map((d) => d.data()).toList();
-
-    // Totals
-    double totalInventoryValue = 0.0;
-    int totalItemsCount = 0;
-    for (var item in inventory) {
-      final qty = (item['qty'] ?? item['quantity'] ?? 0);
-      final price = (item['price'] ?? item['unitPrice'] ?? 0);
-      // ensure numeric
-      final q = _toDouble(qty);
-      final p = _toDouble(price);
-      totalItemsCount += q.round();
-      totalInventoryValue += q * p;
+    // Load logo from assets (fallback: if fails, we'll skip image)
+    pw.MemoryImage? logoImage;
+    try {
+      final logoBytes = await rootBundle.load('assets/images/Receipt Logo.png');
+      logoImage = pw.MemoryImage(logoBytes.buffer.asUint8List());
+    } catch (e) {
+      // ignore, logoImage stays null
+      logoImage = null;
     }
 
-    double totalTransactionsAmount = 0.0;
-    double totalReceived = 0.0;
-    int totalTransactionsCount = transactions.length;
-    for (var t in transactions) {
-      totalTransactionsAmount += _toDouble(t['totalAmount'] ?? t['amount'] ?? 0);
-      totalReceived += _toDouble(t['paid'] ?? t['received'] ?? 0);
-    }
+    // Display name fallback
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final displayName = currentUser?.displayName ?? 'User';
 
-    // ledger totals (example: total debit = payments received)
-    double totalDebit = 0.0;
-    double outstandingPayments = 0.0;
-    for (var l in ledger) {
-      totalDebit += _toDouble(l['paymentReceived'] ?? l['credit'] ?? 0);
-      outstandingPayments += _toDouble(l['balance'] ?? 0);
-    }
-
-    // Date range header (From DATE - Current DATE)
-    final now = DateTime.now();
-    final currentDateStr = DateFormat('yyyy-MM-dd').format(now);
-    // Optionally compute earliest date from data; we'll use earliest transaction or inventory timestamp if present
-    DateTime? earliest;
-    for (var t in transactions) {
-      final ts = t['timestamp'];
-      if (ts is Timestamp) {
-        final dt = ts.toDate();
-        earliest = (earliest == null || dt.isBefore(earliest)) ? dt : earliest;
-      } else if (t['date'] != null && t['date'] is String) {
+    // Compute fromDate by earliest createdAt in inventory or earliest dateTime in receipts
+    DateTime? firstDate;
+    for (var item in inventoryData) {
+      final ts = item['createdAt'];
+      if (ts != null) {
         try {
-          final dt = DateTime.parse(t['date']);
-          earliest = (earliest == null || dt.isBefore(earliest)) ? dt : earliest;
+          final dt = (ts as Timestamp).toDate();
+          if (firstDate == null || dt.isBefore(firstDate)) firstDate = dt;
         } catch (_) {}
       }
     }
-    final fromDateStr = earliest == null ? 'Beginning' : DateFormat('yyyy-MM-dd').format(earliest);
+    for (var r in transactionData) {
+      final ts = r['dateTime'];
+      if (ts != null) {
+        try {
+          final dt = (ts as Timestamp).toDate();
+          if (firstDate == null || dt.isBefore(firstDate)) firstDate = dt;
+        } catch (_) {}
+      }
+    }
 
-    // Create PDF
-    final pdf = pw.Document();
+    final now = DateTime.now();
+    final fromDate = firstDate != null
+        ? "${_two(firstDate.month)}/${_two(firstDate.day)}/${firstDate.year}"
+        : "START";
+    final toDate = "${_two(now.month)}/${_two(now.day)}/${now.year}";
 
-    // Common text styles
-    final headerStyle = pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold);
-    final tableHeaderStyle = pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold);
-    final normal = pw.TextStyle(fontSize: 9);
+    // ----------------------- Helper widgets & functions -----------------------
+    pw.Widget headerCell(String text) => pw.Padding(
+          padding: const pw.EdgeInsets.all(6),
+          child: pw.Text(text,
+              style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold)),
+        );
 
-    // Add a multi-page with sections (Inventory, Ledger, Transactions)
+    pw.Widget cell(String text, [bool isHeader = false]) {
+      return pw.Container(
+        padding: const pw.EdgeInsets.all(4),
+        color: isHeader ? PdfColor.fromInt(0xffd3e3ff) : PdfColors.white,
+        child: pw.Text(
+          text,
+          style: pw.TextStyle(
+            fontSize: 9,
+            fontWeight: isHeader ? pw.FontWeight.bold : pw.FontWeight.normal,
+          ),
+        ),
+      );
+    }
+
+    pw.Widget firstCol(String text) => pw.Container(
+          color: _headerColor,
+          padding: const pw.EdgeInsets.all(6),
+          child: pw.Text(
+            text,
+            style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold),
+          ),
+        );
+
+    String formatCurrency(dynamic value) {
+      double v = 0.0;
+      if (value == null) return "PHP 0.00";
+      try {
+        v = (value is num) ? value.toDouble() : double.parse(value.toString());
+      } catch (_) {
+        v = 0.0;
+      }
+      return "PHP ${v.toStringAsFixed(2)}";
+    }
+
+    // ----------------------- INVENTORY PAGE -----------------------
     pdf.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(18),
-        build: (pw.Context ctx) {
+        header: (context) {
+          return pw.Column(children: [
+            pw.SizedBox(height: 6),
+            if (logoImage != null) pw.Center(child: pw.Image(logoImage, width: 120)),
+            pw.SizedBox(height: 6),
+            pw.Center(
+                child: pw.Text("$displayName's Store Data",
+                    style: pw.TextStyle(fontSize: 15, fontWeight: pw.FontWeight.bold))),
+            pw.SizedBox(height: 2),
+            pw.Center(child: pw.Text("$fromDate - $toDate", style: const pw.TextStyle(fontSize: 10))),
+            pw.SizedBox(height: 10), //8
+          ]);
+        },
+        footer: (context) {
+          return pw.Align(
+            alignment: pw.Alignment.centerRight,
+            child: pw.Text("Page ${context.pageNumber} / ${context.pagesCount}", style: const pw.TextStyle(fontSize: 8)),
+          );
+        },
+        build: (context) {
+          // Build Inventory table rows
+          final invRows = <pw.TableRow>[];
+
+          invRows.add(pw.TableRow(
+            decoration: pw.BoxDecoration(color: _headerColor),
+            children: [
+              headerCell("QTY"),
+              headerCell("UOM"),
+              headerCell("NAME"),
+              headerCell("DESCRIPTION"),
+              headerCell("CATEGORY"),
+              headerCell("BCODE"),
+              headerCell("PRICE"),
+              headerCell("QTY SOLD"),
+              headerCell("AMOUNT"),
+            ],
+          ));
+
+          double totalInventoryValue = 0;
+          int totalItems = 0;
+
+          for (var item in inventoryData) {
+            final qty = int.tryParse(item['quantity']?.toString() ?? "0") ?? 0;
+            final price = double.tryParse(item['price']?.toString() ?? "0") ?? 0.0;
+            final amount = qty * price;
+            totalItems += qty;
+            totalInventoryValue += amount;
+
+            invRows.add(pw.TableRow(children: [
+              // first column colored
+              pw.Container(color: _headerColor, padding: const pw.EdgeInsets.all(4), child: pw.Text("$qty", style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+              cell(item['unit']?.toString() ?? ""),
+              cell(item['name']?.toString() ?? ""),
+              cell(item['add_info']?.toString() ?? ""),
+              cell(item['category']?.toString() ?? ""),
+              cell(item['barcode']?.toString() ?? ""),
+              cell("PHP ${price.toStringAsFixed(2)}"),
+              cell(item['sold']?.toString() ?? item['quantity']?.toString() ?? ""),
+              cell("PHP ${amount.toStringAsFixed(2)}"),
+            ]));
+          }
+
           return [
-            // Title/header
-            pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-              children: [
-                pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
-                    pw.Text("$headerName's Store Data", style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
-                    pw.SizedBox(height: 4),
-                    pw.Text("From $fromDateStr - $currentDateStr", style: normal),
-                  ],
-                ),
-                pw.Text(DateFormat('yyyy-MM-dd HH:mm').format(now), style: normal),
-              ],
-            ),
+            pw.Text("INVENTORY", style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+            pw.SizedBox(height: 6),
+            pw.Table(border: pw.TableBorder.all(), children: invRows),
             pw.SizedBox(height: 12),
-
-            // INVENTORY Section
-            pw.Text('INVENTORY', style: headerStyle),
-            pw.SizedBox(height: 6),
-
-            // Inventory table
-            pw.Table.fromTextArray(
-              headers: ['QTY', 'UOM', 'NAME', 'DESCRIPTION', 'CATEGORY', 'BCODE', 'PRICE', 'QTY SOLD', 'AMOUNT'],
-              data: inventory.map((it) {
-                final qty = _toDouble(it['qty'] ?? it['quantity'] ?? 0);
-                final uom = (it['uom'] ?? '') .toString();
-                final name = (it['name'] ?? '') .toString();
-                final desc = (it['description'] ?? '') .toString();
-                final cat = (it['category'] ?? '') .toString();
-                final bcode = (it['barcode'] ?? it['bcode'] ?? '') .toString();
-                final price = _toDouble(it['price'] ?? it['unitPrice'] ?? 0);
-                final qtySold = _toDouble(it['qtySold'] ?? it['sold'] ?? 0);
-                final amount = qty * price;
-                return [
-                  qty.toStringAsFixed(qty % 1 == 0 ? 0 : 2),
-                  uom,
-                  name,
-                  desc,
-                  cat,
-                  bcode,
-                  _formatCurrency(price),
-                  qtySold.toStringAsFixed(qtySold % 1 == 0 ? 0 : 2),
-                  _formatCurrency(amount),
-                ];
-              }).toList(),
-              headerStyle: tableHeaderStyle,
-              cellStyle: normal,
-              headerDecoration: const pw.BoxDecoration(color: PdfColors.grey300),
-              cellAlignment: pw.Alignment.centerLeft,
-              columnWidths: {
-                0: pw.FlexColumnWidth(1),
-                1: pw.FlexColumnWidth(1),
-                2: pw.FlexColumnWidth(3),
-                3: pw.FlexColumnWidth(3),
-                4: pw.FlexColumnWidth(2),
-                5: pw.FlexColumnWidth(2),
-                6: pw.FlexColumnWidth(2),
-                7: pw.FlexColumnWidth(1.5),
-                8: pw.FlexColumnWidth(2),
-              },
-            ),
-
+            pw.Container(
+                width: double.infinity,
+                padding: const pw.EdgeInsets.only(right: 15),
+                alignment: pw.Alignment.centerRight,
+                child: pw.Text("TOTAL ITEMS: $totalItems", style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+            pw.Container(
+                width: double.infinity,
+                padding: const pw.EdgeInsets.only(right: 15, top: 4),
+                alignment: pw.Alignment.centerRight,
+                child: pw.Text("TOTAL INVENTORY VALUE: PHP ${totalInventoryValue.toStringAsFixed(2)}",
+                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
             pw.SizedBox(height: 8),
-            pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-              children: [
-                pw.Text('TOTAL ITEMS: $totalItemsCount', style: normal),
-                pw.Text('TOTAL INVENTORY VALUE: ${_formatCurrency(totalInventoryValue)}', style: normal),
-              ],
-            ),
-
-            pw.Divider(height: 18),
-
-            // LEDGER Section
-            pw.Text('LEDGER', style: headerStyle),
-            pw.SizedBox(height: 6),
-
-            pw.Table.fromTextArray(
-              headers: ['NAME', 'CONTACT NO.', 'PAYMENT STATUS', 'CREDIT (UTANG)', 'PARTIAL PAYMENT', 'BALANCE', 'RECEIVED BY'],
-              data: ledger.map((l) {
-                return [
-                  (l['name'] ?? '') .toString(),
-                  (l['contact'] ?? l['phone'] ?? '') .toString(),
-                  (l['paymentStatus'] ?? '') .toString(),
-                  _formatCurrency(_toDouble(l['credit'] ?? l['utang'] ?? 0)),
-                  _formatCurrency(_toDouble(l['partialPayment'] ?? l['partial'] ?? 0)),
-                  _formatCurrency(_toDouble(l['balance'] ?? 0)),
-                  (l['receivedBy'] ?? '') .toString(),
-                ];
-              }).toList(),
-              headerStyle: tableHeaderStyle,
-              cellStyle: normal,
-              headerDecoration: const pw.BoxDecoration(color: PdfColors.grey300),
-            ),
-
-            pw.SizedBox(height: 8),
-            pw.Text('TOTAL DEBIT: ${_formatCurrency(totalDebit)}', style: normal),
-
-            pw.Divider(height: 18),
-
-            // OUTSTANDING PAYMENTS summary
-            pw.Text("${headerName}'s Store Data", style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
-            pw.SizedBox(height: 4),
-            pw.Text('From $fromDateStr - $currentDateStr', style: normal),
-            pw.SizedBox(height: 8),
-            pw.Text('OUTSTANDING PAYMENTS: ${_formatCurrency(outstandingPayments)}', style: normal),
-
-            pw.Divider(height: 18),
-
-            // TRANSACTIONS / HISTORY
-            pw.Text('TRANSACTIONS', style: headerStyle),
-            pw.SizedBox(height: 6),
-
-            // Transaction table headers similar to design
-            pw.Table.fromTextArray(
-              headers: ['TXN ID', 'PAYMENT METHOD', 'CUSTOMER NAME', 'ITEMS (NAME - QTY - PRICE)', 'TOTAL AMOUNT', 'TOTAL PAID', 'CHANGE/REC BY'],
-              data: transactions.map((t) {
-                final txnId = (t['txnId'] ?? t['id'] ?? '') .toString();
-                final payMethod = (t['paymentMethod'] ?? t['method'] ?? '') .toString();
-                final customer = (t['customerName'] ?? t['customer'] ?? '') .toString();
-                final items = t['items'];
-                String itemsStr = '';
-                if (items is List) {
-                  itemsStr = items.map((it) {
-                    final n = (it['name'] ?? it['itemName'] ?? '') .toString();
-                    final q = _toDouble(it['qty'] ?? it['quantity'] ?? 0);
-                    final p = _toDouble(it['price'] ?? it['unitPrice'] ?? 0);
-                    return '$n - ${q % 1 == 0 ? q.toInt() : q} - ${_formatCurrency(p)}';
-                  }).join('\n');
-                } else if (items is String) {
-                  itemsStr = items;
-                }
-                final totalAmt = _toDouble(t['totalAmount'] ?? t['amount'] ?? 0);
-                final paid = _toDouble(t['paid'] ?? t['received'] ?? 0);
-                final changeRecBy = (t['changeRecBy'] ?? t['handledBy'] ?? '') .toString();
-
-                return [
-                  txnId,
-                  payMethod,
-                  customer,
-                  itemsStr,
-                  _formatCurrency(totalAmt),
-                  _formatCurrency(paid),
-                  changeRecBy,
-                ];
-              }).toList(),
-              headerStyle: tableHeaderStyle,
-              cellStyle: normal,
-              headerDecoration: const pw.BoxDecoration(color: PdfColors.grey300),
-              columnWidths: {
-                0: pw.FlexColumnWidth(2),
-                1: pw.FlexColumnWidth(2),
-                2: pw.FlexColumnWidth(2),
-                3: pw.FlexColumnWidth(4),
-                4: pw.FlexColumnWidth(2),
-                5: pw.FlexColumnWidth(2),
-                6: pw.FlexColumnWidth(2),
-              },
-            ),
-
-            pw.SizedBox(height: 8),
-            pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                  pw.Text('TOTAL TRANSACTIONS: $totalTransactionsCount', style: normal),
-                  pw.Text('TOTAL AMOUNT: ${_formatCurrency(totalTransactionsAmount)}', style: normal),
-                  pw.Text('TOTAL RECEIVED: ${_formatCurrency(totalReceived)}', style: normal),
-                  pw.Text('OUTSTANDING: ${_formatCurrency(totalTransactionsAmount - totalReceived)}', style: normal),
-                ]
-            ),
           ];
         },
       ),
     );
 
-    // Save PDF to local storage and prompt share/save
-    final bytes = await pdf.save();
-    final filename = 'SariSync_Report_${DateFormat('yyyyMMdd_HHmm').format(now)}.pdf';
-    try {
-      final dir = await getApplicationDocumentsDirectory();
-      final file = File('${dir.path}/$filename');
-      await file.writeAsBytes(bytes);
-      // Show share/save dialog
-      await Printing.sharePdf(bytes: bytes, filename: filename);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('PDF generated: $filename')),
-      );
-    } catch (e) {
-      // fallback: directly open share dialog
-      await Printing.sharePdf(bytes: bytes, filename: filename);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('PDF generated (shared): $filename')),
-      );
+
+    
+// ----------------------- LEDGER PAGE -----------------------
+pdf.addPage(pw.MultiPage(
+  pageFormat: PdfPageFormat.a4,
+  header: (context) {
+    return pw.Column(children: [
+      pw.SizedBox(height: 6),
+      if (logoImage != null) pw.Center(child: pw.Image(logoImage, width: 120)),
+      pw.SizedBox(height: 6),
+      pw.Center(
+          child: pw.Text("$displayName's Store Data",
+              style: pw.TextStyle(fontSize: 15, fontWeight: pw.FontWeight.bold))),
+      pw.SizedBox(height: 2),
+      pw.Center(child: pw.Text("$fromDate - $toDate", style: const pw.TextStyle(fontSize: 10))),
+      pw.SizedBox(height: 10),
+    ]);
+  },
+  footer: (context) => pw.Align(
+      alignment: pw.Alignment.centerRight,
+      child: pw.Text("Page ${context.pageNumber} / ${context.pagesCount}",
+          style: const pw.TextStyle(fontSize: 8))),
+  build: (context) {
+    // ledger header + rows
+    final ledgerRows = <pw.TableRow>[];
+    ledgerRows.add(pw.TableRow(
+      decoration: pw.BoxDecoration(color: _headerColor),
+      children: [
+        headerCell("NAME"),
+        headerCell("CONTACT NO."),
+        headerCell("PAYMENT STATUS"),
+        headerCell("CREDIT (UTANG)"),
+        headerCell("PARTIAL PAYMENT"),
+        headerCell("BALANCE"),
+        headerCell("RECEIVED BY"),
+      ],
+    ));
+
+    double totalDebit = 0.0;
+    double totalOutstanding = 0.0; // NEW: sum of unpaid balances
+
+    for (var item in ledgerData) {
+      final credit = double.tryParse(item['credit']?.toString() ?? "0") ?? 0.0;
+      final partial = double.tryParse(item['partialPay']?.toString() ?? "0") ?? 0.0;
+      final balance = credit - partial;
+
+      totalDebit += partial;
+      totalOutstanding += balance; // accumulate outstanding
+
+      ledgerRows.add(pw.TableRow(children: [
+        // first col colored
+        pw.Container(
+            color: _headerColor,
+            padding: const pw.EdgeInsets.all(4),
+            child: pw.Text(item['name']?.toString() ?? "",
+                style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+        cell(item['contact']?.toString() ?? ""),
+        cell(item['payStatus']?.toString() ?? ""),
+        cell(formatCurrency(credit)),
+        cell(formatCurrency(partial)),
+        cell(formatCurrency(balance)),
+        cell(item['received']?.toString() ?? item['receivedBy']?.toString() ?? ""),
+      ]));
     }
+
+    return [
+      pw.Text("LEDGER", style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+      pw.SizedBox(height: 6),
+      pw.Table(
+          border: pw.TableBorder.all(),
+          defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
+          columnWidths: {
+            0: const pw.FlexColumnWidth(2),
+            1: const pw.FlexColumnWidth(2),
+            2: const pw.FlexColumnWidth(2),
+            3: const pw.FlexColumnWidth(2),
+            4: const pw.FlexColumnWidth(1.4),
+            5: const pw.FlexColumnWidth(1.8),
+            6: const pw.FlexColumnWidth(2),
+          },
+          children: ledgerRows),
+      pw.SizedBox(height: 12),
+
+      // TOTAL DEBIT
+      pw.Container(
+          width: double.infinity,
+          padding: const pw.EdgeInsets.only(right: 15),
+          alignment: pw.Alignment.centerRight,
+          child: pw.Text("TOTAL DEBIT (PAYMENTS RECEIVED): ${formatCurrency(totalDebit)}",
+              style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+
+      pw.SizedBox(height: 4),
+
+      // OUTSTANDING PAYMENTS
+      pw.Container(
+          width: double.infinity,
+          padding: const pw.EdgeInsets.only(right: 15),
+          alignment: pw.Alignment.centerRight,
+          child: pw.Text("OUTSTANDING PAYMENTS: ${formatCurrency(totalOutstanding)}",
+              style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.black))),
+      pw.SizedBox(height: 8),
+    ];
+  },
+));
+
+    // ===== COMPUTE SUMMARY VALUES =====
+final int totalTransactions = transactionData.length;
+
+final double totalAmount = transactionData.fold(0.0, (sum, item) {
+  final price = double.tryParse(item["totalAmount"].toString()) ?? 0.0;
+  return sum + price;
+});
+
+final double totalReceived = transactionData.fold(0.0, (sum, item) {
+  final paid = double.tryParse(item["totalPaid"].toString()) ?? 0.0;
+  return sum + paid;
+});
+
+final double totalOutstanding = totalAmount - totalReceived;
+
+
+// =============== TRANSACTIONS PAGE ===============
+pdf.addPage(
+  pw.MultiPage(
+    pageFormat: PdfPageFormat.a4,
+    header: (context) => pw.Column(children: [
+      pw.SizedBox(height: 6),
+      if (logoImage != null) pw.Center(child: pw.Image(logoImage, width: 120)),
+      pw.SizedBox(height: 6),
+      pw.Center(
+          child: pw.Text("$displayName's Store Data",
+              style: pw.TextStyle(fontSize: 15, fontWeight: pw.FontWeight.bold))),
+      pw.SizedBox(height: 2),
+      pw.Center(child: pw.Text("$fromDate - $toDate", style: const pw.TextStyle(fontSize: 10))),
+
+      pw.SizedBox(height: 10),
+    ]),
+    footer: (context) => pw.Align(
+      alignment: pw.Alignment.centerRight,
+      child: pw.Text("Page ${context.pageNumber} / ${context.pagesCount}",
+          style: const pw.TextStyle(fontSize: 8)),
+    ),
+    build: (context) => [
+      pw.SizedBox(height: 10),
+      pw.Text(
+        "TRANSACTIONS",
+        style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold),
+      ),
+      pw.SizedBox(height: 8),
+      // ===== TABLE =====
+      pw.Table(
+        border: pw.TableBorder.all(),
+        defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
+        columnWidths: {
+          0: const pw.FlexColumnWidth(2),
+          1: const pw.FlexColumnWidth(2),
+          2: const pw.FlexColumnWidth(2),
+          3: const pw.FlexColumnWidth(2.5),
+          4: const pw.FlexColumnWidth(4),
+          5: const pw.FlexColumnWidth(2),
+          6: const pw.FlexColumnWidth(2),
+          7: const pw.FlexColumnWidth(2),
+        },
+        children: [
+          // header row
+          pw.TableRow(
+            decoration: pw.BoxDecoration(color: PdfColor.fromInt(0xffd3e3ff)),
+            children: [
+              cell("TXN ID", true),
+              cell("DATE", true),
+              cell("METHOD", true),
+              cell("CUSTOMER", true),
+              cell("ITEMS (NAME × QTY × PRICE)", true),
+              cell("TOTAL", true),
+              cell("PAID", true),
+              cell("CHANGE", true),
+            ],
+          ),
+          ...transactionData.map((item) {
+            final ts = item["dateTime"];
+            final date = ts is Timestamp
+                ? ts.toDate()
+                : DateTime.tryParse(ts.toString()) ?? DateTime.now();
+            final formattedDate = "${date.month}/${date.day}/${date.year}";
+            final rawItems = item['items'] as List<dynamic>? ?? [];
+            final itemsList = rawItems.map((it) {
+              final n = it['name'] ?? "";
+              final q = it['quantity'] ?? "";
+              final p = double.tryParse(it['price']?.toString() ?? "0") ?? 0;
+              return "$n × $q @ PHP ${p.toStringAsFixed(2)}";
+            }).toList();
+
+            return pw.TableRow(
+              children: [
+                pw.Container(
+                  decoration: pw.BoxDecoration(color: _headerColor),
+                  padding: const pw.EdgeInsets.all(4),
+                  alignment: pw.Alignment.centerLeft,
+                  child: pw.Text(
+                    item["transactionId"] ?? "",
+                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9),
+                  ),
+                ),
+                cell(formattedDate),
+                cell(item["paymentMethod"] ?? ""),
+                cell(item["name"]?.toString() ?? "-"),
+                cell(itemsList.join("\n")),
+                cell("PHP ${(double.tryParse(item["totalAmount"].toString()) ?? 0).toStringAsFixed(2)}"),
+                cell("PHP ${(double.tryParse(item["totalPaid"].toString()) ?? 0).toStringAsFixed(2)}"),
+                cell("PHP ${(double.tryParse(item["change"].toString()) ?? 0).toStringAsFixed(2)}"),
+              ],
+            );
+          }),
+        ],
+      ),
+      pw.SizedBox(height: 18),
+      // ===== SUMMARY =====
+      pw.Container(
+        width: double.infinity,
+        padding: const pw.EdgeInsets.only(right: 15),
+        alignment: pw.Alignment.centerRight,
+        child: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.end,
+          children: [
+            pw.Text(
+              "TOTAL TRANSACTIONS: $totalTransactions",
+              style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+            ),
+            pw.SizedBox(height: 4),
+            pw.Text(
+              "TOTAL AMOUNT: PHP ${totalAmount.toStringAsFixed(2)}",
+              style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+            ),
+            pw.SizedBox(height: 4),
+            pw.Text(
+              "TOTAL RECEIVED: PHP ${totalReceived.toStringAsFixed(2)}",
+              style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+            ),
+            pw.SizedBox(height: 4),
+            pw.Text(
+              "OUTSTANDING: PHP ${totalOutstanding.toStringAsFixed(2)}",
+              style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+            ),
+          ],
+        ),
+      ),
+    ],
+  ),
+);
+
+    // ----------------------- SAVE & OPEN -----------------------
+    final downloadsDir = await getDownloadsDirectory();
+    final filePath = "${downloadsDir!.path}/SariSync_Report_${now.toIso8601String().split('T')[0]}.pdf";
+    final file = File(filePath);
+    await file.writeAsBytes(await pdf.save());
+    print("PDF saved at: $filePath");
+
+    // Open file (if platform supports)
+    try {
+      OpenFile.open(filePath);
+    } catch (_) {}
   }
 
-  static double _toDouble(dynamic v) {
-    if (v == null) return 0.0;
-    if (v is num) return v.toDouble();
-    final s = v.toString();
-    return double.tryParse(s.replaceAll(',', '')) ?? 0.0;
-  }
-
-  static String _formatCurrency(double v) {
-    final nf = NumberFormat.currency(locale: 'en_PH', symbol: '₱');
-    return nf.format(v);
-  }
+  // small helper: zero-pad month/day
+  static String _two(int n) => n < 10 ? "0$n" : "$n";
 }

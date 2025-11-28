@@ -13,7 +13,6 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:sarisync/services/pdf_generator.dart';
 
-
 // pages
 import 'package:sarisync/views/inventory.dart';
 import 'package:sarisync/views/ledger.dart';
@@ -32,6 +31,7 @@ import 'package:sarisync/models/inventory_item.dart';
 import 'package:sarisync/services/ledger_service.dart';
 import 'auto_cleanup_executor.dart';
 import 'package:sarisync/services/local_storage_service.dart';
+import 'package:sarisync/widgets/message_prompts.dart';
 
 class HomePage extends StatefulWidget {
   final int initialIndex;
@@ -519,9 +519,39 @@ class HomeContent extends StatelessWidget {
                 // Download Inventory Button
                 PDFBtn(
                   onTap: () async {
-                await PdfGenerator.generateFullReport(context);
-                },
-              ),
+                    final user = FirebaseAuth.instance.currentUser;
+                    if (user == null) return;
+
+                    try {
+                      // SHOW LOADING while generating PDF
+                      DialogHelper.showLoading(
+                        context,
+                        message: "Generating PDF. Please wait...",
+                      );
+
+                      final pdfGen = PdfGenerator(
+                        firestore: FirebaseFirestore.instance,
+                        userId: user.uid,
+                      );
+
+                      await pdfGen.generateAndDownloadPDF();
+
+                      // CLOSE LOADING
+                      DialogHelper.closeLoading(context);
+
+                    } catch (e) {
+                      // CLOSE LOADING
+                      DialogHelper.closeLoading(context);
+
+                      // ERROR MESSAGE
+                      DialogHelper.warning(
+                        context,
+                        "Failed to generate PDF. Please try again.",
+                      );
+                    }
+                  },
+                ),
+
 
                 const SizedBox(height: 12),
 

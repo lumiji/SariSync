@@ -119,7 +119,9 @@ class DialogHelper {
     BuildContext context,
     String message, {
     VoidCallback? onOk,
-  }) {
+  })
+  
+   {
     showDialog(
       context: context,
       barrierDismissible: false,
