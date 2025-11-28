@@ -10,7 +10,6 @@ import 'package:async/async.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:sarisync/services/pdf_generator.dart';
 
-
 // pages
 import 'package:sarisync/views/inventory.dart';
 import 'package:sarisync/views/ledger.dart';
@@ -397,9 +396,14 @@ class HomeContent extends StatelessWidget {
                 // Download Inventory Button
                 PDFBtn(
                   onTap: () async {
-                await PdfGenerator.generateFullReport(context);
-                },
-              ),
+                      final user = FirebaseAuth.instance.currentUser;
+                      final pdfGen = PdfGenerator(
+                        firestore: FirebaseFirestore.instance,
+                        userId: user!.uid,
+                      );
+                      await pdfGen.generateAndDownloadPDF();
+                    },
+                ),
 
                 const SizedBox(height: 12),
 
