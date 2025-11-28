@@ -31,7 +31,7 @@ class AutoCleanupExecutor {
     await _deleteAll("ledger");
     await _deleteAll("receipts");
     await _deleteAll("dailySales");
-    // Add more if needed
+   
 
   }
 

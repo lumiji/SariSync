@@ -137,10 +137,12 @@ class _SetPinScreenState extends State<SetPinScreen> {
               Navigator.pop(context);
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(builder: (_) => PinScreen(
-                  accountIdentifier: _displayAccount,
-                  accountType: _accountType,
-                )),
+                MaterialPageRoute(
+                  builder: (_) => PinScreen(
+                    accountIdentifier: _displayAccount,
+                    accountType: _accountType,
+                  ),
+                ),
               );
             },
           ),
@@ -277,13 +279,13 @@ Future<void> _saveNewPinFlow() async {
         _errorMessage = 'Password is too weak. Please use at least 6 characters.';
         break;
       case 'operation-not-allowed':
-        _errorMessage = 'Email/password accounts are not enabled.';
+        _errorMessage = 'Email/password sign-up is not enabled in Firebase Console.\nPlease enable it in Authentication > Sign-in method.';
         break;
       case 'account-exists-with-different-credential':
         _errorMessage = 'An account already exists with this email using a different sign-in method.';
         break;
       default:
-        _errorMessage = 'Error: ${e.message}';
+        _errorMessage = 'Error: ${e.code} - ${e.message}';
     }
 
     if (context.mounted) {

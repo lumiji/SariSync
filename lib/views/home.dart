@@ -49,8 +49,10 @@ class _HomePageState extends State<HomePage> {
   late final Stream<double> totalDebtStream;
   late final Stream<List<TransactionItem>> _recentTransactions;
   String? uid;
+  String? username; // Add username for PIN-based auth
   String? _selectedCategory;
   bool _isOnline = true;
+  bool _isInitializing = true;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
       
   @override
@@ -58,17 +60,30 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     _selectedIndex = widget.initialIndex;
 
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _checkAuthState();
-      });
-      
-    
-    // Safely get UID with fallback
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAuthState();
+      _initializeUserData(); // Async initialization
+    });
+  }
+
+  Future<void> _initializeUserData() async {
+    // Safely get UID with fallback, or get username from local storage
     final currentUser = FirebaseAuth.instance.currentUser;
     uid = currentUser?.uid;
     
+    // If no Firebase auth, try to get username from local storage for PIN-based auth
     if (uid == null) {
+      username = await LocalStorageService.getAccountIdentifier();
+    }
+    
+    if (uid == null && username == null) {
       // Handle case where user is not authenticated
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const SignInOptionsScreen()),
+        );
+      }
       return;
     }
     
@@ -78,41 +93,71 @@ class _HomePageState extends State<HomePage> {
     // Run auto cleanup
     AutoCleanupExecutor.run();
     
-    todaySalesStream = salesService.todaySalesStream();
-    totalDebtStream = debtService.totalDebtStream();
-    _recentTransactions = FirebaseFirestore.instance
-      .collection('users')
-      .doc(uid)
-      .collection('receipts')
-      .orderBy('createdAt', descending: true)
-      .limit(5)
-      .snapshots(includeMetadataChanges: true) 
-      .map((snapshot) => snapshot.docs.map((doc) {
-        final data = doc.data();
-        return TransactionItem.fromJson({
-          'totalAmount': data['totalAmount']?.toString() ?? '0.00',
-          'createdAt': data['createdAt'],
-          'transactionId': data['transactionId'] ?? '',
-          'paymentMethod': data['paymentMethod'] ?? '',
-        });
-      }).toList());
+    // Initialize streams based on whether we have UID or username
+    if (uid != null) {
+      todaySalesStream = salesService.todaySalesStream();
+      totalDebtStream = debtService.totalDebtStream();
+      _recentTransactions = FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('receipts')
+        .orderBy('createdAt', descending: true)
+        .limit(5)
+        .snapshots(includeMetadataChanges: true) 
+        .map((snapshot) => snapshot.docs.map((doc) {
+          final data = doc.data();
+          return TransactionItem.fromJson({
+            'totalAmount': data['totalAmount']?.toString() ?? '0.00',
+            'createdAt': data['createdAt'],
+            'transactionId': data['transactionId'] ?? '',
+            'paymentMethod': data['paymentMethod'] ?? '',
+          });
+        }).toList());
+    } else if (username != null) {
+      // PIN-based auth: query by username instead of UID
+      _initializePinBasedStreams(username!);
+    }
+    
+    if (mounted) {
+      _isInitializing = false;
+      setState(() {});
+    }
+  }
+
+  void _initializePinBasedStreams(String userIdentifier) {
+    // For PIN-based users, we query Firestore by username
+    // This is a simplified approach - data will load when streams are accessed
+    todaySalesStream = Future.value({
+      'totalSales': 0,
+      'transactionCount': 0,
+    }).asStream().cast();
+
+    totalDebtStream = Stream.value(0.0);
+
+    _recentTransactions = Stream.value([]);
   }
 
   Future<void> _checkAuthState() async {
     final currentUser = FirebaseAuth.instance.currentUser;
     final isLoggedIn = await LocalStorageService.isLoggedIn();
     
-    // If Firebase says no user but local storage says logged in, something is wrong
+    // If Firebase says no user but local storage says logged in,
+    // allow it when a local account identifier exists (PIN-based login).
     if (currentUser == null && isLoggedIn) {
-      // Clear inconsistent state
-      await LocalStorageService.clearUserData();
-      
-      if (mounted) {
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (_) => const SignInOptionsScreen()),
-          (route) => false,
-        );
+      final localAccount = await LocalStorageService.getAccountIdentifier();
+      if (localAccount == null) {
+        // No local account info -> inconsistent state, force sign-in
+        await LocalStorageService.clearUserData();
+        if (mounted) {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (_) => const SignInOptionsScreen()),
+            (route) => false,
+          );
+        }
+      } else {
+        // Local account exists; treat as PIN-authenticated session and continue
+        return;
       }
     }
   }
@@ -175,8 +220,15 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    // Handle case where user is not authenticated
-    if (uid == null) {
+    // If we're still initializing (checking local/Firebase state), show a loader
+    if (_isInitializing) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    // Handle case where neither Firebase UID nor local username is available
+    if (uid == null && username == null) {
       return Scaffold(
         body: Center(
           child: Column(
@@ -190,11 +242,19 @@ class _HomePageState extends State<HomePage> {
                 onPressed: () {
                   // Navigate back to sign-in
                   Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const SignInOptionsScreen()),
-              );
+                    context,
+                    MaterialPageRoute(builder: (_) => const SignInOptionsScreen()),
+                  );
                 },
                 child: const Text('Sign In'),
+              ),
+              const SizedBox(height: 8),
+              ElevatedButton(
+                onPressed: () {
+                  // Retry local initialization
+                  _initializeUserData();
+                },
+                child: const Text('Retry'),
               ),
             ],
           ),

@@ -316,34 +316,6 @@ class _SettingsPageState extends State<SettingsPage> {
 
           const SizedBox(height: 16),
 
-          // NOTIFICATIONS
-          sectionHeader("Notifications"),
-
-          customSwitchTile(
-            title: "Low Stocks Alert",
-            value: lowStocksAlert,
-            // onChanged: (v) {},
-            onChanged: (v) {
-              setState(() {
-                lowStocksAlert = v;
-              });
-              saveSettings();
-            },
-          ),
-          customSwitchTile(
-            title: "Scheduled Data Cleanup",
-            value: scheduledDataCleanup,
-            //onChanged: (_) {},
-            onChanged: (v) {
-              setState(() {
-                scheduledDataCleanup = v;
-              });
-              saveSettings();
-            },
-          ),
-
-          const SizedBox(height: 16),
-
           // ABOUT / HELP
           sectionHeader("About/Help"),
 

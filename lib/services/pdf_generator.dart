@@ -14,13 +14,13 @@ class PdfGenerator {
 
   PdfGenerator({required this.firestore, required this.userId});
 
-  // Header/first column color (same as your header)
+  // Header/first column color (same as header)
   final PdfColor _headerColor = PdfColor.fromInt(0xffd3e3ff);
 
   Future<void> generateAndDownloadPDF() async {
     final pdf = pw.Document();
 
-    // ----------------------- Fetch data -----------------------
+    
     // Inventory
     final inventorySnapshot = await firestore
         .collection('users')
@@ -45,7 +45,7 @@ class PdfGenerator {
         .get();
     final transactionData = receiptSnapshot.docs.map((d) => d.data()).toList();
 
-    // Load logo from assets (fallback: if fails, we'll skip image)
+    // Load logo from assets (fallback: if fails, skip image)
     pw.MemoryImage? logoImage;
     try {
       final logoBytes = await rootBundle.load('assets/images/Receipt Logo.png');
@@ -86,7 +86,7 @@ class PdfGenerator {
         : "START";
     final toDate = "${_two(now.month)}/${_two(now.day)}/${now.year}";
 
-    // ----------------------- Helper widgets & functions -----------------------
+    //Helper widgets & functions
     pw.Widget headerCell(String text) => pw.Padding(
           padding: const pw.EdgeInsets.all(6),
           child: pw.Text(text,
@@ -127,7 +127,7 @@ class PdfGenerator {
       return "PHP ${v.toStringAsFixed(2)}";
     }
 
-    // ----------------------- INVENTORY PAGE -----------------------
+    //INVENTORY PAGE
     pdf.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
@@ -217,7 +217,7 @@ class PdfGenerator {
 
 
     
-// ----------------------- LEDGER PAGE -----------------------
+// LEDGER PAGE 
 pdf.addPage(pw.MultiPage(
   pageFormat: PdfPageFormat.a4,
   header: (context) {
@@ -320,7 +320,7 @@ pdf.addPage(pw.MultiPage(
   },
 ));
 
-    // ===== COMPUTE SUMMARY VALUES =====
+    // COMPUTE SUMMARY VALUES 
 final int totalTransactions = transactionData.length;
 
 final double totalAmount = transactionData.fold(0.0, (sum, item) {
@@ -336,7 +336,7 @@ final double totalReceived = transactionData.fold(0.0, (sum, item) {
 final double totalOutstanding = totalAmount - totalReceived;
 
 
-// =============== TRANSACTIONS PAGE ===============
+//  TRANSACTIONS PAGE 
 pdf.addPage(
   pw.MultiPage(
     pageFormat: PdfPageFormat.a4,
@@ -431,7 +431,7 @@ pdf.addPage(
         ],
       ),
       pw.SizedBox(height: 18),
-      // ===== SUMMARY =====
+      // SUMMARY 
       pw.Container(
         width: double.infinity,
         padding: const pw.EdgeInsets.only(right: 15),
@@ -465,7 +465,7 @@ pdf.addPage(
   ),
 );
 
-    // ----------------------- SAVE & OPEN -----------------------
+    // SAVE & OPEN 
     final downloadsDir = await getDownloadsDirectory();
     final filePath = "${downloadsDir!.path}/SariSync_Report_${now.toIso8601String().split('T')[0]}.pdf";
     final file = File(filePath);

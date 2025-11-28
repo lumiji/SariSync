@@ -1,9 +1,12 @@
+import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:sarisync/views/home.dart';
 import 'package:sarisync/services/local_storage_service.dart';
 import 'package:sarisync/views/set_pin_screen.dart';
 import 'package:sarisync/views/sign-in_options.dart';
+import 'package:crypto/crypto.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class PinScreen extends StatefulWidget {
   final String? accountIdentifier;
@@ -33,8 +36,9 @@ class _PinScreenState extends State<PinScreen> {
   }
 
   Future<void> _loadAccountInfo() async {
-    _displayAccount = await LocalStorageService.getAccountIdentifier();
-    _accountType = await LocalStorageService.getAccountType();
+    // Use passed parameters if available, otherwise load from local storage
+    _displayAccount = widget.accountIdentifier ?? await LocalStorageService.getAccountIdentifier();
+    _accountType = widget.accountType ?? await LocalStorageService.getAccountType();
     setState(() {});
   }
 
@@ -78,30 +82,65 @@ class _PinScreenState extends State<PinScreen> {
       return;
     }
 
-    String? accountIdentifier = await LocalStorageService.getAccountIdentifier();
+    String? accountIdentifier = _displayAccount ?? await LocalStorageService.getAccountIdentifier();
 
     if (accountIdentifier == null) {
       setState(() => _errorMessage = 'Account not found');
       return;
     }
 
-    String? savedPin = await LocalStorageService.getPin(accountIdentifier);
+    try {
+      // Hash the entered PIN using SHA-256
+      final enteredPinHash = sha256.convert(utf8.encode(_enteredPin)).toString();
 
-    if (savedPin == null) {
-      setState(() => _errorMessage = 'No PIN is set. Please set a PIN first.');
-      return;
-    }
+      // Query Firestore for user with matching username/identifier
+      final query = await FirebaseFirestore.instance
+          .collection('users')
+          .where('username', isEqualTo: accountIdentifier)
+          .limit(1)
+          .get();
 
-    if (_enteredPin == savedPin) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => HomePage()),
-      );
-    } else {
-      setState(() {
-        _errorMessage = 'Incorrect PIN';
-        _enteredPin = '';
-      });
+      if (query.docs.isEmpty) {
+        setState(() => _errorMessage = 'Account not found in database');
+        return;
+      }
+
+      final userDoc = query.docs.first;
+      final storedPinHash = userDoc.data()['pinHash'] as String?;
+
+      if (storedPinHash == null || storedPinHash.isEmpty) {
+        setState(() => _errorMessage = 'No PIN is set. Please set a PIN first.');
+        return;
+      }
+
+      // Compare hashed PINs
+      if (enteredPinHash == storedPinHash) {
+        // PIN is correct - save session info and navigate
+        try {
+          // Save account info to local storage (already done, but ensure it's set)
+          await LocalStorageService.saveAccountInfo(accountIdentifier, _accountType ?? 'password');
+          await LocalStorageService.saveLoggedIn();
+          
+          // Navigate to home
+          if (mounted) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => HomePage()),
+            );
+          }
+        } catch (saveError) {
+          setState(() => _errorMessage = 'Error saving session: $saveError');
+          print('Session save error: $saveError');
+        }
+      } else {
+        setState(() {
+          _errorMessage = 'Incorrect PIN';
+          _enteredPin = '';
+        });
+      }
+    } catch (e) {
+      setState(() => _errorMessage = 'Error verifying PIN: $e');
+      print('PIN verification error: $e');
     }
   }
 
