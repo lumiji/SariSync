@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:sarisync/models/inventory_item.dart';
 import 'package:sarisync/widgets/pos-item_card.dart';
@@ -142,7 +141,7 @@ Widget build(BuildContext context) {
                 children: [
                   Text(
                     "Total Scanned Items: $_scannedItems",
-                    style: GoogleFonts.inter(
+                    style: TextStyle( fontFamily: 'Inter',
                       color: Color(0xFF212121),
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -186,7 +185,7 @@ Widget build(BuildContext context) {
                     ? Center(
                         child: Text(
                           "No scanned items",
-                          style: GoogleFonts.inter(
+                          style: TextStyle( fontFamily: 'Inter',
                             fontSize: 14, 
                             color: Colors.grey,
                             fontWeight: FontWeight.w500),
@@ -271,10 +270,14 @@ Widget build(BuildContext context) {
             MaterialPageRoute(
               builder: (context) => ReceiptPage(
                 scannedItems: scannedItemsList.map((item) => ReceiptItem(
+                  
                   id: item.id!,
                   name: item.name,
                   price: item.price,
                   quantity: 1,
+                  add_info: item.add_info,
+                  unit: item.unit,
+
                 )).toList(),
               ),
             ),
@@ -287,7 +290,7 @@ Widget build(BuildContext context) {
         backgroundColor: const Color(0xFFFF9800),
         label: Text(
           'Proceed to Receipt',
-          style: GoogleFonts.inter(
+          style: TextStyle( fontFamily: 'Inter',
             fontSize: 16,
             color: const Color(0xFFFCFCFC),
             fontWeight: FontWeight.w700,

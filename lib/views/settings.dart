@@ -1,6 +1,5 @@
 //dependencies
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
@@ -100,6 +99,9 @@ class _SettingsPageState extends State<SettingsPage> {
       try {
         await FacebookAuth.instance.logOut();
       } catch (e) {}
+
+       await LocalStorageService.clearUserData();
+
     } catch (e) {
       print("Sign out error: $e");
     }
@@ -114,10 +116,12 @@ class _SettingsPageState extends State<SettingsPage> {
         titleSpacing: -2,
         title: Text(
           "Settings",
-          style: GoogleFonts.inter(
-            fontSize: 20,
-            color: Colors.white, 
-            fontWeight: FontWeight.w600),
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 20, 
+            color: Colors.white,
+            fontWeight: FontWeight.w600
+          ),
         ),
         leading: IconButton(
           icon: const Icon(
@@ -203,7 +207,7 @@ class _SettingsPageState extends State<SettingsPage> {
             padding: const EdgeInsets.only(left: 15, bottom: 4),
             child: Text(
               "Set Cleanup Schedule",
-              style: GoogleFonts.inter(
+              style: TextStyle( fontFamily: 'Inter',
                 fontSize: 15,
                 color: autoCleanup ? Colors.black : Colors.grey,
               ),
@@ -382,7 +386,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ListTile(
             title: Text(
               "Logout",
-              style: GoogleFonts.inter(
+              style: TextStyle( fontFamily: 'Inter',
                 fontSize: 16,
                 color: const Color.fromARGB(255, 0, 0, 0),
                 fontWeight: FontWeight.w600,
@@ -429,7 +433,7 @@ class _SettingsPageState extends State<SettingsPage> {
       padding: const EdgeInsets.only(bottom: 6, top: 10),
       child: Text(
         text,
-        style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700),
+        style: TextStyle( fontFamily: 'Inter',fontSize: 15, fontWeight: FontWeight.w700),
       ),
     );
   }
@@ -443,7 +447,7 @@ class _SettingsPageState extends State<SettingsPage> {
     return Column(
       children: [
         SwitchListTile(
-          title: Text(title, style: GoogleFonts.inter(fontSize: 15)),
+          title: Text(title, style: TextStyle( fontFamily: 'Inter',fontSize: 15)),
           value: value,
           onChanged: onChanged,
           activeColor: Colors.white,
@@ -471,7 +475,7 @@ class _SettingsPageState extends State<SettingsPage> {
         CheckboxListTile(
           title: Text(
             title,
-            style: GoogleFonts.inter(
+            style: TextStyle( fontFamily: 'Inter',
               fontSize: 15,
               color: enabled ? Colors.black : Colors.grey,
             ),
@@ -500,7 +504,8 @@ class _SettingsPageState extends State<SettingsPage> {
     return ListTile(
       title: Text(
         title,
-        style: GoogleFonts.inter(
+        style: TextStyle(
+          fontFamily: 'Inter',
           fontSize: 15,
           color: enabled ? Colors.black : Colors.grey,
         ),

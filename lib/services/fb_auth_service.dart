@@ -4,7 +4,27 @@ import 'package:firebase_auth/firebase_auth.dart';
 class FacebookAuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  /// Sign in with Facebook
+  Future<Map<String, dynamic>?> signInWithFacebookGetTokens() async {
+    try {
+      final LoginResult result = await FacebookAuth.instance.login();
+
+      if (result.status == LoginStatus.success) {
+        final userData = await FacebookAuth.instance.getUserData();
+        
+        return {
+          'accessToken': result.accessToken!.token,
+          'email': userData['email'],
+          'displayName': userData['name'],
+        };
+      }
+      return null;
+    } catch (e) {
+      print("Facebook Sign-In Error: $e");
+      return null;
+    }
+  }
+
+  // Sign in with Facebook
   Future<User?> signInWithFacebook() async {
     try {
       // Trigger Facebook login
@@ -43,7 +63,7 @@ class FacebookAuthService {
     }
   }
 
-  /// Sign out
+  // Sign out
   Future<void> signOut() async {
     await FacebookAuth.instance.logOut();
     await _auth.signOut();

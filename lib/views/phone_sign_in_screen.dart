@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:sarisync/services/auth_flow_service.dart';
 import 'package:sarisync/services/remote_db_service.dart';
+import 'package:sarisync/services/local_storage_service.dart';
 
 class PhoneSignInScreen extends StatefulWidget {
   @override
@@ -23,7 +24,10 @@ class _PhoneSignInScreenState extends State<PhoneSignInScreen> {
         UserCredential userCredential = await _auth.signInWithCredential(credential);
         //Navigator.pop(context); // Close screen after success
         await RemoteDbService.initializeUserDatabase(uid: userCredential.user!.uid);
-        await AuthFlowService.handlePostLogin(context);
+        await AuthFlowService.handlePostLogin(
+          context,
+          accountIdentifier:  phoneController.text.trim(),
+          accountType: "phone");
       },
       verificationFailed: (error) {
         ScaffoldMessenger.of(context)
@@ -51,9 +55,13 @@ class _PhoneSignInScreenState extends State<PhoneSignInScreen> {
   // Create Firestore user + default collections
     await RemoteDbService.initializeUserDatabase(uid: userCredential.user!.uid);
 
+    await LocalStorageService.saveAccountInfo(phoneController.text.trim(), "phone");
+
     //Navigator.pop(context); // Close screen after success
 
-    await AuthFlowService.handlePostLogin(context);
+    await AuthFlowService.handlePostLogin(context,
+          accountIdentifier:  phoneController.text.trim(),
+          accountType: "phone");
   }
 
   @override

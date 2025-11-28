@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sarisync/services/pdf_generator.dart';
 
 class PDFBtn extends StatelessWidget {
   final VoidCallback? onTap;
@@ -7,6 +8,16 @@ class PDFBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    
+    void showLoading(BuildContext context) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) =>
+            const Center(child: CircularProgressIndicator(color: Colors.black)),
+      );
+    }
+
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -26,7 +37,7 @@ class PDFBtn extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: const [
                 Text(
-                  'Download Inventory',
+                  'Generate Report',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w900,

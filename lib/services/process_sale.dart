@@ -39,6 +39,8 @@ Future<void> subtractStock(ReceiptItem item) async {
         name: item.name,
         price: item.price,
         quantity: item.quantity,
+        add_info: item.add_info,
+        unit:item.unit,
       );
     }
   }

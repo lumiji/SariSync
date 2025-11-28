@@ -1,6 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:intl/intl.dart';
 import 'package:sarisync/models/ledger_item.dart';
@@ -173,7 +172,7 @@ class LedItemCard extends StatelessWidget {
                           // Name
                           Text(
                             item.name,
-                            style: GoogleFonts.inter(
+                            style: TextStyle( fontFamily: 'Inter',
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                             ),
@@ -183,7 +182,7 @@ class LedItemCard extends StatelessWidget {
 
                           Text(
                             'Tel: ${item.contact!}',
-                            style: GoogleFonts.inter(
+                            style: TextStyle( fontFamily: 'Inter',
                               fontSize: 14,
                               color: Color(0xFF757575),
                               fontWeight: FontWeight.normal,
@@ -193,7 +192,7 @@ class LedItemCard extends StatelessWidget {
                           // Date of utang
                           Text(
                             formattedDate,
-                            style: GoogleFonts.inter(
+                            style: TextStyle( fontFamily: 'Inter',
                               fontSize: 12,
                               color: Colors.grey.shade500,
                             ),
@@ -202,7 +201,7 @@ class LedItemCard extends StatelessWidget {
                           // Customer ID
                           Text(
                             'ID: ${item.customerID}',
-                            style: GoogleFonts.inter(
+                            style: TextStyle( fontFamily: 'Inter',
                               fontSize: 12,
                               color: Colors.grey.shade500,
                             ),
@@ -211,7 +210,7 @@ class LedItemCard extends StatelessWidget {
                           // Received by
                           Text(
                             "Received by: ${item.received}",
-                            style: GoogleFonts.inter(
+                            style: TextStyle( fontFamily: 'Inter',
                               fontSize: 12,
                               color: Color(0xFF757575),
                             ),
@@ -233,14 +232,14 @@ class LedItemCard extends StatelessWidget {
                       
                         Text(
                           item.credit.toStringAsFixed(2),
-                          style: GoogleFonts.inter(
+                          style: TextStyle( fontFamily: 'Inter',
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         Text(
                           "PHP",
-                          style: GoogleFonts.inter(
+                          style: TextStyle( fontFamily: 'Inter',
                             fontSize: 12,
                             color: Color(0xFF757575),
                           ),

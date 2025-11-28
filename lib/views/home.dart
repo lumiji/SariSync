@@ -2,9 +2,12 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:sarisync/services/sales_card_service.dart';
+import 'package:sarisync/services/user_display_service.dart';
 import 'package:sarisync/views/new_sales.dart';
 import 'package:sarisync/widgets/bottom_nav_item.dart';
 import 'package:async/async.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'dart:async';
 
 //firebase dependencies
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -15,6 +18,8 @@ import 'package:sarisync/views/inventory.dart';
 import 'package:sarisync/views/ledger.dart';
 import 'package:sarisync/views/history.dart';
 import 'settings.dart';
+import 'package:sarisync/views/transaction_receipt.dart';
+import 'package:sarisync/views/sign-in_options.dart';
 
 // models, services, and widgets
 import 'package:sarisync/models/transaction_model.dart';
@@ -25,18 +30,12 @@ import 'package:sarisync/widgets/home-transaction_item.dart';
 import 'package:sarisync/models/inventory_item.dart';
 import 'package:sarisync/services/ledger_service.dart';
 import 'auto_cleanup_executor.dart';
+import 'package:sarisync/services/local_storage_service.dart';
+import 'package:sarisync/widgets/message_prompts.dart';
 
 class HomePage extends StatefulWidget {
   final int initialIndex;
   const HomePage({Key? key, this.initialIndex = 0}) : super(key: key);
-
-
-//   @override
-//   void initState() {
-//   super.initState();
-//   AutoCleanupExecutor.run();
-// }
-
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -44,48 +43,100 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   late int _selectedIndex;
-  // late final List<Widget> _pages; 
   final SalesService salesService = SalesService();
   final LedgerService debtService = LedgerService();
   late final Stream<Map<String, dynamic>> todaySalesStream;
   late final Stream<double> totalDebtStream;
   late final Stream<List<TransactionItem>> _recentTransactions;
-  final uid = FirebaseAuth.instance.currentUser!.uid;
+  String? uid;
   String? _selectedCategory;
+  bool _isOnline = true;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
       
   @override
   void initState() {
     super.initState();
     _selectedIndex = widget.initialIndex;
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _checkAuthState();
+      });
+      
+    
+    // Safely get UID with fallback
+    final currentUser = FirebaseAuth.instance.currentUser;
+    uid = currentUser?.uid;
+    
+    if (uid == null) {
+      // Handle case where user is not authenticated
+      return;
+    }
+    
+    // Check initial connectivity and set up listener
+    _checkConnectivity();
+    
+    // Run auto cleanup
+    AutoCleanupExecutor.run();
+    
     todaySalesStream = salesService.todaySalesStream();
     totalDebtStream = debtService.totalDebtStream();
     _recentTransactions = FirebaseFirestore.instance
-    .collection('users')
-    .doc(uid)
-    .collection('receipts')
-    .orderBy('createdAt', descending: true)
-    .limit(5)
-    .snapshots()
-    .map((snapshot) => snapshot.docs.map((doc) {
-      final data = doc.data();
-      return TransactionItem.fromJson({
-        'totalAmount': data['totalAmount']?.toString() ?? '0.00',
-        'createdAt': data['createdAt'],
-        'transactionId': data['transactionId'] ?? '',
-        'paymentMethod': data['paymentMethod'] ?? '',
-      });
-    }).toList())
-    .asBroadcastStream();
+      .collection('users')
+      .doc(uid)
+      .collection('receipts')
+      .orderBy('createdAt', descending: true)
+      .limit(5)
+      .snapshots(includeMetadataChanges: true) 
+      .map((snapshot) => snapshot.docs.map((doc) {
+        final data = doc.data();
+        return TransactionItem.fromJson({
+          'totalAmount': data['totalAmount']?.toString() ?? '0.00',
+          'createdAt': data['createdAt'],
+          'transactionId': data['transactionId'] ?? '',
+          'paymentMethod': data['paymentMethod'] ?? '',
+        });
+      }).toList());
+  }
 
-    // _pages = [
-    //   InventoryPage(
-    //     onSearchSelected: switchToPage,
-    //     selectedCategory: _selectedCategory ?? 'All'),
-    //   LedgerPage(),
-    //   HistoryPage(),
-    // ];
+  Future<void> _checkAuthState() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final isLoggedIn = await LocalStorageService.isLoggedIn();
+    
+    // If Firebase says no user but local storage says logged in, something is wrong
+    if (currentUser == null && isLoggedIn) {
+      // Clear inconsistent state
+      await LocalStorageService.clearUserData();
+      
+      if (mounted) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const SignInOptionsScreen()),
+          (route) => false,
+        );
+      }
+    }
+  }
 
-    AutoCleanupExecutor.run(); //invisible cleaning, no UI needed
+  Future<void> _checkConnectivity() async {
+    final connectivityResult = await Connectivity().checkConnectivity();
+    setState(() {
+      _isOnline = connectivityResult.first != ConnectivityResult.none;
+    });
+    
+    // Listen for connectivity changes
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> result) {
+      if (mounted) {
+        setState(() {
+          _isOnline = result.first != ConnectivityResult.none;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _connectivitySubscription?.cancel();
+    super.dispose();
   }
 
   void _onItemTapped(int index) {
@@ -95,34 +146,61 @@ class _HomePageState extends State<HomePage> {
   }
 
   void switchToPage(String type, String id) {
-  if (type == 'inventory') {
-    setState(() {
-      _selectedIndex = 1; // inventory tab
-    });
-    // pass the id to InventoryPage if needed (via a controller or provider)
-  } else if (type == 'ledger') {
-    setState(() {
-      _selectedIndex = 2; // ledger tab
-    });
-    // pass the id to LedgerPage if needed
+    if (type == 'inventory') {
+      setState(() {
+        _selectedIndex = 1; // inventory tab
+      });
+    } else if (type == 'ledger') {
+      setState(() {
+        _selectedIndex = 2; // ledger tab
+      });
+    }
   }
-}
 
   Stream<List<InventoryItem>> getInventoryItems() {
-  return FirebaseFirestore.instance
-      .collection('users')
-      .doc(uid)
-      .collection('inventory') 
-      .orderBy('createdAt', descending: true)
-      .snapshots()         
-      .map((snapshot) => snapshot.docs
-          .map((doc) => InventoryItem.fromMap(doc.data(), doc.id))
-          .toList());
+    if (uid == null) {
+      return Stream.value([]); // Return empty stream if no user
+    }
+    
+    return FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('inventory') 
+        .orderBy('createdAt', descending: true)
+        .snapshots(includeMetadataChanges: true)         
+        .map((snapshot) => snapshot.docs
+            .map((doc) => InventoryItem.fromMap(doc.data(), doc.id))
+            .toList());
   }
-
 
   @override
   Widget build(BuildContext context) {
+    // Handle case where user is not authenticated
+    if (uid == null) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 64, color: Colors.red),
+              const SizedBox(height: 16),
+              const Text('Authentication error. Please sign in again.'),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () {
+                  // Navigate back to sign-in
+                  Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const SignInOptionsScreen()),
+              );
+                },
+                child: const Text('Sign In'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     final List<Widget> pages = [
       InventoryPage(
@@ -137,18 +215,37 @@ class _HomePageState extends State<HomePage> {
       body: _selectedIndex == 0
         ? StreamBuilder<List<dynamic>>(
             stream: StreamZip([
-              salesService.todaySalesStream(),  // Stream<Map<String,dynamic>>
-              debtService.totalDebtStream(),    // Stream<double>
+              salesService.todaySalesStream(),
+              debtService.totalDebtStream(),
             ]),
             builder: (context, snapshot) {
-              if (!snapshot.hasData) {
+              // Handle loading state
+              if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
                 return const Center(child: CircularProgressIndicator());
+              }
+
+              // Handle error state
+              if (snapshot.hasError) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
+                      const SizedBox(height: 16),
+                      Text(
+                        _isOnline 
+                          ? 'Error loading data' 
+                          : 'Offline - showing cached data',
+                        style: TextStyle(color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+                );
               }
 
               final totalSalesData = snapshot.data?[0] as Map<String,dynamic>? ?? {};
               final totalSales = totalSalesData['totalSales'] ?? 0;
               final totalItems = totalSalesData['totalItemsSold'] ?? 0;
-
               final totalDebt = snapshot.data?[1] as double? ?? 0.0;
 
               return HomeContent(
@@ -156,6 +253,7 @@ class _HomePageState extends State<HomePage> {
                 totalSales: totalSales,
                 totalItemsSold: totalItems,
                 totalDebt: totalDebt,
+                isOnline: _isOnline,
                 setCategory: (cat) {
                   setState(() {
                     _selectedCategory = cat;
@@ -174,7 +272,6 @@ class _HomePageState extends State<HomePage> {
         height: 60,
         child: FloatingActionButton(
           onPressed: () async {
-            // Open PoSSystem and wait for tabIndex returned
             final tabIndex = await Navigator.push<int>(
               context,
               MaterialPageRoute(
@@ -184,10 +281,9 @@ class _HomePageState extends State<HomePage> {
               ),
             );
 
-            // If ReceiptPage returned a tab index (Ledger), switch tab
             if (tabIndex != null) {
               setState(() {
-                _selectedIndex = tabIndex; // 2 = Ledger tab
+                _selectedIndex = tabIndex;
               });
             }
           },
@@ -223,50 +319,38 @@ class _HomePageState extends State<HomePage> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                // Home
                 GestureDetector(
                   onTap: () => _onItemTapped(0),
-                  child: 
-                    BtmNavItem(
-                      icon: Icons.home,
-                      label:  'Home',
-                      isActive:  _selectedIndex == 0
-                    ),
+                  child: BtmNavItem(
+                    icon: Icons.home,
+                    label: 'Home',
+                    isActive: _selectedIndex == 0
+                  ),
                 ),
-
-                // Inventory
                 GestureDetector(
                   onTap: () => _onItemTapped(1),
-                  child:
-                    BtmNavItem(
-                      icon: Icons.inventory_2_outlined,
-                      label:  'Inventory',
-                      isActive:  _selectedIndex == 1
-                    ),
+                  child: BtmNavItem(
+                    icon: Icons.inventory_2_outlined,
+                    label: 'Inventory',
+                    isActive: _selectedIndex == 1
+                  ),
                 ),
-
                 const SizedBox(width: 40),
-
-                // Ledger
                 GestureDetector(
                   onTap: () => _onItemTapped(2),
-                  child: 
-                    BtmNavItem(
-                      icon: Icons.book_outlined,
-                      label:  'Ledger',
-                      isActive:  _selectedIndex == 2
-                    ),
+                  child: BtmNavItem(
+                    icon: Icons.book_outlined,
+                    label: 'Ledger',
+                    isActive: _selectedIndex == 2
+                  ),
                 ),
-
-                // History
                 GestureDetector(
                   onTap: () => _onItemTapped(3),
-                  child: 
-                    BtmNavItem(
-                      icon: Icons.history,
-                      label:  'History',
-                      isActive:  _selectedIndex == 3
-                    ),
+                  child: BtmNavItem(
+                    icon: Icons.history,
+                    label: 'History',
+                    isActive: _selectedIndex == 3
+                  ),
                 ),
               ],
             ),
@@ -284,26 +368,26 @@ class HomeContent extends StatelessWidget {
   final double totalSales;
   final int totalItemsSold;
   final double totalDebt;
+  final bool isOnline;
   final Stream<List<TransactionItem>> recentTransactions;
 
-  HomeContent({
+  const HomeContent({
     Key? key, 
     required this.onSearchSelected,
     required this.totalSales,
     required this.totalItemsSold,
     required this.totalDebt,
+    required this.isOnline,
     required this.setCategory,
     required this.recentTransactions,
-
   }) : super(key: key);
   
   @override
   Widget build(BuildContext context) {
-
     return Stack(
       children: [
         Container(
-          color: Color(0xFFF7FBFF),
+          color: const Color(0xFFF7FBFF),
         ),
         SafeArea(
           child: SingleChildScrollView(
@@ -311,6 +395,34 @@ class HomeContent extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Offline banner
+                if (!isOnline)
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.orange[50],
+                      border: Border.all(color: Colors.orange),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.wifi_off, size: 16, color: Colors.orange[700]),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Offline mode - showing cached data',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.orange[900],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
@@ -318,18 +430,15 @@ class HomeContent extends StatelessWidget {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          // Logo
                           Image.asset(
                             'assets/images/logo_blue.png',
                             width: 32, 
                             height: 32,
                           ),
                           const SizedBox(width: 8),
-                          // Greetings
                           Builder(
                             builder: (context) {
-                              final user = FirebaseAuth.instance.currentUser;
-                              final displayName = user?.displayName ?? 'User';
+                              final displayName = UserDisplay.getDisplayName();
                               final hour = DateTime.now().hour;
                               final greeting = hour < 12
                                   ? 'Good morning'
@@ -337,18 +446,32 @@ class HomeContent extends StatelessWidget {
                                       ? 'Good afternoon'
                                       : 'Good evening';
                               return Expanded(
-                                child: FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  alignment: Alignment.centerLeft,
-                                  child: Text(
-                                    '$greeting, $displayName!',
-                                    style: const TextStyle(
-                                      fontFamily: 'Inter',
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFF1565C0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '$greeting, $displayName!',
+                                      style: const TextStyle(
+                                        fontFamily: 'Inter',
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF1565C0),
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                  ),
+                                    const Text(
+                                      'Welcome to SariSync!',
+                                      style: TextStyle(
+                                        fontFamily: 'Inter',
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.normal,
+                                        color: Color(0xFF1565C0),
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    )
+                                  ],
                                 ),
                               );
                             },
@@ -371,14 +494,14 @@ class HomeContent extends StatelessWidget {
 
                 const SizedBox(height: 20),
 
-                // Sales Card
+                // Sales Card with offline indicator
                 InfoCard(
-                      title: "Today's Total Sales",
-                      subtitle: "No. of items sold: $totalItemsSold",
-                      amount: "₱ ${totalSales.toStringAsFixed(2)}",
-                      imagePath: 'assets/images/SALES.png',
-                      gradientColors: const [Color(0xFF43A047), Color(0xFF6DE96D)],
-                    ),
+                  title: isOnline ? "Today's Total Sales" : "Total Sales (cached)",
+                  subtitle: "No. of items sold: $totalItemsSold",
+                  amount: "₱ ${totalSales.toStringAsFixed(2)}",
+                  imagePath: 'assets/images/SALES.png',
+                  gradientColors: const [Color(0xFF43A047), Color(0xFF6DE96D)],
+                ),
                   
                 const SizedBox(height: 12),
 
@@ -396,14 +519,39 @@ class HomeContent extends StatelessWidget {
                 // Download Inventory Button
                 PDFBtn(
                   onTap: () async {
-                      final user = FirebaseAuth.instance.currentUser;
+                    final user = FirebaseAuth.instance.currentUser;
+                    if (user == null) return;
+
+                    try {
+                      // SHOW LOADING while generating PDF
+                      DialogHelper.showLoading(
+                        context,
+                        message: "Generating PDF. Please wait...",
+                      );
+
                       final pdfGen = PdfGenerator(
                         firestore: FirebaseFirestore.instance,
-                        userId: user!.uid,
+                        userId: user.uid,
                       );
+
                       await pdfGen.generateAndDownloadPDF();
-                    },
+
+                      // CLOSE LOADING
+                      DialogHelper.closeLoading(context);
+
+                    } catch (e) {
+                      // CLOSE LOADING
+                      DialogHelper.closeLoading(context);
+
+                      // ERROR MESSAGE
+                      DialogHelper.warning(
+                        context,
+                        "Failed to generate PDF. Please try again.",
+                      );
+                    }
+                  },
                 ),
+
 
                 const SizedBox(height: 12),
 
@@ -430,7 +578,7 @@ class HomeContent extends StatelessWidget {
                           color: Color(0xFF212121),
                           decoration: TextDecoration.underline,
                           decorationThickness: 0.8,
-                          decorationColor: Color(0xFF1565C0),
+                          decorationColor: Color(0xFF212121),
                         ),
                       ),
                     ),
@@ -500,42 +648,73 @@ class HomeContent extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
 
-                // For recent transactions
-                 StreamBuilder<List<TransactionItem>>(
+                StreamBuilder<List<TransactionItem>>(
                   stream: recentTransactions,
                   builder: (context, snapshot) {
-                    if (!snapshot.hasData) {
+                    // Show loading only on initial load
+                    if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
                       return const Center(child: CircularProgressIndicator());
                     }
 
                     if (snapshot.hasError) {
-                      return Center(child: Text('Error loading transactions'));
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 50, bottom: 50),
+                        child: Center(
+                          child: Column(
+                            children: [
+                              Icon(Icons.error_outline, color: Colors.grey[400]),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Error loading transactions',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 14,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
                     }
                    
-                    final recentTransactions = snapshot.data!;
+                    final transactions = snapshot.data ?? [];
 
-                    if(recentTransactions.isEmpty) {
-                        return Padding(
-                            padding: const EdgeInsets.only(top: 100, bottom: 100),
-                          child: Center(                       
-                            child: Text(
-                              'No recent transactions',
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 14,
-                                color:Color(0xFF757575),
-                              ),
+                    if (transactions.isEmpty) {
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 100, bottom: 100),
+                        child: Center(
+                          child: Text(
+                            'No recent transactions',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 14,
+                              color: Color(0xFF757575),
                             ),
                           ),
-                        );
+                        ),
+                      );
                     }
 
                     return ListView.builder(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      itemCount: recentTransactions.length,
+                      itemCount: transactions.length,
                       itemBuilder: (context, index) {
-                        return TrnscItemCard(transaction: recentTransactions[index]);
+                        final transaction = transactions[index];
+                        return GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => TransactionReceipt(
+                                  transactionId: transaction.transactionId
+                                ),
+                              ),
+                            );
+                          },
+                          child: TrnscItemCard(transaction: transaction),
+                        );
                       },
                     );
                   },

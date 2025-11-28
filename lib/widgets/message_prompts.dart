@@ -67,7 +67,7 @@ class DialogHelper {
 
 
 // Success Popup
-  static void success(
+  static success(
     BuildContext context,
     String message, {
     VoidCallback? onOk,
@@ -119,7 +119,9 @@ class DialogHelper {
     BuildContext context,
     String message, {
     VoidCallback? onOk,
-  }) {
+  })
+  
+   {
     showDialog(
       context: context,
       barrierDismissible: false,

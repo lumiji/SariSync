@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:sarisync/models/transaction_model.dart';
 import 'package:intl/intl.dart';
 
@@ -46,7 +45,7 @@ class TrnscItemCard extends StatelessWidget {
                   
                   Text(
                     transaction.paymentMethod,
-                    style: GoogleFonts.inter(
+                    style: TextStyle( fontFamily: 'Inter',
                       fontSize: 15,
                       color: Colors.black,
                       fontWeight: FontWeight.w700,
@@ -55,7 +54,7 @@ class TrnscItemCard extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     transaction.transactionId,
-                    style: GoogleFonts.inter(
+                    style: TextStyle( fontFamily: 'Inter',
                       fontSize: 12,
                       color: Colors.grey,
                     ),
@@ -72,26 +71,35 @@ class TrnscItemCard extends StatelessWidget {
               Row(
                 children: [
 
-                  Text (
-                    '₱ ${transaction.totalAmount.toString()}',
-                    style: GoogleFonts.inter(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                    ),
+                 Text(
+                  '${transaction.paymentMethod.toLowerCase() == 'cash' ? '+ ' : ''}₱ ${transaction.totalAmount.toString()}',
+                  style: TextStyle( fontFamily: 'Inter',
+                    fontSize: 15,
+                    color: transaction.paymentMethod.toLowerCase() == 'cash'
+                        ? Color(0xFF4CAF50)   // green for cash
+                        : Color(0xFFFF9800),  // orange for credit
+                    fontWeight: FontWeight.bold,
                   ),
+                ),
                   
                 ],
               ),              
               const SizedBox(height: 2),
               Text(
                 DateFormat('MMM d, yyyy – h:mm a').format(transaction.createdAt.toLocal()),
-                style: GoogleFonts.inter(
+                style: TextStyle( fontFamily: 'Inter',
                   fontSize: 12,
                   color: Colors.grey.shade700,
                 ),
               ),
             ],
           ),
+
+          Icon(
+            Icons.chevron_right_rounded,
+            color: Colors.grey,
+            size: 24,
+          )
         ],
       ),
     );

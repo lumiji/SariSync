@@ -494,6 +494,8 @@ class _ReceiptPageState extends State<ReceiptPage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
+
+                //Item name
                 child: Text(
                   item.name,
                   style: const TextStyle(
@@ -502,14 +504,42 @@ class _ReceiptPageState extends State<ReceiptPage> {
                   ),
                 ),
               ),
+
+              // Item price
               Text(
                 item.price.toStringAsFixed(2),
                 style: const TextStyle(
+                  color: Color(0xFF757575),
                   fontSize: 14),
               ),
             ],
           ),
           const SizedBox(height: 4),
+
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+                Text(
+                  item.add_info.toString(),
+                    style: const TextStyle(
+                      fontSize: 14, 
+                      color: Color(0xFF757575),
+                      fontWeight: FontWeight.normal,
+                    ),
+                ),
+
+                Text(
+                  item.unit.toString(),
+                    style: const TextStyle(
+                      fontSize: 14, 
+                      color: Color(0xFF757575),
+                      fontWeight: FontWeight.normal,
+                    ),
+                ),
+            ],
+          ),
+
+          const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -521,6 +551,8 @@ class _ReceiptPageState extends State<ReceiptPage> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+
+                    //Item Quantity
                     IconButton(
                       icon: const Icon(
                         Icons.remove, size: 24),
@@ -551,6 +583,8 @@ class _ReceiptPageState extends State<ReceiptPage> {
                   ],
                 ),
               ),
+
+              //Total item price based on quantity
               Text(
                 (item.price * item.quantity).toStringAsFixed(2),
                 style: const TextStyle(

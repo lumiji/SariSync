@@ -1,21 +1,37 @@
+import 'dart:convert';
+import 'package:crypto/crypto.dart';
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:sarisync/views/home.dart';
 import 'package:sarisync/services/local_storage_service.dart';
+import 'sign-in_options.dart';
 import 'pin_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sarisync/models/pending_registration.dart';
+import 'package:sarisync/services/remote_db_service.dart';
+
 
 class SetPinScreen extends StatefulWidget {
   final String? accountIdentifier; // Can be phone, email, or any account identifier
   final String? accountType; // 'phone', 'google', 'facebook', etc.
+  final PendingRegistration? pendingRegistration;
   
-  const SetPinScreen({super.key, this.accountIdentifier, this.accountType});
+  const SetPinScreen({
+    super.key,
+      this.accountIdentifier,
+      this.accountType,
+      this.pendingRegistration
+    });
 
   @override
   State<SetPinScreen> createState() => _SetPinScreenState();
 }
 
 class _SetPinScreenState extends State<SetPinScreen> {
+  String? _existingPin;
   String _enteredPin = '';
   String _errorMessage = '';
   String? _pressedKey;
@@ -29,15 +45,32 @@ class _SetPinScreenState extends State<SetPinScreen> {
   }
 
   Future<void> _loadAccountInfo() async {
-    // Try to get account info from widget parameters first, then from storage
+    
     String? account = widget.accountIdentifier ?? await LocalStorageService.getAccountIdentifier();
     String? type = widget.accountType ?? await LocalStorageService.getAccountType();
-    
+    String? existingPin;
+
+     if (account != null) {
+      // Query Firestore for a user document where username/email/phone == account
+      final query = await FirebaseFirestore.instance
+          .collection('users')
+          .where('username', isEqualTo: account) // or 'email' / 'phone'
+          .limit(1)
+          .get();
+
+      if (query.docs.isNotEmpty) {
+        existingPin = query.docs.first.data()['pinHash'];
+      }
+    }
+
+
     setState(() {
       _displayAccount = account;
       _accountType = type;
+      _existingPin = existingPin;
     });
   }
+
 
   IconData _getAccountIcon() {
     switch (_accountType?.toLowerCase()) {
@@ -76,28 +109,202 @@ class _SetPinScreenState extends State<SetPinScreen> {
   }
 
   void _onSubmit() async {
-    if (_enteredPin.length == 4) {
-      setState(() {
-        _errorMessage = '';
-      });
+      if (_enteredPin.length != 4) {
+        setState(() => _errorMessage = 'Enter 4 digits');
+        return;
+      }
+      setState(() => _errorMessage = '');
 
-      // Save PIN locally
-      await LocalStorageService.savePin(_enteredPin);
+      // Check for existing PIN first
+      if (_existingPin != null) {
+        _showExistingPinDialog();
+      } else {
+        await _saveNewPinFlow();
+      }
+    }
 
-      // Mark user as logged in (first-time sign-in complete)
+  void _showExistingPinDialog() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Existing Account"),
+        content: const Text(
+            "An account with this identifier already has a PIN. What would you like to do?"),
+        actions: [
+          TextButton(
+            child: const Text("Enter existing PIN"),
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => PinScreen(
+                  accountIdentifier: _displayAccount,
+                  accountType: _accountType,
+                )),
+              );
+            },
+          ),
+          TextButton(
+            child: const Text("Set a new PIN"),
+            onPressed: () {
+              Navigator.pop(context);
+              _saveNewPinFlow();
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+
+ // In SetPinScreen, when PIN is confirmed:
+Future<void> _saveNewPinFlow() async {
+  final pending = widget.pendingRegistration;
+
+  if (pending == null) {
+    // Existing user flow
+    final account = await LocalStorageService.getAccountIdentifier();
+    if (account == null) {
+      setState(() => _errorMessage = 'Account not found');
+      return;
+    }
+    
+    await LocalStorageService.savePin(account, _enteredPin);
+    await LocalStorageService.saveLoggedIn();
+    
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final pinHash = sha256.convert(utf8.encode(_enteredPin)).toString();
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .update({'pinHash': pinHash});
+    }
+    
+    if (context.mounted) {
+      Navigator.pushReplacement(
+          context, MaterialPageRoute(builder: (_) => PinScreen()));
+    }
+    return;
+  }
+
+  // New user registration flow
+  try {
+    UserCredential? userCredential;
+
+    // Creating Firebase account based on type
+    switch (pending.accountType) {
+      case 'password':
+        userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+          email: pending.email!,
+          password: pending.password!,
+        );
+        break;
+
+      case 'google':
+        final credential = GoogleAuthProvider.credential(
+          idToken: pending.googleIdToken,
+          accessToken: pending.googleAccessToken,
+        );
+        userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+        break;
+
+      case 'facebook':
+        final credential = FacebookAuthProvider.credential(pending.facebookAccessToken!);
+        userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+        break;
+
+      case 'phone':
+        final credential = PhoneAuthProvider.credential(
+          verificationId: pending.phoneVerificationId!,
+          smsCode: pending.phoneCode!,
+        );
+        userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+        break;
+    }
+
+    if (userCredential != null) {
+      final uid = userCredential.user!.uid;
+
+      // Initialize Firestore
+      await RemoteDbService.initializeUserDatabase(uid: uid);
+
+      // Save account info FIRST
+      await LocalStorageService.saveAccountInfo(
+        pending.displayIdentifier, 
+        pending.accountType
+      );
+      
+      // NOW save PIN with the correct identifier
+      await LocalStorageService.savePin(pending.displayIdentifier, _enteredPin);
+
+      // Save hashed PIN to Firebase
+      final pinHash = sha256.convert(utf8.encode(_enteredPin)).toString();
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userCredential.user!.uid)
+          .set({
+            'username': pending.displayIdentifier,
+            'email': pending.email ?? userCredential.user!.email,
+            'phone': pending.accountType == 'phone' ? userCredential.user!.phoneNumber : null,
+            'accountType': pending.accountType,
+            'pinHash': pinHash,
+            'createdAt': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
+
+      // Mark as logged in
       await LocalStorageService.saveLoggedIn();
 
-      // Redirect to enter PIN screen
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => PinScreen()),
+      // Navigate to PIN screen
+      if (context.mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => PinScreen()),
+        );
+      }
+    }
+  } on FirebaseAuthException catch (e) {
+    String _errorMessage;
+
+    switch (e.code) {
+      case 'email-already-in-use': 
+        _errorMessage = 'This email is already registered. Please log in instead.';
+        break;
+      case 'invalid-email':
+      _errorMessage = 'Invalid email address.';
+      break;
+      case 'weak-password':
+        _errorMessage = 'Password is too weak. Please use at least 6 characters.';
+        break;
+      case 'operation-not-allowed':
+        _errorMessage = 'Email/password accounts are not enabled.';
+        break;
+      case 'account-exists-with-different-credential':
+        _errorMessage = 'An account already exists with this email using a different sign-in method.';
+        break;
+      default:
+        _errorMessage = 'Error: ${e.message}';
+    }
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_errorMessage),
+          backgroundColor: Color(0xFFE53935),
+          duration: Duration(seconds: 4),)
       );
-    } else {
-      setState(() {
-        _errorMessage = 'Enter 4 digits';
-      });
+    }
+  } catch (e) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Error creating account: $e")),
+        );
     }
   }
+}
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -134,7 +341,7 @@ class _SetPinScreenState extends State<SetPinScreen> {
                       const SizedBox(width: 10),
                       Text(
                         "SariSync",
-                        style: GoogleFonts.inter(
+                        style: TextStyle( fontFamily: 'Inter',
                           color: Colors.white,
                           fontSize: 40,
                           fontWeight: FontWeight.bold,
@@ -149,8 +356,8 @@ class _SetPinScreenState extends State<SetPinScreen> {
 
               // Tagline
               Text(
-                "Your Store. Smarter than ever.",
-                style: GoogleFonts.inter(
+                "Smooth sales, smooth days.",
+                style: TextStyle( fontFamily: 'Inter',
                   fontSize: 16,
                   color: Colors.white.withOpacity(0.9),
                   fontWeight: FontWeight.w400,
@@ -162,8 +369,8 @@ class _SetPinScreenState extends State<SetPinScreen> {
               // Account display (phone, email, or social media account)
               if (_displayAccount != null)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  margin: const EdgeInsets.symmetric(horizontal: 40),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+                  margin: const EdgeInsets.symmetric(horizontal: 24),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.95),
                     borderRadius: BorderRadius.circular(30),
@@ -177,11 +384,11 @@ class _SetPinScreenState extends State<SetPinScreen> {
                         color: const Color(0xFF1E88E5),
                         size: 20,
                       ),
-                      const SizedBox(width: 10),
+                      const SizedBox(width: 12),
                       Flexible(
                         child: Text(
                           _displayAccount!,
-                          style: GoogleFonts.inter(
+                          style: TextStyle( fontFamily: 'Inter',
                             fontSize: 16,
                             color: const Color(0xFF1E88E5),
                             fontWeight: FontWeight.w600,
@@ -190,11 +397,15 @@ class _SetPinScreenState extends State<SetPinScreen> {
                         ),
                       ),
                       const SizedBox(width: 12),
-                      Icon(
-                        Icons.swap_horiz,
-                        color: const Color(0xFF1E88E5),
-                        size: 24,
-                      ),
+                      IconButton(
+                        onPressed:  () => _handleSwitchAccount(context),
+                          icon: const Icon(
+                            Icons.swap_horiz,
+                            color: Color(0xFF1E88E5),
+                            size: 24,
+                          ),
+                        ),
+
                     ],
                   ),
                 ),
@@ -204,7 +415,7 @@ class _SetPinScreenState extends State<SetPinScreen> {
               // Set PIN text
               Text(
                 "Set PIN",
-                style: GoogleFonts.inter(
+                style: TextStyle( fontFamily: 'Inter',
                   fontSize: 20,
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -235,8 +446,8 @@ class _SetPinScreenState extends State<SetPinScreen> {
                   padding: const EdgeInsets.only(top: 8.0),
                   child: Text(
                     _errorMessage,
-                    style: GoogleFonts.inter(
-                      color: const Color.fromARGB(255, 114, 3, 3),
+                    style: TextStyle( fontFamily: 'Inter',
+                      color: const Color.fromARGB(255, 209, 22, 22),
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
                     ),
@@ -247,6 +458,44 @@ class _SetPinScreenState extends State<SetPinScreen> {
 
               // Numeric keypad
               _buildKeypad(),
+
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => PinScreen()),
+                      );
+                    },
+                    child: Text(
+                      "Enter PIN",
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.white,
+                        decoration: TextDecoration.none,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 32),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => SignInOptionsScreen()),
+                      );
+                    },
+                    child: Text(
+                      "Sign Up",
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.white,
+                        decoration: TextDecoration.none,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
             ],
           ),
         ],
@@ -333,14 +582,50 @@ class _SetPinScreenState extends State<SetPinScreen> {
               ? Icon(icon, color: Colors.white, size: 28)
               : Text(
                   key,
-                  style: GoogleFonts.inter(
+                  style: TextStyle( fontFamily: 'Inter',
                     fontSize: 26,
                     color: Colors.white,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
         ),
       ),
     );
   }
+
+  Future<void> _handleSwitchAccount(BuildContext context) async {
+    try {
+      // Sign out from Google
+      final googleSignIn = GoogleSignIn();
+      await googleSignIn.signOut();
+
+      // Sign out from Facebook
+      await FacebookAuth.instance.logOut();
+
+      // Sign out from Firebase (covers email/password + phone)
+      await FirebaseAuth.instance.signOut();
+
+      // Remove temp data if any
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('temp_user_data');
+
+      // Clear PIN for the current account
+      final account = await LocalStorageService.getAccountIdentifier();
+      if (account != null) {
+        await LocalStorageService.clearPin(account);
+      }
+
+      // Clear account info + login flags
+      await LocalStorageService.clearUserData();
+
+      if (context.mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const SignInOptionsScreen()),
+        );
+      }
+    } catch (e) {
+      print('Error switching account: $e');
+    }
+  } 
 }

@@ -1,11 +1,18 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:sarisync/views/home.dart';
 import 'package:sarisync/services/local_storage_service.dart';
+import 'package:sarisync/views/set_pin_screen.dart';
+import 'package:sarisync/views/sign-in_options.dart';
 
 class PinScreen extends StatefulWidget {
-  const PinScreen({super.key});
+  final String? accountIdentifier;
+  final String? accountType;
+
+  const PinScreen({
+    super.key,
+    this.accountIdentifier,
+    this.accountType});
 
   @override
   State<PinScreen> createState() => _PinScreenState();
@@ -71,7 +78,14 @@ class _PinScreenState extends State<PinScreen> {
       return;
     }
 
-    String? savedPin = await LocalStorageService.getPin();
+    String? accountIdentifier = await LocalStorageService.getAccountIdentifier();
+
+    if (accountIdentifier == null) {
+      setState(() => _errorMessage = 'Account not found');
+      return;
+    }
+
+    String? savedPin = await LocalStorageService.getPin(accountIdentifier);
 
     if (savedPin == null) {
       setState(() => _errorMessage = 'No PIN is set. Please set a PIN first.');
@@ -127,7 +141,7 @@ class _PinScreenState extends State<PinScreen> {
                       const SizedBox(width: 10),
                       Text(
                         "SariSync",
-                        style: GoogleFonts.inter(
+                        style: TextStyle( fontFamily: 'Inter',
                           color: Colors.white,
                           fontSize: 40,
                           fontWeight: FontWeight.bold,
@@ -138,12 +152,12 @@ class _PinScreenState extends State<PinScreen> {
                 ),
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 12),
 
               
               Text(
-                "Your Store. Smarter than ever.",
-                style: GoogleFonts.inter(
+                "Smooth sales, smooth days.",
+                style: TextStyle( fontFamily: 'Inter',
                   fontSize: 16,
                   color: Colors.white.withOpacity(0.9),
                   fontWeight: FontWeight.w400,
@@ -152,24 +166,29 @@ class _PinScreenState extends State<PinScreen> {
 
               const SizedBox(height: 30),
 
-              // account info display
+               // Account display (phone, email, or social media account)
               if (_displayAccount != null)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  margin: const EdgeInsets.symmetric(horizontal: 40),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+                  margin: const EdgeInsets.symmetric(horizontal: 12),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.95),
                     borderRadius: BorderRadius.circular(30),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(_getAccountIcon(), color: const Color(0xFF1E88E5), size: 20),
-                      const SizedBox(width: 10),
+                      Icon(
+                        _getAccountIcon(),
+                        color: const Color(0xFF1E88E5),
+                        size: 20,
+                      ),
+                      const SizedBox(width: 12),
                       Flexible(
                         child: Text(
                           _displayAccount!,
-                          style: GoogleFonts.inter(
+                          style: TextStyle( fontFamily: 'Inter',
                             fontSize: 16,
                             color: const Color(0xFF1E88E5),
                             fontWeight: FontWeight.w600,
@@ -177,6 +196,22 @@ class _PinScreenState extends State<PinScreen> {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
+                      const SizedBox(width: 12),
+                      IconButton(
+                        onPressed: () {
+                          // Navigate back to SignInOptionsScreen
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(builder: (_) => const SignInOptionsScreen()),
+                          );
+                        },
+                        icon: const Icon(
+                          Icons.swap_horiz,
+                          color: Color(0xFF1E88E5),
+                          size: 24,
+                        ),
+                      ),
+
                     ],
                   ),
                 ),
@@ -186,7 +221,7 @@ class _PinScreenState extends State<PinScreen> {
               //Enter PIN
               Text(
                 "Enter PIN",
-                style: GoogleFonts.inter(
+                style: TextStyle( fontFamily: 'Inter',
                   fontSize: 20,
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -217,8 +252,8 @@ class _PinScreenState extends State<PinScreen> {
                   padding: const EdgeInsets.only(top: 8.0),
                   child: Text(
                     _errorMessage,
-                    style: GoogleFonts.inter(
-                      color: const Color.fromARGB(255, 114, 3, 3),
+                    style: TextStyle( fontFamily: 'Inter',
+                      color: const Color.fromARGB(255, 209, 22, 22),
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
                     ),
@@ -228,6 +263,43 @@ class _PinScreenState extends State<PinScreen> {
               const SizedBox(height: 40),
 
               _buildKeypad(),
+
+               Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => SetPinScreen()),
+                      );
+                    },
+                    child: Text(
+                      "Set PIN",
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.white,
+                        decoration: TextDecoration.none,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 32),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => SignInOptionsScreen()),
+                      );
+                    },
+                    child: Text(
+                      "Sign Up",
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.white,
+                        decoration: TextDecoration.none,
+                      ),
+                    ),
+                  ),
+                ],
+              )
             ],
           ),
         ],
@@ -305,7 +377,7 @@ class _PinScreenState extends State<PinScreen> {
               ? Icon(icon, color: Colors.white, size: 28)
               : Text(
                   key,
-                  style: GoogleFonts.inter(
+                  style: TextStyle( fontFamily: 'Inter',
                     fontSize: 26,
                     color: Colors.white,
                     fontWeight: FontWeight.w500,

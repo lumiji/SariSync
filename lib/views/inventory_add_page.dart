@@ -1,11 +1,11 @@
-// This is the "ADD" form for the inventory page
+// This is the "ADD" form for the inventory page (Offline-friendly version)
 
 // flutter dependencies
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 //firebase dependencies
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -22,7 +22,6 @@ import '../models/inventory_item.dart';
 import 'package:sarisync/widgets/message_prompts.dart';
 
 class InventoryAddPage extends StatefulWidget {
- 
   final InventoryItem? item; // null for Add, not null for Edit
 
   const InventoryAddPage({Key? key, this.item}) : super(key: key);
@@ -34,6 +33,55 @@ class InventoryAddPage extends StatefulWidget {
 class _InventoryAddPageState extends State<InventoryAddPage> {
   final _formKey = GlobalKey<FormState>();
   final _inventoryService = InventoryService();
+  bool _isOnline = true;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _unitDropdownValue = _units.first;
+    _checkConnectivity();
+
+    if (widget.item != null) {
+      final item = widget.item!;
+      _nameController.text = item.name;
+      _priceController.text = item.price.toString();
+      _quantityController.text = item.quantity.toString();
+      _quantity = item.quantity;
+      _selectedCategory = item.category;
+      _barcodeController.text = item.barcode;
+      _expirationController.text = item.expiration;
+      _infoController.text = item.add_info;
+
+      // Split unit before space: "60 mL"
+      if (item.unit.contains(" ")) {
+        final split = item.unit.split(" ");
+        _unitAmountController.text = split.first;
+        _unitDropdownValue = split.last;
+      }
+
+      // load image preview if existing
+      if (item.imageUrl != null && item.imageUrl!.isNotEmpty) {
+        imageUrl = item.imageUrl;
+      }
+    }
+  }
+
+  Future<void> _checkConnectivity() async {
+    final connectivityResult = await Connectivity().checkConnectivity();
+    setState(() {
+      _isOnline = connectivityResult.first != ConnectivityResult.none;
+    });
+    
+    // Listen for connectivity changes
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> result) {
+      if (mounted) {
+        setState(() {
+          _isOnline = result.first != ConnectivityResult.none;
+        });
+      }
+    });
+  }
 
   // for picking image
   Future<void> _pickImage() async {
@@ -92,8 +140,7 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
   final _unitAmountController = TextEditingController();
   final _expirationController = TextEditingController();
   final _infoController = TextEditingController();
-  final _barcodeController =
-      TextEditingController(); // text field for displaying barcode
+  final _barcodeController = TextEditingController();
 
   // State
   File? _selectedImage;
@@ -113,36 +160,6 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
     'Condiments',
     'Others',
   ];
-
-  @override
-  void initState() {
-    super.initState();
-    _unitDropdownValue = _units.first;
-
-    if (widget.item != null) {
-      final item = widget.item!;
-      _nameController.text = item.name;
-      _priceController.text = item.price.toString();
-      _quantityController.text = item.quantity.toString();
-      _quantity = item.quantity;
-      _selectedCategory = item.category;
-      _barcodeController.text = item.barcode;
-      _expirationController.text = item.expiration;
-      _infoController.text = item.add_info;
-
-      // Split unit before space: "60 mL"
-      if (item.unit.contains(" ")) {
-        final split = item.unit.split(" ");
-        _unitAmountController.text = split.first;
-        _unitDropdownValue = split.last;
-      }
-
-      // load image preview if existing
-      if (item.imageUrl != null && item.imageUrl!.isNotEmpty) {
-        imageUrl = item.imageUrl;
-      }
-    }
-  }
 
   //for increasing and decreasing quantity
   void _incrementQuantity() {
@@ -178,6 +195,233 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
     }
   }
 
+  // Check for duplicate barcode (works both online and offline)
+  Future<bool> _checkDuplicateBarcode(String barcode, String name) async {
+    if (barcode.isEmpty) return false;
+    
+    final uid = FirebaseAuth.instance.currentUser!.uid;
+    final inventoryRef = FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('inventory');
+
+    try {
+      QuerySnapshot querySnapshot;
+      
+      if (_isOnline) {
+        // Online: Check server
+        querySnapshot = await inventoryRef
+            .where('barcode', isEqualTo: barcode)
+            .limit(1)
+            .get();
+      } else {
+        // Offline: Check cache only
+        querySnapshot = await inventoryRef
+            .where('barcode', isEqualTo: barcode)
+            .limit(1)
+            .get(const GetOptions(source: Source.cache));
+      }
+
+      if (querySnapshot.docs.isNotEmpty) {
+        await DialogHelper.warning(
+          context,
+          '$name is already in your inventory.',
+        );
+        return true; // Duplicate found
+      }
+      
+      return false; // No duplicate
+    } catch (e) {
+      print('Error checking for duplicates: $e');
+      // If cache is empty or error, allow the save
+      return false;
+    }
+  }
+
+  // OFFLINE SAVE - Fast and simple
+  Future<void> _saveOffline(
+    String name,
+    int quantity,
+    double price,
+    String category,
+    String barcode,
+    String unit,
+    String info,
+    String expiration,
+  ) async {
+    final uid = FirebaseAuth.instance.currentUser!.uid;
+
+    try {
+      if (widget.item == null) {
+        // ADD MODE - Offline
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
+            .collection('inventory')
+            .add({
+          'name': name,
+          'quantity': quantity,
+          'price': price,
+          'category': category,
+          'barcode': barcode,
+          'unit': unit,
+          'add_info': info,
+          'expiration': expiration,
+          'imageUrl': null,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      } else {
+        // EDIT MODE - Offline
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
+            .collection('inventory')
+            .doc(widget.item!.id)
+            .update({
+          'name': name,
+          'quantity': quantity,
+          'price': price,
+          'category': category,
+          'barcode': barcode,
+          'unit': unit,
+          'add_info': info,
+          'expiration': expiration,
+          if (imageUrl != null) 'imageUrl': imageUrl,
+        });
+      }
+
+      // Success
+      if (!mounted) return;
+      DialogHelper.closeLoading(context); // Use closeLoading instead of Navigator.pop
+      await DialogHelper.success(
+        context,
+        'Item saved offline. Will sync when connected.',
+      );
+      if (!mounted) return;
+      Navigator.of(context).pop(widget.item == null ? "added" : "updated");
+    } catch (e) {
+      print('Offline save error: $e');
+      if (!mounted) return;
+      DialogHelper.closeLoading(context); // Use closeLoading instead of Navigator.pop
+      await DialogHelper.warning(
+        context,
+        'Failed to save offline. Please try again.',
+      );
+    }
+  }
+
+  // ONLINE SAVE - Full featured with images and history
+  Future<void> _saveOnline(
+    String name,
+    int quantity,
+    double price,
+    String category,
+    String barcode,
+    String unit,
+    String info,
+    String expiration,
+  ) async {
+    String? uploadedImageUrl = imageUrl;
+
+    try {
+      // Upload image if new image selected
+      if (_selectedImage != null) {
+        try {
+          uploadedImageUrl = await _inventoryService
+              .uploadImage(_selectedImage!)
+              .timeout(
+                const Duration(seconds: 30),
+                onTimeout: () {
+                  print('Image upload timed out');
+                  return null;
+                },
+              );
+        } catch (e) {
+          print('Image upload failed: $e');
+          uploadedImageUrl = null;
+        }
+      }
+
+      if (widget.item == null) {
+        // ADD MODE - Online
+        await _inventoryService.addItem(
+          name: name,
+          quantity: quantity,
+          price: price,
+          category: category,
+          barcode: barcode,
+          unit: unit,
+          info: info,
+          expirationDate: expiration,
+          imageUrl: uploadedImageUrl,
+        );
+
+        // Run history checks
+        try {
+          await Future.wait([
+            HistoryService.checkStockEvent(
+              itemName: name,
+              quantity: quantity,
+            ),
+            HistoryService.checkExpiryEvent(
+              itemName: name,
+              expirationDate: expiration,
+            ),
+          ]).timeout(const Duration(seconds: 5));
+        } catch (e) {
+          print('History service error: $e');
+        }
+      } else {
+        // EDIT MODE - Online
+        final updatedItem = InventoryItem(
+          id: widget.item!.id,
+          name: name,
+          quantity: quantity,
+          price: price,
+          category: category,
+          barcode: barcode,
+          unit: unit,
+          add_info: info,
+          expiration: expiration,
+          imageUrl: uploadedImageUrl,
+          createdAt: widget.item!.createdAt,
+        );
+
+        await _inventoryService.updateItem(updatedItem);
+
+        // Run history checks
+        try {
+          await Future.wait([
+            HistoryService.checkStockEvent(
+              itemName: name,
+              quantity: quantity,
+            ),
+            HistoryService.checkExpiryEvent(
+              itemName: name,
+              expirationDate: expiration,
+            ),
+          ]).timeout(const Duration(seconds: 5));
+        } catch (e) {
+          print('History service error: $e');
+        }
+      }
+
+      // Success
+      if (!mounted) return;
+      DialogHelper.closeLoading(context); // Use closeLoading instead of Navigator.pop
+      if (!mounted) return;
+      Navigator.of(context).pop(widget.item == null ? "added" : "updated");
+    } catch (e) {
+      print('Online save error: $e');
+      if (!mounted) return;
+      DialogHelper.closeLoading(context); // Use closeLoading instead of Navigator.pop
+      await DialogHelper.warning(
+        context,
+        'Failed to save item. Please try again.',
+      );
+    }
+  }
+
   Future<void> _saveItem() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -190,124 +434,92 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
     final info = _infoController.text.trim();
     final expiration = _expirationController.text.trim();
 
-    String? uploadedImageUrl = imageUrl;
-
-   
-   //DUPLICATE BARCODE CHECK (BEFORE LOADING)
-   
-    if (widget.item == null && barcode.isNotEmpty) {
-      final uid = FirebaseAuth.instance.currentUser!.uid;
-
-      // Query for any document in inventory where barcode equals the input
-      final querySnapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid)
-          .collection('inventory')
-          .where('barcode', isEqualTo: barcode)
-          .limit(1) // we only need to know if at least one exists
-          .get();
-
-      if (querySnapshot.docs.isNotEmpty) {
-        await DialogHelper.warning(
-          context,
-          '$name is already in your inventory.',
-        );
-        return; // STOP — no saving
-      }
+    // Double-check connectivity
+    final connectivityCheck = await Connectivity().checkConnectivity();
+    final isCurrentlyOnline = connectivityCheck.first != ConnectivityResult.none;
+    
+    if (isCurrentlyOnline != _isOnline) {
+      setState(() {
+        _isOnline = isCurrentlyOnline;
+      });
     }
 
+    // Check for duplicate barcode (works both online and offline)
+    if (widget.item == null) {
+      final isDuplicate = await _checkDuplicateBarcode(barcode, name);
+      if (isDuplicate) return;
+    }
 
-    
-    // SHOW LOADING AFTER ALL VALIDATIONS
-    DialogHelper.showLoading(context, message: "Saving item. Please wait...");
-
-    try {
-      // Upload image only if a new one was selected
-      if (_selectedImage != null) {
-        uploadedImageUrl =
-            await _inventoryService.uploadImage(_selectedImage!);
-      }
-
-      
-      // ADD MODE
-      
-      if (widget.item == null) {
-        await Future.wait([
-          _inventoryService.addItem(
-            name: name,
-            quantity: quantity,
-            price: price,
-            category: category,
-            barcode: barcode,
-            unit: unit,
-            info: info,
-            expirationDate: expiration,
-            imageUrl: uploadedImageUrl,
+    // Warn about offline image upload
+    if (!isCurrentlyOnline && _selectedImage != null) {
+      final proceed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Offline Mode'),
+          content: const Text(
+            'You are offline. The item will be saved without the image. You can edit it later to add the image when online.'
           ),
-
-          HistoryService.checkStockEvent(
-            itemName: name,
-            quantity: quantity,
-          ),
-
-          HistoryService.checkExpiryEvent(
-            itemName: name,
-            expirationDate: expiration,
-          ),
-        ]);
-
-        Navigator.pop(context, "added");
-        return;
-      }
-
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Save Without Image'),
+            ),
+          ],
+        ),
+      );
       
-      //EDIT MODE
+      if (proceed != true) return;
+    }
 
-      final updatedItem = InventoryItem(
-        id: widget.item!.id,
-        name: name,
-        quantity: quantity,
-        price: price,
-        category: category,
-        barcode: barcode,
-        unit: unit,
-        add_info: info,
-        expiration: expiration,
-        imageUrl: uploadedImageUrl,
-        createdAt: widget.item!.createdAt,
+    // Show loading
+    DialogHelper.showLoading(
+      context,
+      message: isCurrentlyOnline ? "Saving item..." : "Saving offline...",
+    );
+
+    // Route to appropriate save method
+    if (isCurrentlyOnline) {
+      await _saveOnline(
+        name,
+        quantity,
+        price,
+        category,
+        barcode,
+        unit,
+        info,
+        expiration,
       );
-
-      await _inventoryService.updateItem(updatedItem);
-
-      await HistoryService.checkStockEvent(
-        itemName: name,
-        quantity: quantity,
+    } else {
+      await _saveOffline(
+        name,
+        quantity,
+        price,
+        category,
+        barcode,
+        unit,
+        info,
+        expiration,
       );
-
-      await HistoryService.checkExpiryEvent(
-        itemName: name,
-        expirationDate: expiration,
-      );
-
-      Navigator.pop(context, "updated");
-    } finally {
-      DialogHelper.closeLoading(context);
     }
   }
 
-
-    // for cleaning up controllers
-    @override
-    void dispose() {
-      _nameController.dispose();
-      _priceController.dispose();
-      _quantityController.dispose();
-      _expirationController.dispose();
-      _infoController.dispose();
-      _barcodeController.dispose();
-      _unitAmountController.dispose();
-      super.dispose();
-    }
+  // for cleaning up controllers
+  @override
+  void dispose() {
+    _connectivitySubscription?.cancel();
+    _nameController.dispose();
+    _priceController.dispose();
+    _quantityController.dispose();
+    _expirationController.dispose();
+    _infoController.dispose();
+    _barcodeController.dispose();
+    _unitAmountController.dispose();
+    super.dispose();
+  }
 
   // for opening barcode scanner page
   void _openBarcodeScanner() {
@@ -315,13 +527,34 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
       context,
       MaterialPageRoute(
         builder: (_) => Scaffold(
-          appBar: AppBar(title: const Text('Scan Barcode')),
+          backgroundColor: const Color(0xFFF7FBFF), 
+          appBar: AppBar(
+            backgroundColor: const Color(0xFF1565C0),
+            titleSpacing: -2,
+            leading: IconButton(
+          icon: const Icon(
+            Icons.arrow_back_rounded,
+            color: Colors.white,
+            size: 24),
+            onPressed: () => Navigator.pop(context),
+          ),
+            title: Text(
+              'Scan Barcode',
+              style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 20, 
+              color: Colors.white,
+              fontWeight: FontWeight.w600
+            ),
+          )
+        ),
+
           body: BarcodeScanner(
             onDetect: (barcode) {
               setState(() {
                 _barcodeController.text = barcode;
               });
-              Navigator.pop(context); // Closes scanner after scanning
+              Navigator.pop(context);
             },
           ),
         ),
@@ -339,14 +572,15 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
         titleSpacing: -2,
         leading: IconButton(
           icon: const Icon(
-            Icons.arrow_back_rounded, 
+            Icons.arrow_back_rounded,
             color: Colors.white,
             size: 24),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           widget.item == null ? 'Add' : 'Edit',
-          style: GoogleFonts.inter(
+          style: TextStyle(
+            fontFamily: 'Inter',
             color: Colors.white,
             fontSize: 20,
             fontWeight: FontWeight.w600,
@@ -360,6 +594,34 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Offline banner
+              if (!_isOnline)
+                Container(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.orange[50],
+                    border: Border.all(color: Colors.orange),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.wifi_off, size: 18, color: Colors.orange[700]),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Offline - images cannot be uploaded',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.orange[900],
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
               // For product image
               Center(
                 child: GestureDetector(
@@ -402,7 +664,7 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
                                 BoxShadow(
                                   color: Colors.black.withOpacity(0.15),
                                   blurRadius: 2,
-                                  offset: const Offset(0,2),
+                                  offset: const Offset(0, 2),
                                 ),
                               ],
                             ),
@@ -419,27 +681,27 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
 
               // for category
               InvAddLabel(text: 'Category'),
-                DropdownButtonFormField<String>(
-                  value: _selectedCategory,
-                  decoration: _inputDecoration(
-                    fillColor: const Color(0xFFF0F8FF),
-                  ), // light grey background
-                  hint: const Text(
-                    'Select category',
-                    style: TextStyle(color: Color(0xFF9E9E9E)),
-                  ),
-                  icon: const Icon(
-                    Icons.arrow_drop_down,
-                    size: 32, 
-                    color: Color(0xFF757575), 
-                  ),
-                  items: _categories
-                      .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                      .toList(),
-                  onChanged: (v) => setState(() => _selectedCategory = v),
-                  validator: (v) =>
-                      v == null || v.isEmpty ? 'Please select a category' : null,
+              DropdownButtonFormField<String>(
+                value: _selectedCategory,
+                decoration: _inputDecoration(
+                  fillColor: const Color(0xFFF0F8FF),
                 ),
+                hint: const Text(
+                  'Select category',
+                  style: TextStyle(color: Color(0xFF9E9E9E)),
+                ),
+                icon: const Icon(
+                  Icons.arrow_drop_down,
+                  size: 32,
+                  color: Color(0xFF757575),
+                ),
+                items: _categories
+                    .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                    .toList(),
+                onChanged: (v) => setState(() => _selectedCategory = v),
+                validator: (v) =>
+                    v == null || v.isEmpty ? 'Please select a category' : null,
+              ),
               const SizedBox(height: 16),
 
               // Name
@@ -507,11 +769,10 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
               InvAddLabel(text: 'Unit of Measure'),
               Row(
                 children: [
-                  // Numeric text field for quantity
                   Expanded(
                     flex: 2,
                     child: TextFormField(
-                      controller: _unitAmountController, 
+                      controller: _unitAmountController,
                       keyboardType: TextInputType.numberWithOptions(
                         decimal: true,
                       ),
@@ -524,8 +785,6 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
                     ),
                   ),
                   const SizedBox(width: 12),
-
-                  // Dropdown for unit
                   Expanded(
                     flex: 1,
                     child: DropdownButtonFormField<String>(
@@ -533,8 +792,8 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
                       decoration: _inputDecoration(),
                       icon: const Icon(
                         Icons.arrow_drop_down,
-                        size: 32, 
-                        color: Color(0xFF757575), 
+                        size: 32,
+                        color: Color(0xFF757575),
                       ),
                       items: _units.map((unit) {
                         return DropdownMenuItem(value: unit, child: Text(unit));
@@ -647,7 +906,8 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
     );
   }
 
-  InputDecoration _inputDecoration({String? hintText, Widget? suffixIcon, Color? fillColor}) {
+  InputDecoration _inputDecoration(
+      {String? hintText, Widget? suffixIcon, Color? fillColor}) {
     return InputDecoration(
       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
       border: OutlineInputBorder(
@@ -658,13 +918,13 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
         borderRadius: BorderRadius.circular(8),
         borderSide: BorderSide(
           color: Color(0xFFB4D7FF),
-        )
+        ),
       ),
       hintText: hintText,
       suffixIcon: suffixIcon,
       hintStyle: const TextStyle(color: Color(0xFF9E9E9E)),
-      filled: true,           
-      fillColor: fillColor ?? Color(0xFFF0F8FF), 
+      filled: true,
+      fillColor: fillColor ?? Color(0xFFF0F8FF),
     );
   }
 }

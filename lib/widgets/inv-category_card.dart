@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 class InvCategoryCard extends StatelessWidget {
   final String label;
@@ -50,7 +49,7 @@ class InvCategoryCard extends StatelessWidget {
                 label,
                 textAlign: TextAlign.center,
                 overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.inter(
+                style: TextStyle( fontFamily: 'Inter',
                   fontSize: 10,
                   fontWeight: FontWeight.w500,
                 ),
