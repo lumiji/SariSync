@@ -54,7 +54,7 @@ class AboutSariSyncPage extends StatelessWidget {
             Text('• Real‑time cloud sync via Firebase Firestore\n'
                  '• File and media storage using Firebase Storage\n'
                  '• Sign in with Google and Facebook\n'
-                 '• QR/barcode scanning with audible feedback\n'
+                 '• Barcode scanning with audible feedback\n'
                  '• Capture and pick images, cached remote images\n'
                  '• PDF generation and printing for reports\n'
                  '• Offline-friendly flags and connectivity monitoring'),
