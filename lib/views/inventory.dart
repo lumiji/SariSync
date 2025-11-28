@@ -24,10 +24,10 @@ class InventoryPage extends StatefulWidget {
   final void Function(String type, String id)? onSearchSelected;
   final String? selectedCategory;
   const InventoryPage({
-    Key? key, 
+    super.key, 
     this.onSearchSelected,
     this.selectedCategory
-    }) : super(key: key);
+    });
 
   @override
   State<InventoryPage> createState() => _InventoryPageState();

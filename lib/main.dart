@@ -37,14 +37,6 @@ Future<void> main() async {
     cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED
   );
 
-  if (kDebugMode) {
-    print("Running in Debug mode");
-  } else if (kReleaseMode) {
-    print("Running in Release mode");
-  } else if (kProfileMode) {
-    print("Running in Profile mode");
-  }
-
   runApp(const MyApp());
 
   await Future.delayed(const Duration(seconds: 1));

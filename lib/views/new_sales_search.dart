@@ -36,6 +36,7 @@ class _SearchPageState extends State<SearchPage> {
         .listen((snapshot) {
       setState(() {
         allInventoryItems = snapshot.docs
+            .where((doc) => doc.id != 'init')
             .map((doc) => InventoryItem.fromMap(doc.data(), doc.id))
             .toList();
       });

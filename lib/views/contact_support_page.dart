@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 class ContactSupportPage extends StatefulWidget {
+  const ContactSupportPage({super.key});
+
   @override
   State<ContactSupportPage> createState() => _ContactSupportPageState();
 }

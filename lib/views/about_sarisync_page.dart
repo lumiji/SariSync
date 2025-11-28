@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 class AboutSariSyncPage extends StatelessWidget {
+  const AboutSariSyncPage({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

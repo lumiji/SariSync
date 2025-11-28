@@ -24,7 +24,7 @@ import 'package:sarisync/widgets/message_prompts.dart';
 class InventoryAddPage extends StatefulWidget {
   final InventoryItem? item; // null for Add, not null for Edit
 
-  const InventoryAddPage({Key? key, this.item}) : super(key: key);
+  const InventoryAddPage({super.key, this.item});
 
   @override
   State<InventoryAddPage> createState() => _InventoryAddPageState();
@@ -682,7 +682,7 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
               // for category
               InvAddLabel(text: 'Category'),
               DropdownButtonFormField<String>(
-                value: _selectedCategory,
+                initialValue: _selectedCategory,
                 decoration: _inputDecoration(
                   fillColor: const Color(0xFFF0F8FF),
                 ),
@@ -788,7 +788,7 @@ class _InventoryAddPageState extends State<InventoryAddPage> {
                   Expanded(
                     flex: 1,
                     child: DropdownButtonFormField<String>(
-                      value: _unitDropdownValue,
+                      initialValue: _unitDropdownValue,
                       decoration: _inputDecoration(),
                       icon: const Icon(
                         Icons.arrow_drop_down,

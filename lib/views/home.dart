@@ -35,7 +35,7 @@ import 'package:sarisync/widgets/message_prompts.dart';
 
 class HomePage extends StatefulWidget {
   final int initialIndex;
-  const HomePage({Key? key, this.initialIndex = 0}) : super(key: key);
+  const HomePage({super.key, this.initialIndex = 0});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -372,7 +372,7 @@ class HomeContent extends StatelessWidget {
   final Stream<List<TransactionItem>> recentTransactions;
 
   const HomeContent({
-    Key? key, 
+    super.key, 
     required this.onSearchSelected,
     required this.totalSales,
     required this.totalItemsSold,
@@ -380,7 +380,7 @@ class HomeContent extends StatelessWidget {
     required this.isOnline,
     required this.setCategory,
     required this.recentTransactions,
-  }) : super(key: key);
+  });
   
   @override
   Widget build(BuildContext context) {
